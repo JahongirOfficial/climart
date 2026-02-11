@@ -156,7 +156,7 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
                 id="supplier"
                 value={formData.supplier}
                 onChange={(e) => handleSupplierChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 required
                 disabled={suppliersLoading}
               >
@@ -198,7 +198,7 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
                     <select
                       value={item.productName}
                       onChange={(e) => handleProductSelect(index, e.target.value)}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       required
                     >
                       <option value="">Tanlang...</option>
@@ -240,7 +240,7 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
                       type="text"
                       value={new Intl.NumberFormat('uz-UZ').format(item.total)}
                       readOnly
-                      className="text-sm bg-gray-50"
+                      className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-100"
                     />
                   </div>
 
@@ -260,7 +260,7 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
               ))}
             </div>
 
-            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+            <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex justify-between items-center">
                 <span className="font-semibold">Jami summa:</span>
                 <span className="text-lg font-bold text-primary">

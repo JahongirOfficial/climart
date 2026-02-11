@@ -10,17 +10,20 @@ import {
   Warehouse,
   Banknote,
   CheckSquare,
+  UserCog,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-const modules = [
-  { id: "dashboard", name: "Ko'rsatkichlar", icon: BarChart3, path: "/", hasSubmenu: true },
-  { id: "purchases", name: "Xaridlar", icon: ShoppingCart, path: "/purchases", hasSubmenu: true },
-  { id: "sales", name: "Savdo", icon: TrendingUp, path: "/sales", hasSubmenu: true },
-  { id: "products", name: "Tovarlar", icon: Package, path: "/products", hasSubmenu: true },
-  { id: "contacts", name: "Kontragentlar", icon: Users, path: "/contacts", hasSubmenu: true },
-  { id: "warehouse", name: "Ombor", icon: Warehouse, path: "/warehouse", hasSubmenu: true },
-  { id: "finance", name: "Pul", icon: Banknote, path: "/finance", hasSubmenu: true },
-  { id: "tasks", name: "Vazifalar", icon: CheckSquare, path: "/tasks", hasSubmenu: true },
+const allModules = [
+  { id: "dashboard", name: "Ko'rsatkichlar", icon: BarChart3, path: "/", hasSubmenu: true, adminOnly: false },
+  { id: "purchases", name: "Xaridlar", icon: ShoppingCart, path: "/purchases", hasSubmenu: true, adminOnly: false },
+  { id: "sales", name: "Savdo", icon: TrendingUp, path: "/sales", hasSubmenu: true, adminOnly: false },
+  { id: "products", name: "Tovarlar", icon: Package, path: "/products", hasSubmenu: true, adminOnly: false },
+  { id: "contacts", name: "Kontragentlar", icon: Users, path: "/contacts", hasSubmenu: true, adminOnly: false },
+  { id: "warehouse", name: "Ombor", icon: Warehouse, path: "/warehouse", hasSubmenu: true, adminOnly: false },
+  { id: "finance", name: "Pul", icon: Banknote, path: "/finance", hasSubmenu: true, adminOnly: false },
+  { id: "tasks", name: "Vazifalar", icon: CheckSquare, path: "/tasks", hasSubmenu: true, adminOnly: false },
+  { id: "employees", name: "Xodimlar", icon: UserCog, path: "/employees", hasSubmenu: false, adminOnly: true },
 ];
 
 const dashboardSubMenu = [
@@ -91,7 +94,40 @@ const tasksSubMenu = [
 export const Navigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAdmin, hasPermission, user } = useAuth();
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
+
+  // Filter modules based on user role and permissions
+  const modules = allModules.filter(module => {
+    // Admin only modules
+    if (module.adminOnly && !isAdmin) return false;
+    
+    // Dashboard is always visible
+    if (module.id === 'dashboard') return true;
+    
+    // Check if user has permission for this module (parent or any sub-permission)
+    if (!module.adminOnly && module.id !== 'dashboard') {
+      if (isAdmin) return true;
+      
+      // Check if user has parent permission or any sub-permission
+      const hasParent = user?.permissions.includes(module.id);
+      const hasAnySub = user?.permissions.some(p => p.startsWith(module.id + '.'));
+      
+      return hasParent || hasAnySub;
+    }
+    
+    return true;
+  });
+
+  // Filter submenu items based on permissions
+  const filterSubmenuItems = (items: any[], moduleId: string) => {
+    if (isAdmin) return items;
+    
+    return items.filter(item => {
+      const permissionKey = `${moduleId}.${item.id}`;
+      return hasPermission(permissionKey);
+    });
+  };
 
   // Sync activeSubmenu with current route - only update if section changes
   useEffect(() => {
@@ -121,38 +157,20 @@ export const Navigation = () => {
     }
   }, [location.pathname]); // Remove activeSubmenu from dependencies
 
-  const handleModuleHover = (moduleId: string, hasSubmenu: boolean) => {
+  const handleModuleClick = (moduleId: string, hasSubmenu: boolean, path: string) => {
     if (hasSubmenu) {
       setActiveSubmenu(moduleId);
-    }
-  };
-
-  const handleModuleClick = (moduleId: string, hasSubmenu: boolean, path: string) => {
-    if (!hasSubmenu) {
+    } else {
       // Navigate directly for modules without submenu
       setActiveSubmenu(null);
       navigate(path);
     }
   };
 
-  const handleNavLeave = () => {
-    // Keep submenu open if we're on a page within that section
-    if (location.pathname !== "/" &&
-      location.pathname !== "/dashboard" &&
-      !location.pathname.startsWith("/dashboard") &&
-      !location.pathname.startsWith("/purchases") &&
-      !location.pathname.startsWith("/sales") &&
-      !location.pathname.startsWith("/products") &&
-      !location.pathname.startsWith("/contacts") &&
-      !location.pathname.startsWith("/warehouse") &&
-      !location.pathname.startsWith("/finance") &&
-      !location.pathname.startsWith("/tasks")) {
-      setActiveSubmenu(null);
-    }
-  };
+
 
   return (
-    <nav className="w-full border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 transition-colors duration-1000" onMouseLeave={handleNavLeave}>
+    <nav className="w-full border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 transition-colors duration-1000">
       <div className="overflow-x-auto">
         <div className="flex gap-1 px-4 py-2 min-w-min">
           {modules.map((module) => {
@@ -172,10 +190,9 @@ export const Navigation = () => {
               <button
                 key={module.id}
                 type="button"
-                onMouseEnter={() => handleModuleHover(module.id, module.hasSubmenu)}
                 onClick={() => handleModuleClick(module.id, module.hasSubmenu, module.path)}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap",
+                  "flex flex-col items-center justify-center gap-1 px-3 py-2 min-w-[88px] h-[54px] rounded-lg transition-all duration-200 whitespace-nowrap",
                   "border-b-2 border-transparent",
                   isActive
                     ? "border-primary text-primary bg-blue-50 dark:bg-blue-950"
@@ -197,7 +214,7 @@ export const Navigation = () => {
         <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 transition-colors duration-1000">
           <div className="overflow-x-auto">
             <div className="flex gap-1 px-4 py-2 min-w-min">
-              {dashboardSubMenu.map((item) => {
+              {filterSubmenuItems(dashboardSubMenu, 'dashboard').map((item) => {
                 const isSubActive = location.pathname === item.path;
 
                 return (
@@ -225,7 +242,7 @@ export const Navigation = () => {
         <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 transition-colors duration-1000">
           <div className="overflow-x-auto">
             <div className="flex gap-1 px-4 py-2 min-w-min">
-              {purchasesSubMenu.map((item) => {
+              {filterSubmenuItems(purchasesSubMenu, 'purchases').map((item) => {
                 const isSubActive = location.pathname === item.path;
 
                 return (
@@ -253,7 +270,7 @@ export const Navigation = () => {
         <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 transition-colors duration-1000">
           <div className="overflow-x-auto">
             <div className="flex gap-1 px-4 py-2 min-w-min">
-              {salesSubMenu.map((item) => {
+              {filterSubmenuItems(salesSubMenu, 'sales').map((item) => {
                 const isSubActive = location.pathname === item.path;
 
                 return (
@@ -281,7 +298,7 @@ export const Navigation = () => {
         <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 transition-colors duration-1000">
           <div className="overflow-x-auto">
             <div className="flex gap-1 px-4 py-2 min-w-min">
-              {productsSubMenu.map((item) => {
+              {filterSubmenuItems(productsSubMenu, 'products').map((item) => {
                 const isSubActive = location.pathname === item.path;
 
                 return (
@@ -309,7 +326,7 @@ export const Navigation = () => {
         <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 transition-colors duration-1000">
           <div className="overflow-x-auto">
             <div className="flex gap-1 px-4 py-2 min-w-min">
-              {contactsSubMenu.map((item) => {
+              {filterSubmenuItems(contactsSubMenu, 'contacts').map((item) => {
                 const isSubActive = location.pathname === item.path;
 
                 return (
@@ -337,7 +354,7 @@ export const Navigation = () => {
         <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 transition-colors duration-1000">
           <div className="overflow-x-auto">
             <div className="flex gap-1 px-4 py-2 min-w-min">
-              {warehouseSubMenu.map((item) => {
+              {filterSubmenuItems(warehouseSubMenu, 'warehouse').map((item) => {
                 const isSubActive = location.pathname === item.path;
 
                 return (
@@ -365,7 +382,7 @@ export const Navigation = () => {
         <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 transition-colors duration-1000">
           <div className="overflow-x-auto">
             <div className="flex gap-1 px-4 py-2 min-w-min">
-              {financeSubMenu.map((item) => {
+              {filterSubmenuItems(financeSubMenu, 'finance').map((item) => {
                 const isSubActive = location.pathname === item.path;
 
                 return (
@@ -394,7 +411,7 @@ export const Navigation = () => {
         <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 transition-colors duration-1000">
           <div className="overflow-x-auto">
             <div className="flex gap-1 px-4 py-2 min-w-min">
-              {tasksSubMenu.map((item) => {
+              {filterSubmenuItems(tasksSubMenu, 'tasks').map((item) => {
                 const isSubActive = location.pathname === item.path;
 
                 return (

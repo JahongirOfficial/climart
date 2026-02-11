@@ -8,8 +8,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { ModalProvider } from "@/contexts/ModalContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { Suspense, lazy } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
+
+// Auth pages
+const Login = lazy(() => import("./pages/Login"));
+
+// Employee pages
+const Employees = lazy(() => import("./pages/Employees"));
 
 // Lazy load all pages for better performance
 const Purchases = lazy(() => import("./pages/Purchases"));
@@ -106,19 +113,27 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <SidebarProvider>
-        <ModalProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
-            <Suspense fallback={<LoadingSpinner />}>
-              <Routes>
-                <Route path="/" element={<Indicators />} />
+      <AuthProvider>
+        <SidebarProvider>
+          <ModalProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <Suspense fallback={<LoadingSpinner />}>
+                <Routes>
+                  {/* Public route */}
+                  <Route path="/login" element={<Login />} />
+                  
+                  {/* Admin only routes */}
+                  <Route path="/employees" element={<Employees />} />
+                  
+                  {/* Protected routes */}
+                  <Route path="/" element={<Indicators />} />
                 <Route path="/dashboard" element={<Indicators />} />
                 <Route path="/dashboard/indicators" element={<Indicators />} />
                 <Route path="/dashboard/documents" element={<Documents />} />
@@ -185,8 +200,9 @@ const App = () => (
           </BrowserRouter>
         </ModalProvider>
       </SidebarProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+    </AuthProvider>
+  </TooltipProvider>
+</QueryClientProvider>
 );
 
 createRoot(document.getElementById("root")!).render(<App />);

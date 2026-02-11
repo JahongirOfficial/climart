@@ -11,7 +11,6 @@ import {
   Package,
   TrendingUp,
   AlertTriangle,
-  AlertTriangle,
   XCircle,
   History
 } from "lucide-react";

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
-  Plus,
+  RefreshCw,
   Search,
   Eye,
   DollarSign,
@@ -166,7 +166,7 @@ const SuppliersAccounts = () => {
               className="bg-primary hover:bg-primary/90 text-white gap-2"
               onClick={refetch}
             >
-              <Plus className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" />
               Yangilash
             </Button>
           </div>

@@ -38,6 +38,10 @@ export const WarehouseReceiptModal = ({ open, onClose, onSuccess, receipt }: War
     reason: "" as "" | "inventory_adjustment" | "found_items" | "production" | "other",
     notes: "",
   });
+
+  // Sabablar ro'yxati: tannarx avtomatik 0 bo'lishi kerak
+  const zeroCostReasons = ["inventory_adjustment", "found_items", "production"];
+  const isZeroCostReason = zeroCostReasons.includes(formData.reason);
   const [items, setItems] = useState<ReceiptItem[]>([]);
 
   useEffect(() => {
@@ -85,27 +89,40 @@ export const WarehouseReceiptModal = ({ open, onClose, onSuccess, receipt }: War
   const updateItem = (index: number, field: keyof ReceiptItem, value: any) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
-    
+
     // Update product name when product is selected
     if (field === 'product') {
       const product = products.find(p => p._id === value);
       if (product) {
         newItems[index].productName = product.name;
-        newItems[index].costPrice = product.costPrice;
+        // Agar sabab inventarizatsiya/topilgan/ishlab chiqarish bo'lsa, tannarx 0
+        newItems[index].costPrice = isZeroCostReason ? 0 : product.costPrice;
       }
     }
-    
+
     // Recalculate total
     if (field === 'quantity' || field === 'costPrice') {
       newItems[index].total = newItems[index].quantity * newItems[index].costPrice;
     }
-    
+
     setItems(newItems);
+  };
+
+  // Sabab o'zgarganda barcha itemlarning tannarxini 0 ga tushirish
+  const handleReasonChange = (value: any) => {
+    setFormData({ ...formData, reason: value });
+    if (zeroCostReasons.includes(value) && items.length > 0) {
+      setItems(items.map(item => ({
+        ...item,
+        costPrice: 0,
+        total: 0,
+      })));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (items.length === 0) {
       toast({
         title: "Xatolik",
@@ -214,7 +231,7 @@ export const WarehouseReceiptModal = ({ open, onClose, onSuccess, receipt }: War
               <Label htmlFor="reason">Sabab</Label>
               <Select
                 value={formData.reason}
-                onValueChange={(value: any) => setFormData({ ...formData, reason: value })}
+                onValueChange={handleReasonChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Sababni tanlang" />

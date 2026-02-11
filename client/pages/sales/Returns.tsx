@@ -2,6 +2,16 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Search, Plus, Trash2, Loader2, RotateCcw, AlertCircle, DollarSign, Package, Printer, CheckCircle, Clock, XCircle
 } from "lucide-react";
@@ -15,6 +25,8 @@ const Returns = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [returnToDelete, setReturnToDelete] = useState<string | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
@@ -101,13 +113,20 @@ const Returns = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Qaytarishni o'chirishni xohlaysizmi?")) {
+    setReturnToDelete(id);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (returnToDelete) {
       try {
-        await deleteReturn(id);
+        await deleteReturn(returnToDelete);
         toast({
           title: "Muvaffaqiyatli",
           description: "Qaytarish o'chirildi",
         });
+        setShowDeleteDialog(false);
+        setReturnToDelete(null);
         refetch();
       } catch (error) {
         toast({
@@ -464,6 +483,35 @@ const Returns = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSave}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Qaytarishni o'chirish</AlertDialogTitle>
+            <AlertDialogDescription>
+              Qaytarishni o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteDialog(false);
+              setReturnToDelete(null);
+            }}>
+              Bekor qilish
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }} 
+              className="bg-red-600 hover:bg-red-700"
+            >
+              O'chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };

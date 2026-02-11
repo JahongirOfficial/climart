@@ -4,6 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Search, Plus, Loader2, Package, CheckCircle, FileText,
   Edit, Trash2, Check, Printer
@@ -21,6 +32,12 @@ const Receipt = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<WarehouseReceipt | undefined>();
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [receiptToPrint, setReceiptToPrint] = useState<WarehouseReceipt | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [receiptToDelete, setReceiptToDelete] = useState<{ id: string; number: string } | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [receiptToConfirm, setReceiptToConfirm] = useState<{ id: string; number: string } | null>(null);
 
   const filteredReceipts = receipts.filter(r => {
     const matchesSearch = 
@@ -50,14 +67,21 @@ const Receipt = () => {
   };
 
   const handleConfirm = async (id: string, receiptNumber: string) => {
-    if (!confirm(`${receiptNumber} kirimni tasdiqlaysizmi? Tasdiqlangandan keyin mahsulot miqdorlari yangilanadi.`)) return;
+    setReceiptToConfirm({ id, number: receiptNumber });
+    setShowConfirmDialog(true);
+  };
+
+  const confirmReceiptAction = async () => {
+    if (!receiptToConfirm) return;
     
     try {
-      await confirmReceipt(id);
+      await confirmReceipt(receiptToConfirm.id);
       toast({
         title: "Kirim tasdiqlandi",
         description: "Mahsulot miqdorlari yangilandi",
       });
+      setShowConfirmDialog(false);
+      setReceiptToConfirm(null);
     } catch (error) {
       toast({
         title: "Xatolik",
@@ -68,14 +92,21 @@ const Receipt = () => {
   };
 
   const handleDelete = async (id: string, receiptNumber: string) => {
-    if (!confirm(`${receiptNumber} kirimni o'chirmoqchimisiz?`)) return;
+    setReceiptToDelete({ id, number: receiptNumber });
+    setShowDeleteDialog(true);
+  };
+
+  const deleteReceiptAction = async () => {
+    if (!receiptToDelete) return;
     
     try {
-      await deleteReceipt(id);
+      await deleteReceipt(receiptToDelete.id);
       toast({
         title: "Kirim o'chirildi",
         description: "Ma'lumotlar muvaffaqiyatli o'chirildi",
       });
+      setShowDeleteDialog(false);
+      setReceiptToDelete(null);
     } catch (error) {
       toast({
         title: "Xatolik",
@@ -83,6 +114,418 @@ const Receipt = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handlePrintReceipt = (receipt: WarehouseReceipt) => {
+    setReceiptToPrint(receipt);
+    setShowPrintDialog(true);
+  };
+
+  const printSimpleReceipt = (receipt: WarehouseReceipt) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const currentDate = new Date().toLocaleDateString('uz-UZ', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Kirim cheki - ${receipt.receiptNumber}</title>
+        <style>
+          @media print {
+            @page { margin: 10mm; }
+            body { margin: 0; }
+          }
+          body {
+            font-family: 'Courier New', monospace;
+            max-width: 80mm;
+            margin: 0 auto;
+            padding: 10px;
+            font-size: 12px;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 2px dashed #000;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+          }
+          .company-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .receipt-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 10px 0;
+          }
+          .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+          }
+          .items {
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+            padding: 10px 0;
+            margin: 10px 0;
+          }
+          .item-row {
+            margin: 8px 0;
+          }
+          .item-name {
+            font-weight: bold;
+          }
+          .item-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-top: 2px;
+          }
+          .total {
+            border-top: 2px solid #000;
+            padding-top: 10px;
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: bold;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px dashed #000;
+            font-size: 11px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="company-name">CLIMART ERP</div>
+          <div>Kirim cheki</div>
+          <div style="font-size: 10px; margin-top: 5px;">${currentDate}</div>
+        </div>
+
+        <div class="receipt-title">ODDIY CHECK</div>
+
+        <div class="info-row">
+          <span>Hujjat №:</span>
+          <span><strong>${receipt.receiptNumber}</strong></span>
+        </div>
+        <div class="info-row">
+          <span>Sana:</span>
+          <span>${new Date(receipt.receiptDate).toLocaleDateString('uz-UZ')}</span>
+        </div>
+        <div class="info-row">
+          <span>Ombor:</span>
+          <span><strong>${receipt.warehouseName}</strong></span>
+        </div>
+        <div class="info-row">
+          <span>Sabab:</span>
+          <span>${getReasonLabel(receipt.reason)}</span>
+        </div>
+
+        <div class="items">
+          ${receipt.items.map((item, index) => `
+            <div class="item-row">
+              <div class="item-name">${index + 1}. ${item.productName}</div>
+              <div class="item-details">
+                <span>${item.quantity} x ${new Intl.NumberFormat('uz-UZ').format(item.costPrice)} so'm</span>
+                <span><strong>${new Intl.NumberFormat('uz-UZ').format(item.total)} so'm</strong></span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="total">
+          <div class="info-row">
+            <span>JAMI SUMMA:</span>
+            <span>${new Intl.NumberFormat('uz-UZ').format(receipt.totalAmount)} so'm</span>
+          </div>
+        </div>
+
+        ${receipt.notes ? `
+          <div style="margin-top: 15px; font-size: 11px;">
+            <div><strong>Izoh:</strong></div>
+            <div style="margin-top: 5px;">${receipt.notes}</div>
+          </div>
+        ` : ''}
+
+        <div class="footer">
+          <div>Ombor kirim cheki</div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+            // Auto-close window after printing
+            setTimeout(function() {
+              window.close();
+            }, 100);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    setShowPrintDialog(false);
+  };
+
+  const printDetailedReceipt = (receipt: WarehouseReceipt) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const currentDate = new Date().toLocaleDateString('uz-UZ', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Kirim dalolatnomasi - ${receipt.receiptNumber}</title>
+        <style>
+          @media print {
+            @page { margin: 15mm; size: A4; }
+            body { margin: 0; }
+          }
+          body {
+            font-family: Arial, sans-serif;
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+            font-size: 12px;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 3px double #000;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+          }
+          .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .document-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 15px 0;
+            text-transform: uppercase;
+          }
+          .info-section {
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+          .info-row {
+            display: flex;
+            padding: 5px 0;
+          }
+          .info-label {
+            font-weight: bold;
+            min-width: 150px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+          }
+          th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+          }
+          th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+          }
+          .text-right {
+            text-align: right;
+          }
+          .text-center {
+            text-align: center;
+          }
+          .total-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 2px solid #000;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 14px;
+          }
+          .grand-total {
+            font-size: 18px;
+            font-weight: bold;
+            border-top: 2px solid #000;
+            padding-top: 10px;
+            margin-top: 10px;
+          }
+          .notes {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #fffbf0;
+            border-left: 4px solid #ffc107;
+          }
+          .signatures {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+          }
+          .signature-box {
+            text-align: center;
+          }
+          .signature-line {
+            border-top: 1px solid #000;
+            margin-top: 50px;
+            padding-top: 5px;
+          }
+          .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="company-name">CLIMART ERP SYSTEM</div>
+          <div style="font-size: 12px; color: #666;">Ombor boshqaruv tizimi</div>
+          <div class="document-title">KIRIM DALOLATNOMASI</div>
+          <div style="font-size: 11px; margin-top: 5px;">Chop etilgan: ${currentDate}</div>
+        </div>
+
+        <div class="info-section">
+          <div>
+            <div class="info-row">
+              <span class="info-label">Hujjat raqami:</span>
+              <span><strong>${receipt.receiptNumber}</strong></span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Sana:</span>
+              <span>${new Date(receipt.receiptDate).toLocaleDateString('uz-UZ')}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Ombor:</span>
+              <span><strong>${receipt.warehouseName}</strong></span>
+            </div>
+          </div>
+          <div>
+            ${receipt.organization ? `
+            <div class="info-row">
+              <span class="info-label">Tashkilot:</span>
+              <span>${receipt.organization}</span>
+            </div>
+            ` : ''}
+            <div class="info-row">
+              <span class="info-label">Sabab:</span>
+              <span>${getReasonLabel(receipt.reason)}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Holat:</span>
+              <span><strong>${receipt.status === 'confirmed' ? 'Tasdiqlangan' : 'Qoralama'}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th class="text-center" style="width: 40px;">№</th>
+              <th>Mahsulot nomi</th>
+              <th class="text-center" style="width: 100px;">Miqdor</th>
+              <th class="text-right" style="width: 150px;">Tan narxi (so'm)</th>
+              <th class="text-right" style="width: 150px;">Jami summa (so'm)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${receipt.items.map((item, index) => `
+              <tr>
+                <td class="text-center">${index + 1}</td>
+                <td><strong>${item.productName}</strong></td>
+                <td class="text-center"><strong>${item.quantity}</strong></td>
+                <td class="text-right">${new Intl.NumberFormat('uz-UZ').format(item.costPrice)}</td>
+                <td class="text-right"><strong>${new Intl.NumberFormat('uz-UZ').format(item.total)}</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="total-section">
+          <div class="total-row">
+            <span>Jami mahsulotlar soni:</span>
+            <span><strong>${receipt.items.reduce((sum, item) => sum + item.quantity, 0)} dona</strong></span>
+          </div>
+          <div class="total-row grand-total">
+            <span>JAMI SUMMA:</span>
+            <span>${new Intl.NumberFormat('uz-UZ').format(receipt.totalAmount)} so'm</span>
+          </div>
+        </div>
+
+        ${receipt.notes ? `
+          <div class="notes">
+            <div style="font-weight: bold; margin-bottom: 5px;">📝 Izoh:</div>
+            <div>${receipt.notes}</div>
+          </div>
+        ` : ''}
+
+        <div class="signatures">
+          <div class="signature-box">
+            <div style="font-weight: bold; margin-bottom: 10px;">Qabul qildi</div>
+            <div class="signature-line">
+              <div style="font-size: 10px; color: #666;">F.I.O. / Imzo</div>
+            </div>
+          </div>
+          <div class="signature-box">
+            <div style="font-weight: bold; margin-bottom: 10px;">Topshirdi</div>
+            <div class="signature-line">
+              <div style="font-size: 10px; color: #666;">F.I.O. / Imzo</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div>Bu hujjat CLIMART ERP tizimi tomonidan avtomatik yaratilgan</div>
+          <div style="margin-top: 5px;">Chop etilgan sana: ${currentDate}</div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+            // Auto-close window after printing
+            setTimeout(function() {
+              window.close();
+            }, 100);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    setShowPrintDialog(false);
   };
 
   const handlePrint = (receipt: WarehouseReceipt) => {
@@ -349,7 +792,7 @@ const Receipt = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handlePrint(receipt)}
+                            onClick={() => handlePrintReceipt(receipt)}
                             title="Chop etish"
                           >
                             <Printer className="h-4 w-4" />
@@ -396,6 +839,109 @@ const Receipt = () => {
           onSuccess={handleModalSuccess}
           receipt={selectedReceipt}
         />
+
+        {/* Print Options Dialog */}
+        <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Check chiqarish</DialogTitle>
+              <DialogDescription>
+                Qaysi turdagi check chiqarishni xohlaysiz?
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-4">
+              <Button
+                onClick={() => receiptToPrint && printSimpleReceipt(receiptToPrint)}
+                className="w-full justify-start h-auto py-4"
+                variant="outline"
+              >
+                <div className="flex items-start gap-3">
+                  <Printer className="h-5 w-5 mt-1 text-blue-600" />
+                  <div className="text-left">
+                    <div className="font-semibold">Oddiy check</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Qisqa format - mahsulot nomlari, miqdor va narxlar
+                    </div>
+                  </div>
+                </div>
+              </Button>
+
+              <Button
+                onClick={() => receiptToPrint && printDetailedReceipt(receiptToPrint)}
+                className="w-full justify-start h-auto py-4"
+                variant="outline"
+              >
+                <div className="flex items-start gap-3">
+                  <Printer className="h-5 w-5 mt-1 text-green-600" />
+                  <div className="text-left">
+                    <div className="font-semibold">Batafsil dalolatnoma</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      To'liq format - barcha ma'lumotlar va imzo joylari
+                    </div>
+                  </div>
+                </div>
+              </Button>
+
+              <Button
+                onClick={() => {
+                  if (receiptToPrint) {
+                    printSimpleReceipt(receiptToPrint);
+                    setTimeout(() => printDetailedReceipt(receiptToPrint), 500);
+                  }
+                }}
+                className="w-full justify-start h-auto py-4"
+                variant="default"
+              >
+                <div className="flex items-start gap-3">
+                  <Printer className="h-5 w-5 mt-1" />
+                  <div className="text-left">
+                    <div className="font-semibold">Ikkala checkni chiqarish</div>
+                    <div className="text-xs text-white/80 mt-1">
+                      Oddiy va batafsil formatlar
+                    </div>
+                  </div>
+                </div>
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirm Receipt Dialog */}
+        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Kirimni tasdiqlash</AlertDialogTitle>
+              <AlertDialogDescription>
+                {receiptToConfirm?.number} kirimni tasdiqlaysizmi? Tasdiqlangandan keyin mahsulot miqdorlari yangilanadi va kirimni tahrirlash mumkin bo'lmaydi.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmReceiptAction}>
+                Tasdiqlash
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Receipt Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Kirimni o'chirish</AlertDialogTitle>
+              <AlertDialogDescription>
+                {receiptToDelete?.number} kirimni o'chirmoqchimisiz? Bu amalni qaytarib bo'lmaydi.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+              <AlertDialogAction onClick={deleteReceiptAction} className="bg-red-600 hover:bg-red-700">
+                O'chirish
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

@@ -613,3 +613,78 @@ export interface Inventory {
   createdAt: string;
   updatedAt: string;
 }
+
+// Authentication and User Management types
+export interface User {
+  _id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  role: 'admin' | 'employee';
+  permissions: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserProfile {
+  _id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  role: 'admin' | 'employee';
+  permissions: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LoginRequest {
+  identifier: string; // username or phone
+  password: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: UserProfile;
+}
+
+export interface CreateEmployeeRequest {
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  permissions: string[];
+}
+
+export interface CreateEmployeeResponse {
+  employee: User;
+  credentials: {
+    username: string;
+    password: string;
+  };
+}
+
+export interface UpdateEmployeeRequest {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  permissions?: string[];
+  isActive?: boolean;
+}
+
+// Permission constants
+export const PERMISSIONS = {
+  DASHBOARD: 'dashboard',
+  PRODUCTS: 'products',
+  PURCHASES: 'purchases',
+  SALES: 'sales',
+  WAREHOUSE: 'warehouse',
+  FINANCE: 'finance',
+  CONTACTS: 'contacts',
+  PRODUCTION: 'production',
+  ECOMMERCE: 'ecommerce',
+} as const;
+
+export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];

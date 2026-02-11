@@ -3,6 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Search, Plus, Eye, Edit, Trash2, CheckCircle, Clock, XCircle, Loader2, Truck, Lock, Unlock
 } from "lucide-react";
 import { useState } from "react";
@@ -23,6 +33,10 @@ const CustomerOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
   const [selectedOrderForShipment, setSelectedOrderForShipment] = useState<string | undefined>(undefined);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+  const [showUnreserveDialog, setShowUnreserveDialog] = useState(false);
+  const [orderToUnreserve, setOrderToUnreserve] = useState<string | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
@@ -99,9 +113,16 @@ const CustomerOrders = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Buyurtmani o'chirishni xohlaysizmi?")) {
+    setOrderToDelete(id);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (orderToDelete) {
       try {
-        await deleteOrder(id);
+        await deleteOrder(orderToDelete);
+        setShowDeleteDialog(false);
+        setOrderToDelete(null);
         refetch();
       } catch (error) {
         showError('Xatolik yuz berdi');
@@ -145,15 +166,22 @@ const CustomerOrders = () => {
   };
 
   const handleUnreserve = async (orderId: string) => {
-    if (window.confirm("Rezervni bekor qilishni xohlaysizmi?")) {
+    setOrderToUnreserve(orderId);
+    setShowUnreserveDialog(true);
+  };
+
+  const confirmUnreserve = async () => {
+    if (orderToUnreserve) {
       try {
-        const response = await fetch(`/api/customer-orders/${orderId}/unreserve`, {
+        const response = await fetch(`/api/customer-orders/${orderToUnreserve}/unreserve`, {
           method: 'PATCH',
         });
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.message);
         }
+        setShowUnreserveDialog(false);
+        setOrderToUnreserve(null);
         refetch();
       } catch (error: any) {
         showError(error.message);
@@ -177,6 +205,8 @@ const CustomerOrders = () => {
       throw error;
     }
   };
+
+
 
   if (loading) {
     return (
@@ -410,6 +440,64 @@ const CustomerOrders = () => {
         onSave={handleSaveShipment}
         orderId={selectedOrderForShipment}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Buyurtmani o'chirish</AlertDialogTitle>
+            <AlertDialogDescription>
+              Buyurtmani o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteDialog(false);
+              setOrderToDelete(null);
+            }}>
+              Bekor qilish
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }} 
+              className="bg-red-600 hover:bg-red-700"
+            >
+              O'chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unreserve Confirmation Dialog */}
+      <AlertDialog open={showUnreserveDialog} onOpenChange={setShowUnreserveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rezervni bekor qilish</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rezervni bekor qilishni xohlaysizmi? Mahsulotlar omborda bo'shashadi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowUnreserveDialog(false);
+              setOrderToUnreserve(null);
+            }}>
+              Bekor qilish
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                confirmUnreserve();
+              }} 
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              Rezervni bekor qilish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };

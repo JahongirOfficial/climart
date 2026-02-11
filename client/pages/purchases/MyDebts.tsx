@@ -2,8 +2,8 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { 
-  Search, 
+import {
+  Search,
   AlertTriangle,
   TrendingUp,
   Calendar,
@@ -13,7 +13,8 @@ import {
   Clock,
   DollarSign,
   CheckCircle,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 import { useState } from "react";
 import { useDebts } from "@/hooks/useDebts";
@@ -66,7 +67,7 @@ const MyDebts = () => {
 
   const filteredDebts = debts.filter(debt => {
     const matchesSearch = debt.supplier.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     if (filterType === 'overdue') {
       return matchesSearch && debt.status === 'overdue';
     }
@@ -108,8 +109,8 @@ const MyDebts = () => {
               <div>
                 <h3 className="font-semibold text-red-900">Xatolik yuz berdi</h3>
                 <p className="text-red-700">{error}</p>
-                <Button 
-                  onClick={refetch} 
+                <Button
+                  onClick={refetch}
                   className="mt-3 bg-red-600 hover:bg-red-700"
                   size="sm"
                 >
@@ -136,7 +137,7 @@ const MyDebts = () => {
               </p>
             </div>
             <Button onClick={refetch} variant="outline" className="gap-2">
-              <Calendar className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" />
               Yangilash
             </Button>
           </div>
@@ -250,7 +251,7 @@ const MyDebts = () => {
               <div className="divide-y divide-gray-100">
                 {filteredDebts.map((debt) => (
                   <div key={debt.id} className="p-4 hover:bg-gray-50 transition-colors">
-                    <div 
+                    <div
                       className="cursor-pointer"
                       onClick={() => setExpandedDebt(expandedDebt === debt.id ? null : debt.id)}
                     >
@@ -282,9 +283,8 @@ const MyDebts = () => {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Qoldiq</p>
-                          <p className={`text-sm font-semibold ${
-                            debt.remainingDebt > 0 ? 'text-red-600' : 'text-green-600'
-                          }`}>
+                          <p className={`text-sm font-semibold ${debt.remainingDebt > 0 ? 'text-red-600' : 'text-green-600'
+                            }`}>
                             {formatCurrency(debt.remainingDebt)}
                           </p>
                         </div>
@@ -293,9 +293,8 @@ const MyDebts = () => {
                       {/* Progress Bar */}
                       <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                         <div
-                          className={`h-2 rounded-full transition-all ${
-                            debt.remainingDebt === 0 ? 'bg-green-600' : 'bg-orange-600'
-                          }`}
+                          className={`h-2 rounded-full transition-all ${debt.remainingDebt === 0 ? 'bg-green-600' : 'bg-orange-600'
+                            }`}
                           style={{
                             width: `${debt.totalDebt > 0 ? (debt.paidAmount / debt.totalDebt) * 100 : 0}%`
                           }}
@@ -389,20 +388,19 @@ const MyDebts = () => {
               <div className="space-y-3">
                 {paymentSchedule.map((payment, idx) => {
                   const daysFromNow = Math.ceil(
-                    (new Date(payment.date).getTime() - new Date().getTime()) / 
+                    (new Date(payment.date).getTime() - new Date().getTime()) /
                     (1000 * 60 * 60 * 24)
                   );
-                  
+
                   return (
-                    <div 
-                      key={idx} 
-                      className={`p-3 rounded-lg border ${
-                        daysFromNow < 0 
-                          ? 'bg-red-50 border-red-200' 
+                    <div
+                      key={idx}
+                      className={`p-3 rounded-lg border ${daysFromNow < 0
+                          ? 'bg-red-50 border-red-200'
                           : daysFromNow <= 2
-                          ? 'bg-yellow-50 border-yellow-200'
-                          : 'bg-blue-50 border-blue-200'
-                      }`}
+                            ? 'bg-yellow-50 border-yellow-200'
+                            : 'bg-blue-50 border-blue-200'
+                        }`}
                     >
                       <div className="flex items-start justify-between mb-1">
                         <p className="text-xs font-semibold text-gray-900">

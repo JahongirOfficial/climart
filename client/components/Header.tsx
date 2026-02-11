@@ -1,10 +1,20 @@
-import { Bell, Search, Settings, CircleUser, Moon, Sun } from "lucide-react";
+import { Bell, Search, Settings, CircleUser, Moon, Sun, LogOut, User } from "lucide-react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Header = () => {
   const [isDark, setIsDark] = useState(false);
+  const { user, logout, isAuthenticated } = useAuth();
 
   // Check for saved theme preference or default to light mode
   useEffect(() => {
@@ -87,13 +97,60 @@ export const Header = () => {
             <Settings className="h-5 w-5 text-foreground" />
           </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hover:bg-secondary"
-          >
-            <CircleUser className="h-5 w-5 text-foreground" />
-          </Button>
+          {/* User Profile Dropdown */}
+          {isAuthenticated && user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="hover:bg-secondary flex items-center gap-2 px-3"
+                >
+                  <CircleUser className="h-5 w-5 text-foreground" />
+                  <div className="hidden md:flex flex-col items-start">
+                    <span className="text-sm font-medium text-foreground">
+                      {user.firstName} {user.lastName}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {user.role === 'admin' ? 'Administrator' : 'Xodim'}
+                    </span>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium">
+                      {user.firstName} {user.lastName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {user.phoneNumber}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      @{user.username}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profil</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-red-600 dark:text-red-400">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Chiqish</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:bg-secondary"
+            >
+              <CircleUser className="h-5 w-5 text-foreground" />
+            </Button>
+          )}
         </div>
       </div>
     </header>

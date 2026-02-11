@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import { createAdminUser } from '../utils/createAdmin';
+import { resetAdminUsers } from '../utils/resetAdmin';
 
 const connectDB = async () => {
   try {
@@ -11,6 +13,14 @@ const connectDB = async () => {
     await mongoose.connect(mongoURI);
     
     console.log('✅ MongoDB connected successfully');
+    
+    // Reset admin users (only in development)
+    if (process.env.RESET_ADMIN === 'true') {
+      await resetAdminUsers();
+    }
+    
+    // Create admin user after successful connection
+    await createAdminUser();
     
     mongoose.connection.on('error', (err) => {
       console.error('❌ MongoDB connection error:', err);

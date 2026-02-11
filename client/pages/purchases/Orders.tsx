@@ -3,6 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Plus,
   Search,
   Eye,
@@ -32,6 +42,8 @@ const Orders = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [receivingOrder, setReceivingOrder] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
@@ -84,13 +96,20 @@ const Orders = () => {
   };
 
   const handleDeleteOrder = async (orderId: string) => {
-    if (!confirm('Buyurtmani o\'chirmoqchimisiz?')) return;
+    setOrderToDelete(orderId);
+    setShowDeleteDialog(true);
+  };
 
-    try {
-      await deleteOrder(orderId);
-      showSuccess('Buyurtma o\'chirildi');
-    } catch (error) {
-      showError(error instanceof Error ? error.message : 'Noma\'lum xatolik');
+  const confirmDelete = async () => {
+    if (orderToDelete) {
+      try {
+        await deleteOrder(orderToDelete);
+        showSuccess('Buyurtma o\'chirildi');
+        setShowDeleteDialog(false);
+        setOrderToDelete(null);
+      } catch (error) {
+        showError(error instanceof Error ? error.message : 'Noma\'lum xatolik');
+      }
     }
   };
 
@@ -434,6 +453,35 @@ const Orders = () => {
           }}
           order={viewingOrder}
         />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Buyurtmani o'chirish</AlertDialogTitle>
+              <AlertDialogDescription>
+                Buyurtmani o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                setShowDeleteDialog(false);
+                setOrderToDelete(null);
+              }}>
+                Bekor qilish
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={(e) => {
+                  e.preventDefault();
+                  confirmDelete();
+                }} 
+                className="bg-red-600 hover:bg-red-700"
+              >
+                O'chirish
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Product } from "@shared/api";
 import { Loader2, Upload, X } from "lucide-react";
 
@@ -21,13 +22,13 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
     name: "",
     sku: "",
     category: "",
-    quantity: 0,
-    costPrice: 0,
-    sellingPrice: 0,
-    minQuantity: 0,
+    quantity: "" as any,
+    costPrice: "" as any,
+    sellingPrice: "" as any,
+    minQuantity: "" as any,
     unit: "dona",
     unitType: "count" as "count" | "uncount",
-    weight: 0,
+    weight: "" as any,
     weightUnit: "kg",
     description: "",
     image: ""
@@ -36,6 +37,19 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
   const [saving, setSaving] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [useMarkup, setUseMarkup] = useState(false);
+  const [markupPercent, setMarkupPercent] = useState<string>("");
+
+  const formatNumber = (value: string | number): string => {
+    if (!value) return "";
+    const numValue = typeof value === 'string' ? value.replace(/\s/g, '') : value.toString();
+    if (!numValue || numValue === '0') return "";
+    return new Intl.NumberFormat('uz-UZ').format(Number(numValue));
+  };
+
+  const parseFormattedNumber = (value: string): string => {
+    return value.replace(/\s/g, '').replace(/[^\d]/g, '');
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -93,44 +107,73 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
         quantity: product.quantity,
         costPrice: product.costPrice,
         sellingPrice: product.sellingPrice,
-        minQuantity: product.minQuantity || 0,
+        minQuantity: product.minQuantity || "",
         unit: product.unit || "dona",
         unitType: product.unitType || "count",
-        weight: product.weight || 0,
+        weight: product.weight || "",
         weightUnit: product.weightUnit || "kg",
         description: product.description || "",
         image: product.image || ""
       });
+      setUseMarkup(false);
+      setMarkupPercent("");
     } else if (open) {
       setFormData({
         name: "",
         sku: generateSKU(),
         category: "",
-        quantity: 0,
-        costPrice: 0,
-        sellingPrice: 0,
-        minQuantity: 0,
+        quantity: "",
+        costPrice: "",
+        sellingPrice: "",
+        minQuantity: "",
         unit: "dona",
         unitType: "count" as "count" | "uncount",
-        weight: 0,
+        weight: "",
         weightUnit: "kg",
         description: "",
         image: ""
       });
+      setUseMarkup(false);
+      setMarkupPercent("");
     }
   }, [product, open]);
+
+  // Calculate selling price when markup is enabled
+  useEffect(() => {
+    if (useMarkup && formData.costPrice && markupPercent) {
+      const cost = Number(formData.costPrice);
+      const markup = Number(markupPercent);
+      if (cost > 0 && markup >= 0) {
+        const calculatedPrice = cost + (cost * markup / 100);
+        setFormData(prev => ({ ...prev, sellingPrice: calculatedPrice.toString() }));
+      }
+    }
+  }, [useMarkup, formData.costPrice, markupPercent]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || formData.costPrice <= 0 || formData.sellingPrice <= 0) {
+    if (!formData.name || !formData.costPrice || !formData.sellingPrice) {
       showWarning("Iltimos, barcha majburiy maydonlarni to'ldiring!");
+      return;
+    }
+
+    if (Number(formData.costPrice) <= 0 || Number(formData.sellingPrice) <= 0) {
+      showWarning("Narxlar 0 dan katta bo'lishi kerak!");
       return;
     }
 
     setSaving(true);
     try {
-      await onSave(formData);
+      const dataToSave = {
+        ...formData,
+        quantity: formData.quantity ? Number(formData.quantity) : 0,
+        costPrice: Number(formData.costPrice),
+        sellingPrice: Number(formData.sellingPrice),
+        minQuantity: formData.minQuantity ? Number(formData.minQuantity) : 0,
+        weight: formData.weight ? Number(formData.weight) : 0,
+      };
+      await onSave(dataToSave);
       onClose();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Noma\'lum xatolik');
@@ -192,7 +235,8 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
                 step="any"
                 min="0"
                 value={formData.quantity}
-                onChange={(e) => setFormData(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, quantity: e.target.value ? parseFloat(e.target.value) : "" }))}
+                placeholder="0"
                 required
               />
             </div>
@@ -205,7 +249,8 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
                 step="any"
                 min="0"
                 value={formData.minQuantity}
-                onChange={(e) => setFormData(prev => ({ ...prev, minQuantity: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, minQuantity: e.target.value ? parseFloat(e.target.value) : "" }))}
+                placeholder="0"
               />
             </div>
 
@@ -213,24 +258,78 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
               <Label htmlFor="costPrice">Tan narx (so'm) *</Label>
               <Input
                 id="costPrice"
-                type="number"
-                min="0"
-                value={formData.costPrice}
-                onChange={(e) => setFormData(prev => ({ ...prev, costPrice: parseFloat(e.target.value) || 0 }))}
+                type="text"
+                inputMode="numeric"
+                value={formatNumber(formData.costPrice)}
+                onChange={(e) => {
+                  const rawValue = parseFormattedNumber(e.target.value);
+                  setFormData(prev => ({ ...prev, costPrice: rawValue }));
+                }}
+                placeholder="0"
                 required
               />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="markupPercent">Ustama foiz (%)</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="useMarkup" className="text-xs text-gray-600 cursor-pointer">
+                    Foizdan foydalanish
+                  </Label>
+                  <Switch
+                    id="useMarkup"
+                    checked={useMarkup}
+                    onCheckedChange={(checked) => {
+                      setUseMarkup(checked);
+                      if (!checked) {
+                        setMarkupPercent("");
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 items-center">
+                <Input
+                  id="markupPercent"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={markupPercent}
+                  onChange={(e) => setMarkupPercent(e.target.value)}
+                  placeholder="0"
+                  disabled={!useMarkup}
+                  className={!useMarkup ? "bg-gray-100 cursor-not-allowed" : ""}
+                />
+                <span className="text-sm font-medium text-gray-600 min-w-[20px]">%</span>
+              </div>
             </div>
 
             <div>
               <Label htmlFor="sellingPrice">Sotuv narxi (so'm) *</Label>
               <Input
                 id="sellingPrice"
-                type="number"
-                min="0"
-                value={formData.sellingPrice}
-                onChange={(e) => setFormData(prev => ({ ...prev, sellingPrice: parseFloat(e.target.value) || 0 }))}
+                type="text"
+                inputMode="numeric"
+                value={formatNumber(formData.sellingPrice)}
+                onChange={(e) => {
+                  const rawValue = parseFormattedNumber(e.target.value);
+                  setFormData(prev => ({ ...prev, sellingPrice: rawValue }));
+                  // If manually editing, disable markup
+                  if (useMarkup) {
+                    setUseMarkup(false);
+                    setMarkupPercent("");
+                  }
+                }}
+                placeholder="0"
                 required
               />
+              {useMarkup && (
+                <p className="text-xs text-blue-600 mt-1">
+                  ℹ️ Avtomatik hisoblangan (foizdan)
+                </p>
+              )}
             </div>
 
             <div>
@@ -247,7 +346,7 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
                     weight: newType === 'count' ? 0 : prev.weight,
                   }));
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white hover:border-gray-400 focus:border-primary focus:ring-1 focus:ring-primary"
               >
                 <option value="count">Sanaladigan (dona/ta)</option>
                 <option value="uncount">O'lchanadigan (kg/litr...)</option>
@@ -261,7 +360,7 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
                   id="unit"
                   value={formData.unit}
                   onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white hover:border-gray-400 focus:border-primary focus:ring-1 focus:ring-primary"
                 >
                   <option value="dona">dona (ta)</option>
                   <option value="to'plam">to'plam</option>
@@ -275,7 +374,7 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
                     id="weightUnit"
                     value={formData.weightUnit}
                     onChange={(e) => setFormData(prev => ({ ...prev, weightUnit: e.target.value, unit: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white hover:border-gray-400 focus:border-primary focus:ring-1 focus:ring-primary"
                   >
                     <option value="kg">kg (kilogramm)</option>
                     <option value="litr">litr</option>
@@ -291,12 +390,12 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
                     step="any"
                     min="0"
                     value={formData.weight}
-                    onChange={(e) => setFormData(prev => ({ ...prev, weight: parseFloat(e.target.value) || 0 }))}
-                    placeholder={`Masalan: 50 ${formData.weightUnit}`}
+                    onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value ? parseFloat(e.target.value) : "" }))}
+                    placeholder={`0`}
                   />
-                  {formData.weight > 0 && formData.quantity > 0 && (
+                  {formData.weight && formData.quantity && (
                     <p className="text-xs text-blue-600 mt-1 font-medium">
-                      Jami: {formData.quantity} dona × {formData.weight} {formData.weightUnit} = {(formData.quantity * formData.weight).toFixed(2)} {formData.weightUnit}
+                      Jami: {formData.quantity} dona × {formData.weight} {formData.weightUnit} = {(Number(formData.quantity) * Number(formData.weight)).toFixed(2)} {formData.weightUnit}
                     </p>
                   )}
                 </div>
@@ -376,8 +475,8 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-700">Foyda:</span>
                   <span className="font-semibold text-blue-700">
-                    {new Intl.NumberFormat('uz-UZ').format(formData.sellingPrice - formData.costPrice)} so'm
-                    ({((formData.sellingPrice - formData.costPrice) / formData.costPrice * 100).toFixed(1)}%)
+                    {new Intl.NumberFormat('uz-UZ').format(Number(formData.sellingPrice) - Number(formData.costPrice))} so'm
+                    ({((Number(formData.sellingPrice) - Number(formData.costPrice)) / Number(formData.costPrice) * 100).toFixed(1)}%)
                   </span>
                 </div>
               </div>

@@ -36,6 +36,8 @@ import turnoverRouter from "./routes/turnover";
 import cashFlowRouter from "./routes/cash-flow";
 import profitLossRouter from "./routes/profit-loss";
 import mutualSettlementsRouter from "./routes/mutual-settlements";
+import authRouter from "./routes/auth";
+import employeesRouter from "./routes/employees";
 
 // Connect to MongoDB
 connectDB().then(() => {
@@ -58,6 +60,12 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+
+  // Authentication routes (public)
+  app.use("/api/auth", authRouter);
+  
+  // Employee management routes (admin only)
+  app.use("/api/employees", employeesRouter);
 
   // Initialize sample data endpoint
   app.post("/api/init-data", async (req, res) => {
