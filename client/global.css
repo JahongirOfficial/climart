@@ -1,0 +1,524 @@
+/** @import must precede all other statements */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
+
+/* 
+  Tailwind CSS directives - these are processed by PostCSS during build
+  Warnings about unknown at-rules can be safely ignored
+*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 211 32% 25%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 211 32% 25%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 211 32% 25%;
+
+    --primary: 211 90% 51%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 50% 97%;
+    --secondary-foreground: 211 32% 25%;
+
+    --muted: 0 0% 94%;
+    --muted-foreground: 211 14% 50%;
+
+    --accent: 145 64% 49%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 0 0% 92%;
+    --input: 0 0% 97%;
+    --ring: 211 90% 51%;
+
+    --radius: 0.25rem; /* 4px for cards */
+    --radius-button: 0.1875rem; /* 3px for buttons */
+    --radius-input: 0.1875rem; /* 3px for inputs */
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 211 32% 25%;
+
+    --sidebar-primary: 211 90% 51%;
+
+    --sidebar-primary-foreground: 0 0% 100%;
+
+    --sidebar-accent: 145 64% 49%;
+
+    --sidebar-accent-foreground: 0 0% 100%;
+
+    --sidebar-border: 0 0% 92%;
+
+    --sidebar-ring: 211 90% 51%;
+
+    --success: 145 64% 49%;
+    --warning: 38 92% 50%;
+  }
+
+  .dark {
+    --background: 211 32% 15%;
+    --foreground: 0 0% 100%;
+
+    --card: 211 32% 20%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 211 32% 20%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 211 90% 61%;
+    --primary-foreground: 211 32% 15%;
+
+    --secondary: 211 32% 25%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 211 32% 25%;
+    --muted-foreground: 211 14% 70%;
+
+    --accent: 145 64% 49%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 211 32% 25%;
+    --input: 211 32% 25%;
+    --ring: 211 90% 61%;
+    --radius: 0.25rem; /* 4px for cards */
+    --radius-button: 0.1875rem; /* 3px for buttons */
+    --radius-input: 0.1875rem; /* 3px for inputs */
+    --sidebar-background: 211 32% 18%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 211 90% 61%;
+    --sidebar-primary-foreground: 211 32% 15%;
+    --sidebar-accent: 145 64% 49%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 211 32% 25%;
+    --sidebar-ring: 211 90% 61%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* Thin scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgb(209 213 219);
+    border-radius: 3px;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgb(75 85 99);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(156 163 175);
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: rgb(107 114 128);
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(209 213 219) transparent;
+  }
+
+  .dark * {
+    scrollbar-color: rgb(75 85 99) transparent;
+  }
+
+  :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
+
+  th, td {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  /* Allow wrapping only for specific columns like 'name' or 'description' if they have a class, 
+     but by default, let's keep it clean */
+  td.wrap-text, th.wrap-text {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  pre,
+  code {
+    overflow-x: auto;
+    white-space: pre;
+  }
+}
+
+/* ========================================
+   ERP DASHBOARD STRICT STYLE RULES
+   ======================================== */
+
+@layer utilities {
+  /* Enable smooth color transitions for dark mode - 1 second */
+  * {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow;
+    transition-timing-function: ease-in-out;
+    transition-duration: 1000ms;
+  }
+
+  /* Prevent scale, translate, rotate animations on specific elements */
+  /* Apply to buttons, cards, and table rows - NOT to modal content */
+  button:hover,
+  button:focus,
+  button:active,
+  .erp-card:hover,
+  .erp-table-row:hover,
+  a:hover,
+  a:focus,
+  a:active {
+    transform: none !important;
+  }
+
+  /* ERP Card Styles - Fixed height, no hover expansion */
+  .erp-card {
+    background-color: white;
+    border: 1px solid rgb(229 231 235);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    border-radius: 4px;
+    transition: background-color 150ms ease-in-out, border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
+  }
+
+  .dark .erp-card {
+    background-color: rgb(31 41 55);
+    border-color: rgb(55 65 81);
+  }
+
+  .erp-card:hover {
+    background-color: rgb(249 250 251);
+    border-color: rgb(147 197 253);
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  }
+
+  .dark .erp-card:hover {
+    background-color: rgb(55 65 81);
+    border-color: rgb(37 99 235);
+  }
+
+  /* ERP Button Styles - Rectangular, no animations */
+  .erp-button {
+    border-radius: 3px;
+    transition: background-color 150ms ease-in-out, border-color 150ms ease-in-out;
+  }
+
+  .erp-button:hover {
+    transform: none !important;
+    animation: none !important;
+  }
+
+  /* ERP Input Styles */
+  .erp-input {
+    border-radius: 3px;
+    transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
+  }
+
+  /* ERP Table Row Hover - Only background color change */
+  .erp-table-row {
+    transition: background-color 150ms ease-in-out;
+  }
+
+  .erp-table-row:hover {
+    background-color: rgb(249 250 251);
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .dark .erp-table-row:hover {
+    background-color: rgb(31 41 55);
+  }
+
+  /* Sticky Table Header */
+  .erp-table-header {
+    position: sticky;
+    top: 0;
+    background-color: rgb(249 250 251);
+    z-index: 10;
+  }
+
+  .dark .erp-table-header {
+    background-color: rgb(17 24 39);
+  }
+
+  /* Table borders for dark mode */
+  .dark table {
+    border-color: rgb(55 65 81);
+  }
+
+  .dark thead {
+    border-color: rgb(55 65 81);
+    background-color: rgb(17 24 39);
+  }
+
+  .dark tbody {
+    background-color: rgb(31 41 55);
+  }
+
+  .dark tbody tr {
+    border-color: rgb(55 65 81);
+  }
+
+  .dark tbody tr:hover {
+    background-color: rgb(55 65 81);
+  }
+
+  .dark tfoot {
+    border-color: rgb(55 65 81);
+    background-color: rgb(17 24 39);
+  }
+
+  /* Table text colors for dark mode */
+  .dark th {
+    color: rgb(209 213 219);
+  }
+
+  .dark td {
+    color: rgb(209 213 219);
+  }
+
+  /* Table specific overrides */
+  table thead {
+    background-color: rgb(249 250 251);
+  }
+
+  .dark table thead {
+    background-color: rgb(17 24 39);
+  }
+
+  table tbody {
+    background-color: white;
+    border-top: 1px solid rgb(229 231 235);
+  }
+
+  .dark table tbody {
+    background-color: rgb(31 41 55);
+    border-top-color: rgb(55 65 81);
+  }
+
+  table tbody tr {
+    border-bottom: 1px solid rgb(229 231 235);
+  }
+
+  .dark table tbody tr {
+    border-bottom-color: rgb(55 65 81);
+  }
+
+  table tbody tr:hover {
+    background-color: rgb(249 250 251);
+  }
+
+  .dark table tbody tr:hover {
+    background-color: rgb(55 65 81);
+  }
+
+  table th {
+    color: rgb(55 65 81);
+  }
+
+  .dark table th {
+    color: rgb(209 213 219);
+  }
+
+  table td {
+    color: rgb(17 24 39);
+  }
+
+  .dark table td {
+    color: rgb(243 244 246);
+  }
+
+  /* Compact Table Styles */
+  table th, 
+  table td {
+    padding: 0.75rem 1rem !important; /* Equivalent to px-4 py-3 */
+  }
+
+  /* Even more compact for sub-tables or modals */
+  .compact-table th,
+  .compact-table td {
+    padding: 0.5rem 0.75rem !important; /* Equivalent to px-3 py-2 */
+  }
+
+  /* Text Truncation for Cards */
+  .erp-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  /* Fixed z-index layering */
+  .erp-z-dropdown {
+    z-index: 1000;
+  }
+
+  .erp-z-tooltip {
+    z-index: 3000;
+  }
+
+  /* Hover state for interactive elements */
+  .erp-hover-bg:hover {
+    background-color: #F3F6FA;
+  }
+
+  .erp-hover-border:hover {
+    border-color: rgb(96 165 250);
+  }
+
+  /* Disable all scale transforms */
+  .no-scale {
+    transform: scale(1) !important;
+  }
+
+  .no-scale:hover,
+  .no-scale:focus,
+  .no-scale:active {
+    transform: scale(1) !important;
+  }
+
+  /* Sidebar specific styles */
+  .sidebar-collapsed {
+    width: 4rem;
+  }
+
+  .sidebar-expanded {
+    width: 16rem;
+  }
+
+  /* Sidebar scrollbar styling */
+  .sidebar-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgb(209 213 219);
+    border-radius: 2px;
+  }
+
+  .dark .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgb(75 85 99);
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgb(156 163 175);
+  }
+
+  .dark .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgb(107 114 128);
+  }
+}
+
+/* Override any existing animations that might cause issues */
+@layer base {
+  /* Disable bounce, scale, and movement animations */
+  *[class*="animate-bounce"],
+  *[class*="animate-pulse"],
+  *[class*="animate-ping"],
+  *[class*="animate-spin"] {
+    animation: none !important;
+  }
+}
+
+/* Select Component Optimizations */
+@layer components {
+  /* Select trigger placeholder styling */
+  [data-radix-select-trigger] [data-placeholder] {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.7;
+  }
+
+  /* Select value text styling */
+  [data-radix-select-trigger] > span {
+    display: block;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+
+  /* Select content styling */
+  [data-radix-select-content] {
+    background: hsl(var(--popover));
+    border: 1px solid hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  /* Select item - consistent with global styles */
+  [data-radix-select-item] {
+    cursor: pointer;
+    border-radius: 3px;
+    transition: none !important;
+  }
+
+  /* Disable hover background - controlled by global styles */
+  [data-radix-select-item]:hover {
+    background: transparent !important;
+  }
+
+  /* Only show background on focus (keyboard navigation) */
+  [data-radix-select-item][data-highlighted] {
+    background: hsl(var(--accent)) !important;
+    color: hsl(var(--accent-foreground)) !important;
+    outline: none;
+  }
+
+  /* Select item selected state */
+  [data-radix-select-item][data-state="checked"] {
+    background: hsl(var(--secondary));
+    font-weight: 500;
+  }
+
+  /* Disable all transitions on select items */
+  [data-radix-select-item] * {
+    transition: none !important;
+  }
+}
