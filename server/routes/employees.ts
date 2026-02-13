@@ -29,19 +29,18 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { firstName, lastName, phoneNumber, address, password, permissions = [] } = req.body;
+    const { firstName, lastName, phoneNumber, address, permissions = [] } = req.body;
     
-    console.log('Creating employee:', { firstName, lastName, phoneNumber, address, password: '***', permissions });
+    console.log('Creating employee:', { firstName, lastName, phoneNumber, address, permissions });
     
     // Validate required fields
-    if (!firstName || !lastName || !phoneNumber || !password) {
-      return res.status(400).json({ error: 'First name, last name, phone number, and password are required' });
+    if (!firstName || !lastName || !phoneNumber) {
+      return res.status(400).json({ error: 'First name, last name, and phone number are required' });
     }
     
-    // Validate password length
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
-    }
+    // Generate random password automatically
+    const password = generatePassword();
+    console.log('Generated password for employee');
     
     // Check for duplicate phone number
     const existingPhone = await User.findOne({ phoneNumber });

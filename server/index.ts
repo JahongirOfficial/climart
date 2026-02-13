@@ -38,6 +38,8 @@ import profitLossRouter from "./routes/profit-loss";
 import mutualSettlementsRouter from "./routes/mutual-settlements";
 import authRouter from "./routes/auth";
 import employeesRouter from "./routes/employees";
+import reportsRouter from "./routes/reports";
+import telegramRouter from "./routes/telegram";
 
 // Connect to MongoDB
 connectDB().then(() => {
@@ -104,6 +106,7 @@ export function createServer() {
   app.use("/api/tax-invoices", taxInvoicesRouter);
   app.use("/api/customer-debts", customerDebtsRouter);
   app.use("/api/contracts", contractsRouter);
+  app.use("/api/telegram", telegramRouter);
   app.use("/api/warehouse-receipts", warehouseReceiptsRouter);
   app.use("/api/inventory", inventoryRouter);
   app.use("/api/balance", balanceRouter);
@@ -111,6 +114,7 @@ export function createServer() {
   app.use("/api/cash-flow", cashFlowRouter);
   app.use("/api/profit-loss", profitLossRouter);
   app.use("/api/mutual-settlements", mutualSettlementsRouter);
+  app.use("/api/reports", reportsRouter);
 
   return app;
 }

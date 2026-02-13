@@ -1,7 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CustomerInvoice } from "@shared/api";
-import { X, Calendar, User, FileText, DollarSign, Printer, Download } from "lucide-react";
+import { X, Calendar, User, FileText, DollarSign, Printer, Download, FileCheck } from "lucide-react";
+import { printCustomerReceipt, printWarehouseReceipt, printBothReceipts } from "@/utils/print";
 
 interface ViewInvoiceModalProps {
   open: boolean;
@@ -28,100 +29,15 @@ export const ViewInvoiceModal = ({ open, onClose, invoice }: ViewInvoiceModalPro
   };
 
   const handleDualPrint = () => {
-    const customerContent = `
-      <div class="print-page">
-        <div class="header">
-          <h1>HISOB-FAKTURA (Mijoz nusxasi)</h1>
-          <p>№ ${invoice.invoiceNumber}</p>
-        </div>
-        <div class="info-grid">
-          <div class="info-item"><strong>Mijoz:</strong> ${invoice.customerName}</div>
-          <div class="info-item"><strong>Sana:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('uz-UZ')}</div>
-          ${invoice.organization ? `<div class="info-item"><strong>Tashkilot:</strong> ${invoice.organization}</div>` : ''}
-        </div>
-        <table>
-          <thead>
-            <tr><th>№</th><th>Mahsulot</th><th class="text-right">Miqdor</th><th class="text-right">Narx</th><th class="text-right">Jami</th></tr>
-          </thead>
-          <tbody>
-            ${invoice.items.map((item, index) => `
-              <tr><td>${index + 1}</td><td>${item.productName}</td><td class="text-right">${item.quantity}</td><td class="text-right">${new Intl.NumberFormat('uz-UZ').format(item.sellingPrice)} so'm</td><td class="text-right">${new Intl.NumberFormat('uz-UZ').format(item.total)} so'm</td></tr>
-            `).join('')}
-          </tbody>
-        </table>
-        <div class="summary">
-          <div class="summary-row total"><span>Jami to'lov:</span><span>${new Intl.NumberFormat('uz-UZ').format(invoice.totalAmount)} so'm</span></div>
-        </div>
-        <div class="footer">Chop etildi: ${new Date().toLocaleString('uz-UZ')}</div>
-      </div>
-    `;
+    printBothReceipts(invoice);
+  };
 
-    const warehouseContent = `
-      <div class="print-page warehouse-copy">
-        <div class="header">
-          <h1>TOVAR BERISH VARAQASI (Ombor nusxasi)</h1>
-          <p>№ ${invoice.invoiceNumber}</p>
-        </div>
-        <div class="info-grid">
-          <div class="info-item"><strong>Mijoz:</strong> ${invoice.customerName}</div>
-          <div class="info-item"><strong>Sana:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('uz-UZ')}</div>
-        </div>
-        <table>
-          <thead>
-            <tr><th>№</th><th>Mahsulot</th><th class="text-right">Miqdor</th><th>Ombor</th><th>Imzo</th></tr>
-          </thead>
-          <tbody>
-            ${invoice.items.map((item, index) => `
-              <tr><td>${index + 1}</td><td>${item.productName}</td><td class="text-right">${item.quantity}</td><td>${item.warehouseName || ''}</td><td>__________</td></tr>
-            `).join('')}
-          </tbody>
-        </table>
-        <div class="footer">Omborchi imzo: __________ &nbsp;&nbsp;&nbsp; Qabul qildi: __________</div>
-      </div>
-    `;
+  const handleCustomerPrint = () => {
+    printCustomerReceipt(invoice);
+  };
 
-    const fullContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Dual Print ${invoice.invoiceNumber}</title>
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; }
-          .print-page { border: 1px solid #eee; padding: 30px; margin-bottom: 50px; background: white; page-break-after: always; }
-          .warehouse-copy { border-top: 2px dashed #333; padding-top: 50px; margin-top: 50px; }
-          .header { text-align: center; margin-bottom: 20px; }
-          .header h1 { margin: 0; font-size: 20px; }
-          .info-grid { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; font-size: 14px; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; font-size: 13px; }
-          th { background: #f9f9f9; }
-          .text-right { text-align: right; }
-          .summary { margin-top: 10px; text-align: right; }
-          .total { font-weight: bold; font-size: 16px; border-top: 2px solid #333; padding-top: 5px; }
-          .footer { margin-top: 30px; font-size: 11px; color: #666; }
-          @media print {
-            body { padding: 0; }
-            .print-page { border: none; margin: 0; }
-          }
-        </style>
-      </head>
-      <body>
-        ${customerContent}
-        ${warehouseContent}
-      </body>
-      </html>
-    `;
-
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(fullContent);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
-    }
+  const handleWarehousePrint = () => {
+    printWarehouseReceipt(invoice);
   };
 
   const handleExportPDF = () => {
@@ -135,9 +51,17 @@ export const ViewInvoiceModal = ({ open, onClose, invoice }: ViewInvoiceModalPro
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl">Hisob-faktura #{invoice.invoiceNumber}</DialogTitle>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleExportPDF}>
+              <Button variant="outline" size="sm" onClick={handleCustomerPrint} title="Mijoz cheki">
                 <Printer className="h-4 w-4 mr-2" />
-                Chop etish
+                Mijoz
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleWarehousePrint} title="Ombor cheki">
+                <FileCheck className="h-4 w-4 mr-2" />
+                Ombor
+              </Button>
+              <Button variant="default" size="sm" onClick={handleDualPrint} title="Ikkala chekni chop etish">
+                <Printer className="h-4 w-4 mr-2" />
+                Ikkalasi
               </Button>
             </div>
           </div>

@@ -10,7 +10,13 @@ const connectDB = async () => {
       throw new Error('MONGODB_URI is not defined in environment variables');
     }
 
-    await mongoose.connect(mongoURI);
+    // Configure mongoose settings
+    mongoose.set('strictQuery', false);
+    
+    await mongoose.connect(mongoURI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
     
     console.log('✅ MongoDB connected successfully');
     
@@ -27,12 +33,19 @@ const connectDB = async () => {
     });
     
     mongoose.connection.on('disconnected', () => {
-      console.log('⚠️ MongoDB disconnected');
+      console.warn('⚠️ MongoDB disconnected. Attempting to reconnect...');
+    });
+    
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected successfully');
     });
     
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error);
-    process.exit(1);
+    // Don't exit in development, allow retry
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
   }
 };
 

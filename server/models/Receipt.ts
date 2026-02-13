@@ -56,14 +56,11 @@ const ReceiptSchema: Schema = new Schema(
     receiptNumber: {
       type: String,
       required: true,
-      unique: true,
-      index: true,
     },
     supplier: {
       type: Schema.Types.ObjectId,
       ref: 'Supplier',
       required: true,
-      index: true,
     },
     supplierName: {
       type: String,
@@ -88,7 +85,6 @@ const ReceiptSchema: Schema = new Schema(
       type: Date,
       required: true,
       default: Date.now,
-      index: true,
     },
     items: [ReceiptItemSchema],
     totalAmount: {
@@ -105,5 +101,10 @@ const ReceiptSchema: Schema = new Schema(
     timestamps: true,
   }
 );
+
+// Indexes for performance
+ReceiptSchema.index({ receiptNumber: 1 }, { unique: true });
+ReceiptSchema.index({ supplier: 1 });
+ReceiptSchema.index({ receiptDate: 1 });
 
 export default mongoose.models.Receipt || mongoose.model<IReceipt>('Receipt', ReceiptSchema);

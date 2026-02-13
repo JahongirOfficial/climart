@@ -9,11 +9,14 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { TelegramProvider, useTelegramModal } from "@/contexts/TelegramContext";
+import { TelegramModal } from "@/components/TelegramModal";
 import { Suspense, lazy } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
 // Auth pages
 const Login = lazy(() => import("./pages/Login"));
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // Employee pages
 const Employees = lazy(() => import("./pages/Employees"));
@@ -44,6 +47,8 @@ const MyDebts = lazy(() => import("./pages/purchases/MyDebts"));
 // Sales pages
 const CustomerOrders = lazy(() => import("./pages/sales/CustomerOrders"));
 const CustomerInvoices = lazy(() => import("./pages/sales/CustomerInvoices"));
+const PendingInvoices = lazy(() => import("./pages/sales/PendingInvoices"));
+const CorrectedInvoices = lazy(() => import("./pages/sales/CorrectedInvoices"));
 const Shipments = lazy(() => import("./pages/sales/Shipments"));
 const TaxInvoices = lazy(() => import("./pages/sales/TaxInvoices"));
 const CustomerDebts = lazy(() => import("./pages/sales/CustomerDebts"));
@@ -110,15 +115,23 @@ const queryClient = new QueryClient({
   },
 });
 
+// TelegramModal wrapper component
+const TelegramModalWrapper = () => {
+  const { isTelegramOpen, closeTelegram } = useTelegramModal();
+  return <TelegramModal isOpen={isTelegramOpen} onClose={closeTelegram} />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
         <SidebarProvider>
           <ModalProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter
+            <TelegramProvider>
+              <Toaster />
+              <Sonner />
+              <TelegramModalWrapper />
+              <BrowserRouter
               future={{
                 v7_startTransition: true,
                 v7_relativeSplatPath: true,
@@ -130,75 +143,78 @@ const App = () => (
                   <Route path="/login" element={<Login />} />
                   
                   {/* Admin only routes */}
-                  <Route path="/employees" element={<Employees />} />
+                  <Route path="/employees" element={<ProtectedRoute requireAdmin><Employees /></ProtectedRoute>} />
                   
                   {/* Protected routes */}
-                  <Route path="/" element={<Indicators />} />
-                <Route path="/dashboard" element={<Indicators />} />
-                <Route path="/dashboard/indicators" element={<Indicators />} />
-                <Route path="/dashboard/documents" element={<Documents />} />
-                <Route path="/dashboard/cart" element={<Cart />} />
-                <Route path="/dashboard/audit" element={<Audit />} />
-                <Route path="/dashboard/files" element={<Files />} />
-                <Route path="/purchases" element={<Purchases />} />
-                <Route path="/purchases/orders" element={<Orders />} />
-                <Route path="/purchases/suppliers-accounts" element={<SuppliersAccounts />} />
-                <Route path="/purchases/receipts" element={<Receipts />} />
-                <Route path="/purchases/returns" element={<PurchaseReturns />} />
-                <Route path="/purchases/received-invoices" element={<ReceivedInvoices />} />
-                <Route path="/purchases/procurement" element={<Procurement />} />
-                <Route path="/purchases/my-debts" element={<MyDebts />} />
-                <Route path="/sales" element={<Sales />} />
-                <Route path="/sales/customer-orders" element={<CustomerOrders />} />
-                <Route path="/sales/customer-invoices" element={<CustomerInvoices />} />
-                <Route path="/sales/shipments" element={<Shipments />} />
-                <Route path="/sales/tax-invoices" element={<TaxInvoices />} />
-                <Route path="/sales/customer-debts" element={<CustomerDebts />} />
-                <Route path="/sales/returns" element={<SalesReturns />} />
-                <Route path="/sales/returns-report" element={<ReturnsReport />} />
-                <Route path="/sales/profitability" element={<Profitability />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/products/list" element={<ProductsList />} />
-                <Route path="/products/history/:id" element={<ProductHistory />} />
-                <Route path="/products/services" element={<Services />} />
-                <Route path="/products/price-lists" element={<PriceLists />} />
-                <Route path="/products/serial-numbers" element={<SerialNumbers />} />
-                <Route path="/contacts" element={<Contacts />} />
-                <Route path="/contacts/partners" element={<Partners />} />
-                <Route path="/contacts/contracts" element={<Contracts />} />
-                <Route path="/contacts/telegram" element={<TelegramPage />} />
-                <Route path="/warehouse" element={<Warehouse />} />
-                <Route path="/warehouse/receipt" element={<Receipt />} />
-                <Route path="/warehouse/expense" element={<Expense />} />
-                <Route path="/warehouse/transfer" element={<Transfer />} />
-                <Route path="/warehouse/writeoff" element={<Writeoff />} />
-                <Route path="/warehouse/internal-order" element={<InternalOrder />} />
-                <Route path="/warehouse/balance" element={<Balance />} />
-                <Route path="/warehouse/turnover" element={<Turnover />} />
-                <Route path="/warehouse/warehouses" element={<Warehouses />} />
-                <Route path="/finance" element={<Finance />} />
-                <Route path="/finance/payments" element={<Payments />} />
-                <Route path="/finance/cashflow" element={<CashFlow />} />
-                <Route path="/finance/profit-loss" element={<ProfitLoss />} />
-                <Route path="/finance/mutual-settlements" element={<MutualSettlements />} />
-                <Route path="/retail" element={<Retail />} />
-                <Route path="/retail/channels" element={<Channels />} />
-                <Route path="/retail/statistics" element={<Statistics />} />
-                <Route path="/ecommerce" element={<Ecommerce />} />
-                <Route path="/production" element={<Production />} />
-                <Route path="/tasks" element={<Tasks />} />
-                <Route path="/tasks/add" element={<AddTask />} />
-                <Route path="/tasks/my-tasks" element={<MyTasks />} />
-                <Route path="/solutions" element={<Solutions />} />
-                <Route path="/solutions/add-employee" element={<AddEmployee />} />
-                <Route path="/solutions/employee-performance" element={<EmployeePerformance />} />
-                <Route path="/solutions/kpi" element={<KPI />} />
+                  <Route path="/" element={<ProtectedRoute><Indicators /></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><Indicators /></ProtectedRoute>} />
+                <Route path="/dashboard/indicators" element={<ProtectedRoute><Indicators /></ProtectedRoute>} />
+                <Route path="/dashboard/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
+                <Route path="/dashboard/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+                <Route path="/dashboard/audit" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
+                <Route path="/dashboard/files" element={<ProtectedRoute><Files /></ProtectedRoute>} />
+                <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
+                <Route path="/purchases/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                <Route path="/purchases/suppliers-accounts" element={<ProtectedRoute><SuppliersAccounts /></ProtectedRoute>} />
+                <Route path="/purchases/receipts" element={<ProtectedRoute><Receipts /></ProtectedRoute>} />
+                <Route path="/purchases/returns" element={<ProtectedRoute><PurchaseReturns /></ProtectedRoute>} />
+                <Route path="/purchases/received-invoices" element={<ProtectedRoute><ReceivedInvoices /></ProtectedRoute>} />
+                <Route path="/purchases/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
+                <Route path="/purchases/my-debts" element={<ProtectedRoute><MyDebts /></ProtectedRoute>} />
+                <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
+                <Route path="/sales/customer-orders" element={<ProtectedRoute><CustomerOrders /></ProtectedRoute>} />
+                <Route path="/sales/customer-invoices" element={<ProtectedRoute><CustomerInvoices /></ProtectedRoute>} />
+                <Route path="/sales/pending-invoices" element={<ProtectedRoute><PendingInvoices /></ProtectedRoute>} />
+                <Route path="/sales/corrected-invoices" element={<ProtectedRoute><CorrectedInvoices /></ProtectedRoute>} />
+                <Route path="/sales/shipments" element={<ProtectedRoute><Shipments /></ProtectedRoute>} />
+                <Route path="/sales/tax-invoices" element={<ProtectedRoute><TaxInvoices /></ProtectedRoute>} />
+                <Route path="/sales/customer-debts" element={<ProtectedRoute><CustomerDebts /></ProtectedRoute>} />
+                <Route path="/sales/returns" element={<ProtectedRoute><SalesReturns /></ProtectedRoute>} />
+                <Route path="/sales/returns-report" element={<ProtectedRoute><ReturnsReport /></ProtectedRoute>} />
+                <Route path="/sales/profitability" element={<ProtectedRoute><Profitability /></ProtectedRoute>} />
+                <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+                <Route path="/products/list" element={<ProtectedRoute><ProductsList /></ProtectedRoute>} />
+                <Route path="/products/history/:id" element={<ProtectedRoute><ProductHistory /></ProtectedRoute>} />
+                <Route path="/products/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
+                <Route path="/products/price-lists" element={<ProtectedRoute><PriceLists /></ProtectedRoute>} />
+                <Route path="/products/serial-numbers" element={<ProtectedRoute><SerialNumbers /></ProtectedRoute>} />
+                <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+                <Route path="/contacts/partners" element={<ProtectedRoute><Partners /></ProtectedRoute>} />
+                <Route path="/contacts/contracts" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
+                <Route path="/contacts/telegram" element={<ProtectedRoute><TelegramPage /></ProtectedRoute>} />
+                <Route path="/warehouse" element={<ProtectedRoute><Warehouse /></ProtectedRoute>} />
+                <Route path="/warehouse/receipt" element={<ProtectedRoute><Receipt /></ProtectedRoute>} />
+                <Route path="/warehouse/expense" element={<ProtectedRoute><Expense /></ProtectedRoute>} />
+                <Route path="/warehouse/transfer" element={<ProtectedRoute><Transfer /></ProtectedRoute>} />
+                <Route path="/warehouse/writeoff" element={<ProtectedRoute><Writeoff /></ProtectedRoute>} />
+                <Route path="/warehouse/internal-order" element={<ProtectedRoute><InternalOrder /></ProtectedRoute>} />
+                <Route path="/warehouse/balance" element={<ProtectedRoute><Balance /></ProtectedRoute>} />
+                <Route path="/warehouse/turnover" element={<ProtectedRoute><Turnover /></ProtectedRoute>} />
+                <Route path="/warehouse/warehouses" element={<ProtectedRoute><Warehouses /></ProtectedRoute>} />
+                <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
+                <Route path="/finance/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
+                <Route path="/finance/cashflow" element={<ProtectedRoute><CashFlow /></ProtectedRoute>} />
+                <Route path="/finance/profit-loss" element={<ProtectedRoute><ProfitLoss /></ProtectedRoute>} />
+                <Route path="/finance/mutual-settlements" element={<ProtectedRoute><MutualSettlements /></ProtectedRoute>} />
+                <Route path="/retail" element={<ProtectedRoute><Retail /></ProtectedRoute>} />
+                <Route path="/retail/channels" element={<ProtectedRoute><Channels /></ProtectedRoute>} />
+                <Route path="/retail/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+                <Route path="/ecommerce" element={<ProtectedRoute><Ecommerce /></ProtectedRoute>} />
+                <Route path="/production" element={<ProtectedRoute><Production /></ProtectedRoute>} />
+                <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+                <Route path="/tasks/add" element={<ProtectedRoute><AddTask /></ProtectedRoute>} />
+                <Route path="/tasks/my-tasks" element={<ProtectedRoute><MyTasks /></ProtectedRoute>} />
+                <Route path="/solutions" element={<ProtectedRoute><Solutions /></ProtectedRoute>} />
+                <Route path="/solutions/add-employee" element={<ProtectedRoute><AddEmployee /></ProtectedRoute>} />
+                <Route path="/solutions/employee-performance" element={<ProtectedRoute><EmployeePerformance /></ProtectedRoute>} />
+                <Route path="/solutions/kpi" element={<ProtectedRoute><KPI /></ProtectedRoute>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
           </BrowserRouter>
-        </ModalProvider>
+        </TelegramProvider>
+      </ModalProvider>
       </SidebarProvider>
     </AuthProvider>
   </TooltipProvider>

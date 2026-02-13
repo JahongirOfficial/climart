@@ -119,25 +119,20 @@ const ProductSchema: Schema = new Schema(
       type: String,
       required: true,
       trim: true,
-      index: true, // Index for faster search
     },
     sku: {
       type: String,
-      unique: true,
       sparse: true, // Allow null values but enforce uniqueness if present
-      index: true,
       trim: true,
     },
     barcode: {
       type: String,
       sparse: true,
-      index: true,
       trim: true,
     },
     category: {
       type: String,
       trim: true,
-      index: true,
     },
     unit: {
       type: String,
@@ -215,7 +210,6 @@ const ProductSchema: Schema = new Schema(
       type: String,
       enum: ['active', 'inactive', 'discontinued'],
       default: 'active',
-      index: true,
     },
   },
   {
@@ -223,8 +217,10 @@ const ProductSchema: Schema = new Schema(
   }
 );
 
-// Indexes for performance (unique indexes already defined in schema)
+// Indexes for performance
 ProductSchema.index({ name: 1 });
+ProductSchema.index({ sku: 1 }, { unique: true, sparse: true });
+ProductSchema.index({ barcode: 1 }, { sparse: true });
 ProductSchema.index({ category: 1 });
 ProductSchema.index({ status: 1 });
 

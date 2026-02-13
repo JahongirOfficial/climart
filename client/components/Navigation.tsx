@@ -13,6 +13,7 @@ import {
   UserCog,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTelegramModal } from "@/contexts/TelegramContext";
 
 const allModules = [
   { id: "dashboard", name: "Ko'rsatkichlar", icon: BarChart3, path: "/", hasSubmenu: true, adminOnly: false },
@@ -47,6 +48,8 @@ const purchasesSubMenu = [
 const salesSubMenu = [
   { id: "customer-orders", name: "Mijozlarning buyurtmalari", path: "/sales/customer-orders" },
   { id: "customer-invoices", name: "Xaridorlarning to'lov fakturalari", path: "/sales/customer-invoices" },
+  { id: "pending-invoices", name: "Kutilayotgan tan narxlar", path: "/sales/pending-invoices" },
+  { id: "corrected-invoices", name: "Tuzatilgan hisob-fakturalar", path: "/sales/corrected-invoices" },
   { id: "shipments", name: "Yuklab yuborish", path: "/sales/shipments" },
   { id: "tax-invoices", name: "Berilgan hisob-fakturalar", path: "/sales/tax-invoices" },
   { id: "customer-debts", name: "Mendan qarzdorlar", path: "/sales/customer-debts" },
@@ -95,6 +98,7 @@ export const Navigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAdmin, hasPermission, user } = useAuth();
+  const { openTelegram } = useTelegramModal();
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
 
   // Filter modules based on user role and permissions
@@ -328,6 +332,22 @@ export const Navigation = () => {
             <div className="flex gap-1 px-4 py-2 min-w-min">
               {filterSubmenuItems(contactsSubMenu, 'contacts').map((item) => {
                 const isSubActive = location.pathname === item.path;
+
+                // Telegram uchun maxsus handler
+                if (item.id === 'telegram') {
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => openTelegram()}
+                      className={cn(
+                        "px-4 py-2 text-sm font-medium rounded transition-all duration-200 whitespace-nowrap",
+                        "text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                      )}
+                    >
+                      {item.name}
+                    </button>
+                  );
+                }
 
                 return (
                   <Link

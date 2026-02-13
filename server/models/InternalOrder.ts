@@ -67,7 +67,6 @@ const InternalOrderSchema: Schema = new Schema(
     orderNumber: {
       type: String,
       required: true,
-      unique: true,
     },
     organization: {
       type: String,

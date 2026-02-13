@@ -67,7 +67,6 @@ const CustomerInvoiceItemSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Warehouse',
     required: true,
-    index: true,
   },
   warehouseName: {
     type: String,
@@ -84,14 +83,11 @@ const CustomerInvoiceSchema: Schema = new Schema(
     invoiceNumber: {
       type: String,
       required: true,
-      unique: true,
-      index: true,
     },
     customer: {
       type: Schema.Types.ObjectId,
       ref: 'Partner',
       required: true,
-      index: true,
     },
     customerName: {
       type: String,
@@ -113,18 +109,15 @@ const CustomerInvoiceSchema: Schema = new Schema(
       type: Date,
       required: true,
       default: Date.now,
-      index: true, // Critical for date range filtering
     },
     dueDate: {
       type: Date,
       required: true,
-      index: true,
     },
     status: {
       type: String,
       enum: ['paid', 'partial', 'unpaid', 'overdue', 'cancelled'],
       default: 'unpaid',
-      index: true,
     },
     shippedStatus: {
       type: String,
@@ -163,9 +156,11 @@ const CustomerInvoiceSchema: Schema = new Schema(
   }
 );
 
-// Indexes for performance (unique index already defined in schema)
+// Indexes for performance
+CustomerInvoiceSchema.index({ invoiceNumber: 1 }, { unique: true });
 CustomerInvoiceSchema.index({ customer: 1 });
 CustomerInvoiceSchema.index({ invoiceDate: 1 });
+CustomerInvoiceSchema.index({ dueDate: 1 });
 CustomerInvoiceSchema.index({ status: 1 });
 
 export default mongoose.models.CustomerInvoice || mongoose.model<ICustomerInvoice>('CustomerInvoice', CustomerInvoiceSchema);

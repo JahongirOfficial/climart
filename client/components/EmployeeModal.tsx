@@ -134,7 +134,6 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
   const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [address, setAddress] = useState('');
-  const [password, setPassword] = useState('');
   const [permissions, setPermissions] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [credentials, setCredentials] = useState<EmployeeCredentials | null>(null);
@@ -146,14 +145,12 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
       setLastName(employee.lastName);
       setPhoneNumber(employee.phoneNumber);
       setAddress('');
-      setPassword('');
       setPermissions(employee.permissions);
     } else {
       setFirstName('');
       setLastName('');
       setPhoneNumber('+998');
       setAddress('');
-      setPassword('');
       setPermissions([]);
     }
     setError('');
@@ -283,16 +280,6 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
       return;
     }
 
-    if (!employee && !password) {
-      setError('Parol kiritish majburiy');
-      return;
-    }
-
-    if (!employee && password.length < 6) {
-      setError('Parol kamida 6 ta belgidan iborat bo\'lishi kerak');
-      return;
-    }
-
     const cleanPhone = phoneNumber.replace(/\s/g, '');
 
     mutation.mutate({
@@ -300,7 +287,6 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
       lastName,
       phoneNumber: cleanPhone,
       address: address || undefined,
-      password: employee ? undefined : password,
       permissions,
     });
   };
@@ -387,23 +373,6 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
               />
             </div>
 
-            {!employee && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Parol *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Kamida 6 ta belgi"
-                  disabled={mutation.isPending}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Kamida 6 ta belgidan iborat bo'lishi kerak
-                </p>
-              </div>
-            )}
-
             <div className="space-y-2">
               <Label>Ruxsatlar</Label>
               <div className="space-y-4 p-4 border rounded-lg max-h-96 overflow-y-auto">
@@ -453,7 +422,7 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
             {!employee && (
               <div className="p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md">
                 <p className="text-sm text-blue-600 dark:text-blue-400">
-                  💡 Login avtomatik yaratiladi (ism va familyadan)
+                  💡 Login va parol avtomatik yaratiladi
                 </p>
               </div>
             )}
@@ -494,7 +463,7 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl">Xodim muvaffaqiyatli qo'shildi! 🎉</AlertDialogTitle>
             <AlertDialogDescription>
-              Quyidagi ma'lumotlarni xodimga bering. Bu ma'lumotlarni keyinroq ko'ra olmaysiz.
+              Quyidagi ma'lumotlarni xodimga bering. Parol avtomatik yaratildi va xavfsiz.
             </AlertDialogDescription>
           </AlertDialogHeader>
           

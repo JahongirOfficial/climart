@@ -19,9 +19,10 @@ import {
   Loader2,
   Settings
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useModal } from "@/contexts/ModalContext";
+import { useTelegram } from "@/hooks/useTelegram";
 
 interface Chat {
   id: string;
@@ -43,110 +44,219 @@ interface Message {
 }
 
 const Telegram = () => {
-  const { showSuccess, showWarning } = useModal();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { showSuccess, showWarning, showError } = useModal();
+  const telegram = useTelegram();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [authStep, setAuthStep] = useState<'phone' | 'code' | 'password'>('phone');
-  const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
 
   // Auth form states
   const [phoneNumber, setPhoneNumber] = useState('');
   const [apiId, setApiId] = useState('');
   const [apiHash, setApiHash] = useState('');
   const [code, setCode] = useState('');
-  const [password, setPassword] = useState('');
 
   // Chat states
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+  const [showChatList, setShowChatList] = useState(true); // Mobile uchun
   const [searchTerm, setSearchTerm] = useState('');
   const [messageText, setMessageText] = useState('');
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loadingChats, setLoadingChats] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
-  // Mock data
-  const [chats] = useState<Chat[]>([
-    {
-      id: '1',
-      name: 'Alisher Karimov',
-      lastMessage: 'Mahsulot qachon keladi?',
-      lastMessageTime: '14:30',
-      unreadCount: 2,
-      isOnline: true,
-      type: 'private'
-    },
-    {
-      id: '2',
-      name: 'Dilshod Toshmatov',
-      lastMessage: 'Raxmat, buyurtma qabul qilindi',
-      lastMessageTime: '12:15',
-      unreadCount: 0,
-      isOnline: false,
-      type: 'private'
-    },
-    {
-      id: '3',
-      name: 'Savdo guruhi',
-      lastMessage: 'Yangi narxlar e\'lon qilindi',
-      lastMessageTime: 'Kecha',
-      unreadCount: 5,
-      isOnline: true,
-      type: 'group'
+  // Notification permission so'rash
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+      
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          setNotificationPermission(permission);
+        });
+      }
     }
-  ]);
+  }, []);
 
-  const [messages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Assalomu alaykum! Mahsulot haqida ma\'lumot bera olasizmi?',
-      time: '14:25',
-      isOutgoing: false,
-      status: 'read'
-    },
-    {
-      id: '2',
-      text: 'Vaalaykum assalom! Albatta, qaysi mahsulot haqida?',
-      time: '14:26',
-      isOutgoing: true,
-      status: 'read'
-    },
-    {
-      id: '3',
-      text: 'Mahsulot qachon keladi?',
-      time: '14:30',
-      isOutgoing: false,
-      status: 'delivered'
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Load chats when authenticated with real-time updates
+  useEffect(() => {
+    if (telegram.isAuthenticated) {
+      loadChats();
+      
+      // Real-time polling - har 5 sekundda chatlarni yangilash (silent)
+      const interval = setInterval(() => {
+        silentRefreshChats();
+      }, 5000);
+      
+      return () => clearInterval(interval);
     }
-  ]);
+  }, [telegram.isAuthenticated]);
+
+  // Load messages when chat is selected
+  useEffect(() => {
+    if (selectedChat && telegram.isAuthenticated) {
+      loadMessages(selectedChat.id);
+      
+      // Real-time polling - har 3 sekundda yangi xabarlarni tekshirish (silent)
+      const interval = setInterval(() => {
+        silentRefreshMessages(selectedChat.id);
+      }, 3000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [selectedChat, telegram.isAuthenticated]);
+
+  const loadChats = async () => {
+    setLoadingChats(true);
+    try {
+      const data = await telegram.getChats();
+      setChats(data);
+    } catch (err) {
+      showError('Chatlarni yuklashda xatolik');
+    } finally {
+      setLoadingChats(false);
+    }
+  };
+
+  const loadMessages = async (chatId: string) => {
+    setLoadingMessages(true);
+    try {
+      const data = await telegram.getMessages(chatId);
+      setMessages(data);
+    } catch (err) {
+      showError('Xabarlarni yuklashda xatolik');
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  // Silent refresh - yangilanish sezilmasin
+  const silentRefreshChats = async () => {
+    try {
+      const data = await telegram.getChats();
+      
+      // Yangi xabarlar borligini tekshirish
+      if (chats.length > 0) {
+        data.forEach(newChat => {
+          const oldChat = chats.find(c => c.id === newChat.id);
+          if (oldChat && newChat.unreadCount > oldChat.unreadCount) {
+            // Yangi xabar keldi - notification ko'rsatish
+            showNotification(newChat.name, newChat.lastMessage);
+          }
+        });
+      }
+      
+      setChats(data);
+    } catch (err) {
+      // Silent error - xatolikni ko'rsatmaymiz
+      console.error('Silent refresh error:', err);
+    }
+  };
+
+  const silentRefreshMessages = async (chatId: string) => {
+    try {
+      const data = await telegram.getMessages(chatId);
+      
+      // Yangi xabarlar borligini tekshirish
+      if (messages.length > 0 && data.length > messages.length) {
+        const newMessages = data.slice(messages.length);
+        newMessages.forEach(msg => {
+          if (!msg.isOutgoing && selectedChat) {
+            // Kiruvchi yangi xabar - notification ko'rsatish
+            showNotification(selectedChat.name, msg.text);
+          }
+        });
+      }
+      
+      setMessages(data);
+    } catch (err) {
+      // Silent error
+      console.error('Silent refresh error:', err);
+    }
+  };
+
+  // Notification ko'rsatish
+  const showNotification = (title: string, body: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      // Agar sahifa focus'da bo'lmasa, notification ko'rsatish
+      if (document.hidden) {
+        const notification = new Notification(title, {
+          body: body,
+          icon: '/telegram-icon.png', // Telegram icon qo'shishingiz mumkin
+          badge: '/telegram-badge.png',
+          tag: 'telegram-message',
+          requireInteraction: false,
+          silent: false
+        });
+
+        // Notification'ga bosilganda sahifani ochish
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+
+        // 5 sekunddan keyin avtomatik yopish
+        setTimeout(() => notification.close(), 5000);
+      }
+    }
+  };
 
   const handleAuth = async () => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
       if (authStep === 'phone') {
+        const result = await telegram.sendCode({ phoneNumber, apiId, apiHash });
+        setSessionId(result.sessionId);
         setAuthStep('code');
-        showSuccess("Demo versiya: Tasdiqlash kodi sifatida ixtiyoriy 5 xonali son kiriting (masalan: 12345)");
+        showSuccess(result.message);
       } else if (authStep === 'code') {
-        if (code === '12345' || code.length === 5) {
-          setIsAuthenticated(true);
-          showSuccess("Tizimga muvaffaqiyatli kirildi (Demo)");
-        } else {
-          showWarning("Kod noto'g'ri (Demo uchun 12345 ishlating)");
-        }
+        await telegram.verifyCode(sessionId, code);
+        showSuccess("Tizimga muvaffaqiyatli kirildi!");
       }
-      setLoading(false);
-    }, 1500);
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
+    }
   };
 
-  const handleSendMessage = () => {
-    if (!messageText.trim()) return;
-    // Send message logic here
-    setMessageText('');
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedChat) return;
+    
+    try {
+      const result = await telegram.sendMessage(selectedChat.id, messageText);
+      setMessages([...messages, result.message]);
+      setMessageText('');
+    } catch (err) {
+      showError('Xabarni yuborishda xatolik');
+    }
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
+  const handleSelectChat = (chat: Chat) => {
+    setSelectedChat(chat);
+    setShowChatList(false); // Mobileda chatni ochganda ro'yxatni yashirish
+  };
+
+  const handleBackToChats = () => {
+    setShowChatList(true);
+    setSelectedChat(null);
+  };
+
+  const handleLogout = async () => {
+    await telegram.logout();
     setAuthStep('phone');
     setPhoneNumber('');
     setApiId('');
     setApiHash('');
     setCode('');
+    setSessionId('');
+    setChats([]);
+    setMessages([]);
+    setSelectedChat(null);
   };
 
   const filteredChats = chats.filter(chat =>
@@ -166,7 +276,7 @@ const Telegram = () => {
     }
   };
 
-  if (!isAuthenticated) {
+  if (!telegram.isAuthenticated) {
     return (
       <Layout>
         <div className="min-h-screen flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-900">
@@ -236,9 +346,9 @@ const Telegram = () => {
                 <Button
                   onClick={handleAuth}
                   className="w-full"
-                  disabled={!phoneNumber || !apiId || !apiHash || loading}
+                  disabled={!phoneNumber || !apiId || !apiHash || telegram.loading}
                 >
-                  {loading ? (
+                  {telegram.loading ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Yuborilmoqda...
@@ -274,9 +384,9 @@ const Telegram = () => {
                 <Button
                   onClick={handleAuth}
                   className="w-full"
-                  disabled={code.length < 5 || loading}
+                  disabled={code.length < 5 || telegram.loading}
                 >
-                  {loading ? (
+                  {telegram.loading ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Tekshirilmoqda...
@@ -318,181 +428,285 @@ const Telegram = () => {
 
   return (
     <Layout>
-      <div className="h-[calc(100vh-4rem)] flex flex-col bg-gray-50 dark:bg-gray-900">
-        {/* Header */}
-        <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <MessageCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Telegram</h1>
-              <Badge className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
-                Ulangan
-              </Badge>
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-[#0e1621]">
+        {/* Telegram Container - Mobile Width */}
+        <div className="w-full max-w-[500px] h-full flex flex-col bg-[#0e1621] shadow-2xl">
+          {/* Telegram Mobile Header - Faqat chatlar ro'yxatida ko'rinadi */}
+          {showChatList && (
+            <div className="bg-[#212d3b] px-4 py-3 flex items-center justify-between border-b border-[#2b5278]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#5288c1] flex items-center justify-center">
+                  <MessageCircle className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-white font-semibold text-lg">Telegram</h1>
+                  <p className="text-[#7e8e9f] text-xs">Ulangan</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Notification Permission Button */}
+                {notificationPermission !== 'granted' && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      if ('Notification' in window) {
+                        Notification.requestPermission().then(permission => {
+                          setNotificationPermission(permission);
+                          if (permission === 'granted') {
+                            showSuccess('Bildirishnomalar yoqildi!');
+                          }
+                        });
+                      }
+                    }}
+                    className="h-9 w-9 p-0 hover:bg-[#2b5278] text-[#7e8e9f] hover:text-white"
+                    title="Bildirishnomalarni yoqish"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </Button>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-9 w-9 p-0 hover:bg-[#2b5278] text-[#7e8e9f] hover:text-white"
+                >
+                  <Search className="h-5 w-5" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleLogout}
+                  className="h-9 w-9 p-0 hover:bg-[#2b5278] text-[#7e8e9f] hover:text-white"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4" />
-                Chiqish
-              </Button>
-            </div>
-          </div>
-        </div>
+          )}
 
-        {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Chat List */}
-          <div className="w-full md:w-96 bg-white dark:bg-gray-800 border-r dark:border-gray-700 flex flex-col">
-            {/* Search */}
-            <div className="p-4 border-b dark:border-gray-700">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
-                <Input
-                  type="search"
-                  placeholder="Qidirish..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+          {/* Main Content */}
+          <div className="flex-1 flex overflow-hidden relative">
+            {/* Chat List - Telegram Mobile Style */}
+            <div className={cn(
+              "w-full bg-[#0e1621] flex flex-col absolute inset-0 transition-transform duration-300",
+              !showChatList && "-translate-x-full"
+            )}>
+              {/* Search Bar */}
+              <div className="p-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#7e8e9f]" />
+                  <Input
+                    type="search"
+                    placeholder="Qidirish"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-9 bg-[#212d3b] border-none text-white placeholder:text-[#7e8e9f] focus-visible:ring-[#2b5278]"
+                  />
+                </div>
+              </div>
+
+              {/* Chats List */}
+              <div className="flex-1 overflow-y-auto">
+                {loadingChats ? (
+                  <div className="flex items-center justify-center h-32">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#5288c1]" />
+                  </div>
+                ) : filteredChats.length === 0 ? (
+                  <div className="flex items-center justify-center h-32">
+                    <p className="text-sm text-[#7e8e9f]">Chatlar topilmadi</p>
+                  </div>
+                ) : (
+                  filteredChats.map((chat) => (
+                    <button
+                      key={chat.id}
+                      onClick={() => handleSelectChat(chat)}
+                      className={cn(
+                        "w-full p-3 flex items-start gap-3 hover:bg-[#212d3b] transition-colors border-b border-[#151e27]",
+                        selectedChat?.id === chat.id && "bg-[#212d3b]"
+                      )}
+                    >
+                      <div className="relative flex-shrink-0">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#5288c1] to-[#3d6fa3] flex items-center justify-center text-white font-semibold">
+                          {chat.name.charAt(0)}
+                        </div>
+                        {chat.isOnline && (
+                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-[#4dcd5e] rounded-full border-2 border-[#0e1621]" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-medium text-white truncate text-sm">
+                            {chat.name}
+                          </h3>
+                          <span className="text-xs text-[#7e8e9f] flex-shrink-0 ml-2">
+                            {chat.lastMessageTime}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-[#7e8e9f] truncate">
+                            {chat.lastMessage}
+                          </p>
+                          {chat.unreadCount > 0 && (
+                            <div className="bg-[#4dcd5e] text-white text-xs rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center ml-2 font-medium">
+                              {chat.unreadCount}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 
-            {/* Chats */}
-            <div className="flex-1 overflow-y-auto">
-              {filteredChats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => setSelectedChat(chat)}
-                  className={cn(
-                    "w-full p-4 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b dark:border-gray-700",
-                    selectedChat?.id === chat.id && "bg-blue-50 dark:bg-blue-900/20"
-                  )}
-                >
-                  <div className="relative flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
-                      {chat.name.charAt(0)}
-                    </div>
-                    {chat.isOnline && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                        {chat.name}
-                      </h3>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
-                        {chat.lastMessageTime}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                        {chat.lastMessage}
-                      </p>
-                      {chat.unreadCount > 0 && (
-                        <Badge className="bg-blue-600 text-white text-xs ml-2">
-                          {chat.unreadCount}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Chat Window */}
-          <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900">
-            {selectedChat ? (
-              <>
-                {/* Chat Header */}
-                <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4">
-                  <div className="flex items-center gap-3">
+            {/* Chat Window - Telegram Mobile Style */}
+            <div className={cn(
+              "flex-1 flex flex-col bg-[#0e1621] absolute inset-0 transition-transform duration-300",
+              showChatList && "translate-x-full"
+            )}>
+              {selectedChat ? (
+                <>
+                  {/* Chat Header */}
+                  <div className="bg-[#212d3b] px-3 py-2.5 flex items-center gap-3 border-b border-[#2b5278]">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleBackToChats}
+                      className="h-9 w-9 p-0 hover:bg-[#2b5278] text-white"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </Button>
                     <div className="relative">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#5288c1] to-[#3d6fa3] flex items-center justify-center text-white font-semibold text-sm">
                         {selectedChat.name.charAt(0)}
                       </div>
                       {selectedChat.isOnline && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />
+                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#4dcd5e] rounded-full border-2 border-[#212d3b]" />
                       )}
                     </div>
-                    <div>
-                      <h2 className="font-semibold text-gray-900 dark:text-white">
+                    <div className="flex-1 min-w-0">
+                      <h2 className="font-medium text-white truncate text-sm">
                         {selectedChat.name}
                       </h2>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {selectedChat.isOnline ? 'Onlayn' : 'Oxirgi faollik: 2 soat oldin'}
+                      <p className="text-xs text-[#7e8e9f] truncate">
+                        {selectedChat.isOnline ? 'onlayn' : 'oxirgi faollik: 2 soat oldin'}
                       </p>
                     </div>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={cn(
-                        "flex",
-                        message.isOutgoing ? "justify-end" : "justify-start"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "max-w-[70%] rounded-2xl px-4 py-2",
-                          message.isOutgoing
-                            ? "bg-blue-600 text-white"
-                            : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        )}
-                      >
-                        <p className="text-sm">{message.text}</p>
-                        <div className="flex items-center justify-end gap-1 mt-1">
-                          <span className={cn(
-                            "text-xs",
-                            message.isOutgoing ? "text-blue-100" : "text-gray-500 dark:text-gray-400"
-                          )}>
-                            {message.time}
-                          </span>
-                          {message.isOutgoing && getMessageStatusIcon(message.status)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Message Input */}
-                <div className="bg-white dark:bg-gray-800 border-t dark:border-gray-700 p-4">
-                  <div className="flex items-end gap-2">
-                    <Input
-                      type="text"
-                      placeholder="Xabar yozing..."
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      className="flex-1"
-                    />
                     <Button
-                      onClick={handleSendMessage}
-                      disabled={!messageText.trim()}
-                      className="flex-shrink-0"
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 w-9 p-0 hover:bg-[#2b5278] text-[#7e8e9f] hover:text-white"
                     >
-                      <Send className="h-4 w-4" />
+                      <Search className="h-5 w-5" />
                     </Button>
                   </div>
+
+                  {/* Messages - Telegram Style */}
+                  <div 
+                    className="flex-1 overflow-y-auto p-3 space-y-2"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                      backgroundColor: '#0e1621'
+                    }}
+                  >
+                    {loadingMessages ? (
+                      <div className="flex items-center justify-center h-full">
+                        <Loader2 className="h-8 w-8 animate-spin text-[#5288c1]" />
+                      </div>
+                    ) : (
+                      <>
+                        {messages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={cn(
+                              "flex",
+                              message.isOutgoing ? "justify-end" : "justify-start"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "max-w-[85%] rounded-xl px-3 py-2 shadow-sm",
+                                message.isOutgoing
+                                  ? "bg-[#2b5278] text-white rounded-br-sm"
+                                  : "bg-[#212d3b] text-white rounded-bl-sm"
+                              )}
+                            >
+                              <p className="text-sm break-words leading-relaxed">{message.text}</p>
+                              <div className="flex items-center justify-end gap-1 mt-0.5">
+                                <span className="text-[10px] text-[#7e8e9f]">
+                                  {message.time}
+                                </span>
+                                {message.isOutgoing && (
+                                  <span className="text-[#7e8e9f]">
+                                    {getMessageStatusIcon(message.status)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={messagesEndRef} />
+                      </>
+                    )}
+                  </div>
+
+                  {/* Message Input - Telegram Style */}
+                  <div className="bg-[#0e1621] p-2 border-t border-[#151e27]">
+                    <div className="flex items-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 w-9 p-0 flex-shrink-0 hover:bg-[#212d3b] text-[#7e8e9f] hover:text-white"
+                      >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </Button>
+                      <Input
+                        type="text"
+                        placeholder="Xabar..."
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                        className="flex-1 h-9 bg-[#212d3b] border-none text-white placeholder:text-[#7e8e9f] focus-visible:ring-[#2b5278] rounded-full px-4"
+                      />
+                      {messageText.trim() ? (
+                        <Button
+                          onClick={handleSendMessage}
+                          disabled={!messageText.trim()}
+                          className="h-9 w-9 p-0 flex-shrink-0 bg-[#5288c1] hover:bg-[#3d6fa3] rounded-full"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 w-9 p-0 flex-shrink-0 hover:bg-[#212d3b] text-[#7e8e9f] hover:text-white"
+                        >
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                          </svg>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center p-4">
+                  <div className="text-center">
+                    <MessageCircle className="h-16 w-16 text-[#2b5278] mx-auto mb-3" />
+                    <p className="text-[#7e8e9f]">
+                      Suhbatni tanlang
+                    </p>
+                  </div>
                 </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <MessageCircle className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Suhbatni tanlang
-                  </p>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>

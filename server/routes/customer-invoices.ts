@@ -5,6 +5,99 @@ import mongoose from 'mongoose';
 
 const router = Router();
 
+// Get pending invoices (with costPricePending items)
+router.get('/pending', async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate, customerId } = req.query;
+    const query: any = {
+      'items.costPricePending': true
+    };
+
+    // Apply date filters
+    if (startDate || endDate) {
+      query.invoiceDate = {};
+      if (startDate) query.invoiceDate.$gte = new Date(startDate as string);
+      if (endDate) query.invoiceDate.$lte = new Date(endDate as string);
+    }
+
+    // Apply customer filter
+    if (customerId) {
+      query.customer = customerId;
+    }
+
+    const invoices = await CustomerInvoice.find(query)
+      .populate('customer', 'name')
+      .sort({ invoiceDate: -1 })
+      .lean();
+
+    // Calculate pending items count for each invoice
+    const result = invoices.map((inv: any) => ({
+      _id: inv._id,
+      invoiceNumber: inv.invoiceNumber,
+      customerName: inv.customerName,
+      invoiceDate: inv.invoiceDate,
+      totalAmount: inv.totalAmount,
+      pendingItemsCount: inv.items.filter((item: any) => item.costPricePending).length,
+      items: inv.items.map((item: any) => ({
+        productName: item.productName,
+        quantity: item.quantity,
+        costPricePending: item.costPricePending || false
+      }))
+    }));
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
+// Get corrected invoices (with isMinusCorrection flag)
+router.get('/corrected', async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate, productId } = req.query;
+    const query: any = {
+      isMinusCorrection: true
+    };
+
+    // Apply date filters on updatedAt
+    if (startDate || endDate) {
+      query.updatedAt = {};
+      if (startDate) query.updatedAt.$gte = new Date(startDate as string);
+      if (endDate) query.updatedAt.$lte = new Date(endDate as string);
+    }
+
+    // Apply product filter
+    if (productId) {
+      query['items.product'] = productId;
+    }
+
+    const invoices = await CustomerInvoice.find(query)
+      .populate('customer', 'name')
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    // Format response
+    const result = invoices.map((inv: any) => ({
+      _id: inv._id,
+      invoiceNumber: inv.invoiceNumber,
+      customerName: inv.customerName,
+      invoiceDate: inv.invoiceDate,
+      updatedAt: inv.updatedAt,
+      totalAmount: inv.totalAmount,
+      items: inv.items.map((item: any) => ({
+        productName: item.productName,
+        quantity: item.quantity,
+        costPrice: item.costPrice,
+        costPricePending: item.costPricePending || false
+      }))
+    }));
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
 // Get all customer invoices with optional date filtering
 router.get('/', async (req: Request, res: Response) => {
   try {

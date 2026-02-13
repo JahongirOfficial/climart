@@ -19,7 +19,6 @@ const UserSchema = new Schema<IUser>(
     username: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
       minlength: 3,
@@ -48,7 +47,6 @@ const UserSchema = new Schema<IUser>(
     phoneNumber: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
     address: {
@@ -77,8 +75,8 @@ const UserSchema = new Schema<IUser>(
 );
 
 // Indexes for performance
-UserSchema.index({ username: 1 });
-UserSchema.index({ phoneNumber: 1 });
+UserSchema.index({ username: 1 }, { unique: true });
+UserSchema.index({ phoneNumber: 1 }, { unique: true });
 UserSchema.index({ role: 1 });
 UserSchema.index({ isActive: 1 });
 
