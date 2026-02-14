@@ -35,6 +35,7 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // Send as 'identifier' to match backend expectation
       await login(username, password);
       navigate('/');
     } catch (err) {

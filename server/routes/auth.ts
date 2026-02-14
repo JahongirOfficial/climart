@@ -12,31 +12,34 @@ const router = Router();
  */
 router.post('/login', async (req: Request, res: Response) => {
   try {
-    const { identifier, password } = req.body;
+    const { identifier, username, password } = req.body;
     
-    console.log('Login attempt:', { identifier, password: '***' });
+    // Support both 'identifier' (old) and 'username' (new) for backward compatibility
+    const loginIdentifier = identifier || username;
     
-    if (!identifier || !password) {
-      return res.status(400).json({ error: 'Identifier and password are required' });
+    console.log('Login attempt:', { identifier: loginIdentifier, password: '***' });
+    
+    if (!loginIdentifier || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
     }
     
     // Find user by username or phone number
     const user = await User.findOne({
       $or: [
-        { username: identifier.toLowerCase() },
-        { phoneNumber: identifier }
+        { username: loginIdentifier.toLowerCase() },
+        { phoneNumber: loginIdentifier }
       ]
     }).select('+passwordHash'); // Include passwordHash for verification
     
     console.log('User found:', user ? { username: user.username, phoneNumber: user.phoneNumber } : 'NOT FOUND');
     
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Login yoki parol noto\'g\'ri' });
     }
     
     // Check if account is active
     if (!user.isActive) {
-      return res.status(403).json({ error: 'Account is inactive' });
+      return res.status(403).json({ error: 'Hisob faol emas' });
     }
     
     // Verify password
@@ -44,7 +47,7 @@ router.post('/login', async (req: Request, res: Response) => {
     console.log('Password valid:', isValidPassword);
     
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Login yoki parol noto\'g\'ri' });
     }
     
     // Generate JWT token
