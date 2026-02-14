@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { UserProfile, LoginResponse } from '@shared/api';
 
 interface AuthContextType {
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('auth_user', JSON.stringify(data.user));
   };
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     if (!token) return;
     
     try {
@@ -88,11 +88,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
         setUser(data.user);
         localStorage.setItem('auth_user', JSON.stringify(data.user));
+        console.log('User refreshed:', data.user.permissions);
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
     }
-  };
+  }, [token]);
 
   const logout = () => {
     setToken(null);
