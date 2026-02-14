@@ -22,7 +22,24 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 /**
- * Generate a random secure password
+ * Generate a password based on last name and random numbers
+ * Format: lastname + 4 random digits
+ * Example: raxmatullayev0804
+ * @param lastName - Employee's last name
+ * @returns Generated password
+ */
+export function generatePasswordFromName(lastName: string): string {
+  // Convert to lowercase and remove spaces
+  const cleanLastName = lastName.toLowerCase().replace(/\s+/g, '');
+  
+  // Generate 4 random digits
+  const randomDigits = Math.floor(1000 + Math.random() * 9000).toString();
+  
+  return cleanLastName + randomDigits;
+}
+
+/**
+ * Generate a random secure password (legacy - for backward compatibility)
  * @returns Random password (8 characters with mixed types)
  */
 export function generatePassword(): string {

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { User } from '../models/User';
-import { hashPassword, generatePassword } from '../utils/password';
+import { hashPassword, generatePasswordFromName } from '../utils/password';
 import { generateUsername } from '../utils/username';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 
@@ -38,8 +38,8 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'First name, last name, and phone number are required' });
     }
     
-    // Generate random password automatically
-    const password = generatePassword();
+    // Generate password from last name + 4 random digits
+    const password = generatePasswordFromName(lastName);
     console.log('Generated password for employee');
     
     // Check for duplicate phone number
