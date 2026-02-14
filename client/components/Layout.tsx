@@ -1,12 +1,30 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Header } from "./Header";
 import { Navigation } from "./Navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export const Layout = ({ children }: LayoutProps) => {
+  const { refreshUser, isAuthenticated } = useAuth();
+
+  // Refresh user data periodically (every 30 seconds)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Initial refresh
+    refreshUser();
+
+    // Set up interval for periodic refresh
+    const interval = setInterval(() => {
+      refreshUser();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, refreshUser]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-1000">
       <Header />
