@@ -128,7 +128,7 @@ const availablePermissions = [
 ];
 
 export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps) {
-  const { token } = useAuth();
+  const { token, user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -183,6 +183,11 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      
+      // If updating current user's permissions, refresh user data
+      if (employee && user && employee._id === user._id) {
+        refreshUser();
+      }
       
       // If creating new employee, show credentials
       if (!employee && data.credentials) {
