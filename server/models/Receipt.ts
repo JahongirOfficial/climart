@@ -20,6 +20,7 @@ export interface IReceipt extends Document {
   items: IReceiptItem[];
   totalAmount: number;
   notes?: string;
+  createdBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -95,6 +96,10 @@ const ReceiptSchema: Schema = new Schema(
     notes: {
       type: String,
       trim: true,
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
     },
   },
   {

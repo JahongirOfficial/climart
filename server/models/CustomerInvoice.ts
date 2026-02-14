@@ -29,6 +29,7 @@ export interface ICustomerInvoice extends Document {
   shippedAmount: number;
   notes?: string;
   isMinusCorrection?: boolean;
+  createdBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -149,6 +150,10 @@ const CustomerInvoiceSchema: Schema = new Schema(
     isMinusCorrection: {
       type: Boolean,
       default: false,
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
     },
   },
   {

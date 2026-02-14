@@ -55,7 +55,12 @@ export const useDashboard = (period: DashboardPeriod = 'this_month') => {
   const { data: stats, isLoading, error, refetch } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats', period],
     queryFn: async () => {
-      const response = await fetch(`/api/dashboard/stats?period=${period}`);
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/dashboard/stats?period=${period}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard stats');
       }

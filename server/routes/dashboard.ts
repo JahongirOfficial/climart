@@ -4,13 +4,20 @@ import Receipt from '../models/Receipt';
 import SupplierInvoice from '../models/SupplierInvoice';
 import CustomerInvoice from '../models/CustomerInvoice';
 import CustomerReturn from '../models/CustomerReturn';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
+
+// Apply authentication to all dashboard routes
+router.use(authenticateToken);
 
 // Get dashboard statistics
 router.get('/stats', async (req: Request, res: Response) => {
   try {
     const { period = 'this_month' } = req.query;
+    const userId = req.user?.userId;
+    const isAdmin = req.user?.role === 'admin';
+    
     const now = new Date();
     let startDate: Date;
     let endDate: Date = now;
@@ -34,6 +41,9 @@ router.get('/stats', async (req: Request, res: Response) => {
     const periodDuration = endDate.getTime() - startDate.getTime();
     const lastStartDate = new Date(startDate.getTime() - periodDuration);
 
+    // Build filter for employee-specific data
+    const employeeFilter = isAdmin ? {} : { createdBy: userId };
+
     // Run static stats in parallel (not period dependent)
     const [staticStats, periodStats, recentStats, chartStats] = await Promise.all([
       // Static stats: Warehouse value, Low stock, Debts
@@ -42,7 +52,10 @@ router.get('/stats', async (req: Request, res: Response) => {
           Product.aggregate([{ $group: { _id: null, total: { $sum: { $multiply: ["$quantity", "$costPrice"] } } } }]),
           Product.find({ minStock: { $gt: 0 }, $expr: { $lte: ["$quantity", "$minStock"] } }).select('name quantity minStock').limit(5).lean(),
           SupplierInvoice.aggregate([{ $match: { status: { $ne: 'paid' } } }, { $group: { _id: null, total: { $sum: { $subtract: ["$totalAmount", "$paidAmount"] } } } }]),
-          CustomerInvoice.aggregate([{ $match: { status: { $nin: ['paid', 'cancelled'] } } }, { $group: { _id: null, total: { $sum: { $subtract: ["$totalAmount", "$paidAmount"] } } } }])
+          CustomerInvoice.aggregate([
+            { $match: { ...employeeFilter, status: { $nin: ['paid', 'cancelled'] } } }, 
+            { $group: { _id: null, total: { $sum: { $subtract: ["$totalAmount", "$paidAmount"] } } } }
+          ])
         ]);
         return {
           warehouseValue: warehouseValueRes[0]?.total || 0,
@@ -56,7 +69,7 @@ router.get('/stats', async (req: Request, res: Response) => {
       (async () => {
         const getRangeStats = async (start: Date, end: Date) => {
           const result = await CustomerInvoice.aggregate([
-            { $match: { invoiceDate: { $gte: start, $lte: end }, status: { $ne: 'cancelled' } } },
+            { $match: { ...employeeFilter, invoiceDate: { $gte: start, $lte: end }, status: { $ne: 'cancelled' } } },
             {
               $project: {
                 totalAmount: 1,
@@ -95,7 +108,7 @@ router.get('/stats', async (req: Request, res: Response) => {
           (async () => {
             const [topProds, topCusts, topSupps] = await Promise.all([
               CustomerInvoice.aggregate([
-                { $match: { invoiceDate: { $gte: startDate, $lte: endDate }, status: { $ne: 'cancelled' } } },
+                { $match: { ...employeeFilter, invoiceDate: { $gte: startDate, $lte: endDate }, status: { $ne: 'cancelled' } } },
                 { $unwind: "$items" },
                 { $group: { _id: "$items.productName", quantity: { $sum: "$items.quantity" }, sales: { $sum: "$items.total" } } },
                 { $sort: { sales: -1 } },
@@ -103,14 +116,14 @@ router.get('/stats', async (req: Request, res: Response) => {
                 { $project: { name: "$_id", quantity: 1, sales: 1, _id: 0 } }
               ]),
               CustomerInvoice.aggregate([
-                { $match: { invoiceDate: { $gte: startDate, $lte: endDate }, status: { $ne: 'cancelled' } } },
+                { $match: { ...employeeFilter, invoiceDate: { $gte: startDate, $lte: endDate }, status: { $ne: 'cancelled' } } },
                 { $group: { _id: "$customerName", count: { $sum: 1 }, sales: { $sum: "$totalAmount" } } },
                 { $sort: { sales: -1 } },
                 { $limit: 5 },
                 { $project: { name: "$_id", orders: "$count", sales: 1, _id: 0 } }
               ]),
               Receipt.aggregate([
-                { $match: { receiptDate: { $gte: startDate, $lte: endDate } } },
+                { $match: { ...employeeFilter, receiptDate: { $gte: startDate, $lte: endDate } } },
                 { $group: { _id: "$supplierName", count: { $sum: 1 }, sales: { $sum: "$totalAmount" } } },
                 { $sort: { sales: -1 } },
                 { $limit: 5 },
@@ -127,8 +140,8 @@ router.get('/stats', async (req: Request, res: Response) => {
       // Recent Transactions
       (async () => {
         const [invoices, receipts] = await Promise.all([
-          CustomerInvoice.find().sort({ invoiceDate: -1, createdAt: -1 }).limit(5).select('invoiceNumber customerName invoiceDate totalAmount status').lean(),
-          Receipt.find().sort({ receiptDate: -1, createdAt: -1 }).limit(5).select('receiptNumber supplierName receiptDate totalAmount').lean()
+          CustomerInvoice.find(employeeFilter).sort({ invoiceDate: -1, createdAt: -1 }).limit(5).select('invoiceNumber customerName invoiceDate totalAmount status').lean(),
+          Receipt.find(employeeFilter).sort({ receiptDate: -1, createdAt: -1 }).limit(5).select('receiptNumber supplierName receiptDate totalAmount').lean()
         ]);
         const trans = [
           ...invoices.map(inv => ({
@@ -156,7 +169,7 @@ router.get('/stats', async (req: Request, res: Response) => {
         sixMonthsAgo.setDate(1);
 
         const aggregation = await CustomerInvoice.aggregate([
-          { $match: { invoiceDate: { $gte: sixMonthsAgo }, status: { $ne: 'cancelled' } } },
+          { $match: { ...employeeFilter, invoiceDate: { $gte: sixMonthsAgo }, status: { $ne: 'cancelled' } } },
           { $group: { _id: { month: { $month: "$invoiceDate" }, year: { $year: "$invoiceDate" } }, total: { $sum: "$totalAmount" } } },
           { $sort: { "_id.year": 1, "_id.month": 1 } }
         ]);

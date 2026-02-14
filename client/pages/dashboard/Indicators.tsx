@@ -25,12 +25,18 @@ const Indicators = () => {
   useEffect(() => {
     // Prefetch all periods for instant switching
     const periods: DashboardPeriod[] = ['today', 'this_week', 'this_month', 'this_year'];
+    const token = localStorage.getItem('auth_token');
+    
     periods.forEach(p => {
       if (p !== period) {
         queryClient.prefetchQuery({
           queryKey: ['dashboard-stats', p],
           queryFn: async () => {
-            const response = await fetch(`/api/dashboard/stats?period=${p}`);
+            const response = await fetch(`/api/dashboard/stats?period=${p}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            });
             return response.json();
           },
           staleTime: 1000 * 60 * 5,

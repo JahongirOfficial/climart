@@ -58,6 +58,7 @@ router.post('/', async (req: Request, res: Response) => {
     const receipt = new Receipt({
       ...req.body,
       receiptNumber,
+      createdBy: req.user?.userId,
     });
 
     // Update warehouse quantities and cost prices
@@ -155,6 +156,7 @@ router.post('/from-order/:orderId', async (req: Request, res: Response) => {
       purchaseOrder: order._id,
       orderNumber: order.orderNumber,
       receiptDate: new Date(),
+      createdBy: req.user?.userId,
       items: order.items.map(item => ({
         product: req.body.productIds?.[item.productName], // Product ID mapping from frontend
         productName: item.productName,

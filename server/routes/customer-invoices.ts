@@ -182,6 +182,7 @@ router.post('/', async (req: Request, res: Response) => {
       ...req.body,
       items: processedItems,
       invoiceNumber,
+      createdBy: req.user?.userId,
     });
 
     await invoice.save({ session });
