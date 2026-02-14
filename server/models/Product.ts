@@ -150,7 +150,7 @@ const ProductSchema: Schema = new Schema(
     },
     weightUnit: {
       type: String,
-      enum: ['kg', 'litr', 'boshqa'],
+      enum: ['kg', 'litr', 'metr', 'boshqa'],
       default: 'kg',
     },
     country: {

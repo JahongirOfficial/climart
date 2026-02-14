@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PartnerWithStats } from '@shared/api';
 
-export const usePartners = (type?: 'customer' | 'supplier' | 'both') => {
+export const usePartners = (type?: 'customer' | 'supplier' | 'both' | 'worker') => {
   const [partners, setPartners] = useState<PartnerWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

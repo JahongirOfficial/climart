@@ -34,7 +34,7 @@ router.get('/pending', async (req: Request, res: Response) => {
     const result = invoices.map((inv: any) => ({
       _id: inv._id,
       invoiceNumber: inv.invoiceNumber,
-      customerName: inv.customerName,
+      customerName: inv.customer?.name || inv.customerName || 'Unknown',
       invoiceDate: inv.invoiceDate,
       totalAmount: inv.totalAmount,
       pendingItemsCount: inv.items.filter((item: any) => item.costPricePending).length,
@@ -80,7 +80,7 @@ router.get('/corrected', async (req: Request, res: Response) => {
     const result = invoices.map((inv: any) => ({
       _id: inv._id,
       invoiceNumber: inv.invoiceNumber,
-      customerName: inv.customerName,
+      customerName: inv.customer?.name || inv.customerName || 'Unknown',
       invoiceDate: inv.invoiceDate,
       updatedAt: inv.updatedAt,
       totalAmount: inv.totalAmount,

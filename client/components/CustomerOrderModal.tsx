@@ -47,6 +47,7 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
   const [saving, setSaving] = useState(false);
   const [showPrintOptions, setShowPrintOptions] = useState(false);
   const [savedOrderData, setSavedOrderData] = useState<any>(null);
+  const [productSearchTerms, setProductSearchTerms] = useState<string[]>([]);
 
   useEffect(() => {
     if (order) {
@@ -74,15 +75,24 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
       });
       setItems([{ product: "", productName: "", quantity: 1, price: 0, total: 0 }]);
     }
+    setProductSearchTerms(items.map(() => ""));
   }, [order, open]);
 
   const handleCustomerChange = (customerId: string) => {
-    const customer = partners.find(p => p._id === customerId);
-    setFormData(prev => ({
-      ...prev,
-      customer: customerId,
-      customerName: customer?.name || ""
-    }));
+    if (customerId === "regular") {
+      setFormData(prev => ({
+        ...prev,
+        customer: "regular",
+        customerName: "Oddiy mijoz"
+      }));
+    } else {
+      const customer = partners.find(p => p._id === customerId);
+      setFormData(prev => ({
+        ...prev,
+        customer: customerId,
+        customerName: customer?.name || ""
+      }));
+    }
   };
 
   const handleItemChange = (index: number, field: keyof OrderItem, value: string | number) => {
@@ -107,15 +117,39 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
     };
     newItems[index].total = newItems[index].quantity * newItems[index].price;
     setItems(newItems);
+    
+    // Clear search term after selection
+    const newSearchTerms = [...productSearchTerms];
+    newSearchTerms[index] = "";
+    setProductSearchTerms(newSearchTerms);
+  };
+
+  const handleProductSearchChange = (index: number, searchTerm: string) => {
+    const newSearchTerms = [...productSearchTerms];
+    newSearchTerms[index] = searchTerm;
+    setProductSearchTerms(newSearchTerms);
+  };
+
+  const getFilteredProducts = (index: number) => {
+    const searchTerm = productSearchTerms[index]?.toLowerCase() || "";
+    if (!searchTerm) return products;
+    
+    return products.filter(product => 
+      product.name.toLowerCase().includes(searchTerm) ||
+      product.sku?.toLowerCase().includes(searchTerm) ||
+      product.barcode?.toLowerCase().includes(searchTerm)
+    );
   };
 
   const addItem = () => {
     setItems([...items, { product: "", productName: "", quantity: 1, price: 0, total: 0 }]);
+    setProductSearchTerms([...productSearchTerms, ""]);
   };
 
   const removeItem = (index: number) => {
     if (items.length > 1) {
       setItems(items.filter((_, i) => i !== index));
+      setProductSearchTerms(productSearchTerms.filter((_, i) => i !== index));
     }
   };
 
@@ -609,6 +643,7 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
                     disabled={partnersLoading}
                   >
                     <option value="">Tanlang...</option>
+                    <option value="regular">Oddiy mijoz</option>
                     {partners.map(partner => (
                       <option key={partner._id} value={partner._id}>
                         {partner.name}
@@ -662,21 +697,48 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
               <div className="space-y-2">
                 {items.map((item, index) => (
                   <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
-                    <div className="col-span-5">
+                    <div className="col-span-5 relative">
                       <Label className="text-xs">Mahsulot</Label>
-                      <select
-                        value={item.product}
-                        onChange={(e) => handleProductSelect(index, e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
+                      <Input
+                        type="text"
+                        list={`products-${index}`}
+                        value={productSearchTerms[index] || item.productName}
+                        onChange={(e) => handleProductSearchChange(index, e.target.value)}
+                        onBlur={(e) => {
+                          // Delay to allow click on dropdown item
+                          setTimeout(() => {
+                            const selectedProduct = products.find(p => 
+                              p.name === e.target.value || 
+                              p._id === e.target.value
+                            );
+                            if (selectedProduct) {
+                              handleProductSelect(index, selectedProduct._id);
+                            }
+                          }, 200);
+                        }}
+                        placeholder="Qidirish..."
+                        className="text-sm"
                         required
-                      >
-                        <option value="">Tanlang...</option>
-                        {products.map(product => (
-                          <option key={product._id} value={product._id}>
-                            {product.name} ({product.quantity} {product.unit})
-                          </option>
-                        ))}
-                      </select>
+                      />
+                      {productSearchTerms[index] && getFilteredProducts(index).length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                          {getFilteredProducts(index).slice(0, 10).map(product => (
+                            <div
+                              key={product._id}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleProductSelect(index, product._id);
+                              }}
+                              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                            >
+                              <div className="font-medium">{product.name}</div>
+                              <div className="text-xs text-gray-500">
+                                Mavjud: {product.quantity} {product.unit} • Narx: {product.sellingPrice.toLocaleString()} so'm
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="col-span-2">

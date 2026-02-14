@@ -30,7 +30,7 @@ const PendingInvoices = () => {
     startDate: format(new Date(new Date().getFullYear(), 0, 1), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd')
   });
-  const [customerFilter, setCustomerFilter] = useState<string>("");
+  const [customerFilter, setCustomerFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
@@ -38,7 +38,7 @@ const PendingInvoices = () => {
   const { invoices, loading, error } = usePendingInvoices({
     startDate: dateFilter.startDate,
     endDate: dateFilter.endDate,
-    customerId: customerFilter || undefined
+    customerId: customerFilter !== "all" ? customerFilter : undefined
   });
 
   const { partners } = usePartners();
@@ -72,11 +72,13 @@ const PendingInvoices = () => {
   if (error) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-            <p className="text-lg font-semibold">Xatolik yuz berdi</p>
-            <p className="text-muted-foreground">{error}</p>
+        <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+              <p className="text-lg font-semibold">Xatolik yuz berdi</p>
+              <p className="text-muted-foreground">{error}</p>
+            </div>
           </div>
         </div>
       </Layout>
@@ -85,7 +87,7 @@ const PendingInvoices = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -165,7 +167,7 @@ const PendingInvoices = () => {
                 <SelectValue placeholder="Barcha mijozlar" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Barcha mijozlar</SelectItem>
+                <SelectItem value="all">Barcha mijozlar</SelectItem>
                 {customers.map((customer) => (
                   <SelectItem key={customer._id} value={customer._id}>
                     {customer.name}

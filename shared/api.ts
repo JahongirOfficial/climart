@@ -4,6 +4,34 @@ export interface DemoResponse {
   message: string;
 }
 
+// Partner types
+export interface Partner {
+  _id: string;
+  code: string;
+  name: string;
+  type: 'customer' | 'supplier' | 'both' | 'worker';
+  status: 'new' | 'active' | 'vip' | 'inactive' | 'blocked';
+  group?: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  legalAddress?: string;
+  physicalAddress?: string;
+  taxId?: string;
+  bankAccount?: string;
+  telegramUsername?: string;
+  notes?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartnerWithStats extends Partner {
+  totalOrders?: number;
+  totalRevenue?: number;
+  totalDebt?: number;
+}
+
 // Pending Invoice Response
 export interface PendingInvoiceResponse {
   _id: string;

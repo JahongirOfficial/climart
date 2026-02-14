@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IPartner extends Document {
   code: string;
   name: string;
-  type: 'customer' | 'supplier' | 'both';
+  type: 'customer' | 'supplier' | 'both' | 'worker';
   status: 'new' | 'active' | 'vip' | 'inactive' | 'blocked';
   group?: string;
   contactPerson?: string;
@@ -35,7 +35,7 @@ const PartnerSchema: Schema = new Schema(
     },
     type: {
       type: String,
-      enum: ['customer', 'supplier', 'both'],
+      enum: ['customer', 'supplier', 'both', 'worker'],
       required: true,
     },
     status: {

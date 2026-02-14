@@ -163,6 +163,12 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
       return;
     }
 
+    // Validate weight for uncount type
+    if (formData.unitType === 'uncount' && (!formData.weight || Number(formData.weight) <= 0)) {
+      showWarning(`O'lchanadigan mahsulotlar uchun har bir dona uchun ${formData.weightUnit} miqdorini kiriting!`);
+      return;
+    }
+
     setSaving(true);
     try {
       const dataToSave = {
@@ -342,8 +348,9 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
                   setFormData(prev => ({
                     ...prev,
                     unitType: newType,
-                    unit: newType === 'count' ? 'dona' : prev.weightUnit || 'kg',
-                    weight: newType === 'count' ? 0 : prev.weight,
+                    unit: newType === 'count' ? 'dona' : (prev.weightUnit || 'kg'),
+                    weight: newType === 'count' ? "" : prev.weight,
+                    weightUnit: newType === 'count' ? 'kg' : (prev.weightUnit || 'kg'),
                   }));
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white hover:border-gray-400 focus:border-primary focus:ring-1 focus:ring-primary"
@@ -383,15 +390,16 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="weight">Har bir dona uchun ({formData.weightUnit})</Label>
+                  <Label htmlFor="weight">Har bir dona uchun ({formData.weightUnit}) *</Label>
                   <Input
                     id="weight"
                     type="number"
                     step="any"
-                    min="0"
+                    min="0.001"
                     value={formData.weight}
                     onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value ? parseFloat(e.target.value) : "" }))}
                     placeholder={`0`}
+                    required
                   />
                   {formData.weight && formData.quantity && (
                     <p className="text-xs text-blue-600 mt-1 font-medium">

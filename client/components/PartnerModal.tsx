@@ -15,7 +15,7 @@ interface PartnerModalProps {
   onClose: () => void;
   onSuccess: () => void;
   partner?: Partner;
-  initialType?: 'customer' | 'supplier' | 'both';
+  initialType?: 'customer' | 'supplier' | 'both' | 'worker';
 }
 
 export const PartnerModal = ({ open, onClose, onSuccess, partner, initialType = 'customer' }: PartnerModalProps) => {
@@ -23,7 +23,7 @@ export const PartnerModal = ({ open, onClose, onSuccess, partner, initialType = 
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    type: "customer" as "customer" | "supplier" | "both",
+    type: "customer" as "customer" | "supplier" | "both" | "worker",
     status: "new" as "new" | "active" | "vip" | "inactive" | "blocked",
     group: "",
     contactPerson: "",
@@ -140,7 +140,7 @@ export const PartnerModal = ({ open, onClose, onSuccess, partner, initialType = 
                   <Label htmlFor="type">Turi *</Label>
                   <Select
                     value={formData.type}
-                    onValueChange={(value) => setFormData({ ...formData, type: value as "customer" | "supplier" | "both" })}
+                    onValueChange={(value) => setFormData({ ...formData, type: value as "customer" | "supplier" | "both" | "worker" })}
                   >
                     <SelectTrigger id="type">
                       <SelectValue placeholder="Turini tanlang" />
@@ -149,6 +149,7 @@ export const PartnerModal = ({ open, onClose, onSuccess, partner, initialType = 
                       <SelectItem value="customer">Mijoz</SelectItem>
                       <SelectItem value="supplier">Yetkazib beruvchi</SelectItem>
                       <SelectItem value="both">Ikkalasi</SelectItem>
+                      <SelectItem value="worker">Usta</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
