@@ -7,11 +7,10 @@ import { Card } from '@/components/ui/card';
 import { Loader2, LogIn, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
-  const [identifier, setIdentifier] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isPhoneMode, setIsPhoneMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
   const { login, isAuthenticated } = useAuth();
@@ -24,48 +23,11 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Format phone number
-  const formatPhoneNumber = (value: string) => {
-    // Remove all non-digits
-    const digits = value.replace(/\D/g, '');
-    
-    // If starts with 998, keep it, otherwise add +998
-    if (digits.startsWith('998')) {
-      const number = digits.slice(3);
-      if (number.length === 0) return '+998';
-      if (number.length <= 2) return `+998 ${number}`;
-      if (number.length <= 5) return `+998 ${number.slice(0, 2)} ${number.slice(2)}`;
-      if (number.length <= 7) return `+998 ${number.slice(0, 2)} ${number.slice(2, 5)} ${number.slice(5)}`;
-      return `+998 ${number.slice(0, 2)} ${number.slice(2, 5)} ${number.slice(5, 7)} ${number.slice(7, 9)}`;
-    } else if (digits.length > 0) {
-      // If doesn't start with 998, add it
-      if (digits.length <= 2) return `+998 ${digits}`;
-      if (digits.length <= 5) return `+998 ${digits.slice(0, 2)} ${digits.slice(2)}`;
-      if (digits.length <= 7) return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`;
-      return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)}`;
-    }
-    
-    return '+998';
-  };
-
-  const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    
-    // Check if it looks like a phone number (starts with + or contains only digits)
-    if (value.startsWith('+') || /^\d+$/.test(value.replace(/\s/g, ''))) {
-      setIsPhoneMode(true);
-      setIdentifier(formatPhoneNumber(value));
-    } else {
-      setIsPhoneMode(false);
-      setIdentifier(value);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    if (!identifier || !password) {
+    if (!username || !password) {
       setError('Iltimos, barcha maydonlarni to\'ldiring');
       return;
     }
@@ -73,12 +35,10 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Remove spaces from phone number before sending
-      const cleanIdentifier = isPhoneMode ? identifier.replace(/\s/g, '') : identifier;
-      await login(cleanIdentifier, password);
+      await login(username, password);
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login xatosi');
+      setError(err instanceof Error ? err.message : 'Login yoki parol noto\'g\'ri');
     } finally {
       setLoading(false);
     }
@@ -113,23 +73,18 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label htmlFor="identifier" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+            <label htmlFor="username" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
-              Login yoki telefon raqam
+              Login
             </label>
             <Input
-              id="identifier"
+              id="username"
               type="text"
-              placeholder="admin yoki +998 91 405 84 81"
-              value={identifier}
-              onChange={handleIdentifierChange}
-              onFocus={(e) => {
-                if (!e.target.value) {
-                  setIsPhoneMode(true);
-                  setIdentifier('+998');
-                }
-              }}
+              placeholder="admin"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase())}
               disabled={loading}
+              autoComplete="username"
               className="h-12 dark:bg-gray-900/50 dark:text-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all"
             />
           </div>
@@ -147,6 +102,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
+                autoComplete="current-password"
                 className="h-12 pr-12 dark:bg-gray-900/50 dark:text-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all"
               />
               <button
@@ -194,12 +150,12 @@ export default function Login() {
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Test uchun</p>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400">Telefon:</span>
-                <code className="bg-gray-100 dark:bg-gray-900/50 px-3 py-1.5 rounded-md text-sm font-mono text-gray-700 dark:text-gray-300">+998 91 405 84 81</code>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Login:</span>
+                <code className="bg-gray-100 dark:bg-gray-900/50 px-3 py-1.5 rounded-md text-sm font-mono text-gray-700 dark:text-gray-300">admin</code>
               </div>
               <div className="flex items-center justify-center gap-2">
                 <span className="text-xs text-gray-500 dark:text-gray-400">Parol:</span>
-                <code className="bg-gray-100 dark:bg-gray-900/50 px-3 py-1.5 rounded-md text-sm font-mono text-gray-700 dark:text-gray-300">1234567</code>
+                <code className="bg-gray-100 dark:bg-gray-900/50 px-3 py-1.5 rounded-md text-sm font-mono text-gray-700 dark:text-gray-300">admin123</code>
               </div>
             </div>
           </div>

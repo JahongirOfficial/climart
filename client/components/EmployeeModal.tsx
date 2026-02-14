@@ -232,8 +232,14 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
         // Remove parent and all its sub-permissions
         return prev.filter(p => p !== permissionId && !p.startsWith(permissionId + '.'));
       } else {
-        // Add parent only (sub-permissions will be added individually)
-        return [...prev, permissionId];
+        // Add parent and ALL sub-permissions automatically
+        const newPerms = [permissionId];
+        if (subPermissions) {
+          subPermissions.forEach(sub => {
+            newPerms.push(sub.id);
+          });
+        }
+        return [...prev, ...newPerms];
       }
     });
   };
@@ -353,13 +359,8 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
                   }
                 }}
                 placeholder="+998 91 234 56 78"
-                disabled={mutation.isPending || !!employee}
+                disabled={mutation.isPending}
               />
-              {employee && (
-                <p className="text-xs text-muted-foreground">
-                  Telefon raqamni o'zgartirib bo'lmaydi
-                </p>
-              )}
             </div>
 
             <div className="space-y-2">
