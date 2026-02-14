@@ -390,12 +390,12 @@ export const TelegramModal = ({ isOpen, onClose }: TelegramModalProps) => {
             className={cn(
               "absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2",
               "w-20 h-1.5 bg-[#3A3A3C] rounded-full cursor-grab active:cursor-grabbing",
-              "hover:bg-[#4A4A4C] transition-colors z-10",
+              "hover:bg-[#4A4A4C] transition-colors z-0",
               isDragging && "cursor-grabbing bg-[#2AABEE]"
             )}
           />
           
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 relative z-20">
             <Button
               variant="ghost"
               size="sm"
