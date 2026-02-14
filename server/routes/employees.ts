@@ -45,7 +45,7 @@ router.post('/', async (req: Request, res: Response) => {
     // Check for duplicate phone number
     const existingPhone = await User.findOne({ phoneNumber });
     if (existingPhone) {
-      return res.status(409).json({ error: 'Phone number already exists' });
+      return res.status(409).json({ error: 'Bu telefon raqam allaqachon ro\'yxatdan o\'tgan' });
     }
     
     // Generate username from first and last name
@@ -142,7 +142,7 @@ router.put('/:id', async (req: Request, res: Response) => {
         _id: { $ne: employee._id } 
       });
       if (existingUser) {
-        return res.status(409).json({ error: 'Phone number already exists' });
+        return res.status(409).json({ error: 'Bu telefon raqam allaqachon ro\'yxatdan o\'tgan' });
       }
       employee.phoneNumber = phoneNumber;
     }
