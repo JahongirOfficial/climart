@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { createAdminUser } from '../utils/createAdmin';
 import { resetAdminUsers } from '../utils/resetAdmin';
+import { updateAdminPassword } from '../utils/updateAdminPassword';
 
 const connectDB = async () => {
   try {
@@ -27,6 +28,11 @@ const connectDB = async () => {
     
     // Create admin user after successful connection
     await createAdminUser();
+    
+    // Update admin password if needed (development only)
+    if (process.env.UPDATE_ADMIN_PASSWORD === 'true') {
+      await updateAdminPassword('admin123');
+    }
     
     mongoose.connection.on('error', (err) => {
       console.error('❌ MongoDB connection error:', err);
