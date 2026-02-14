@@ -395,30 +395,33 @@ export const TelegramModal = ({ isOpen, onClose }: TelegramModalProps) => {
             )}
           />
           
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsMinimized(true)}
-              className="h-6 w-6 p-0 hover:bg-[#2C2C2E] text-[#8B98A5] hover:text-white rounded-full"
+              className="h-7 w-7 p-0 hover:bg-[#2C2C2E] text-[#FFFFFF] hover:text-white rounded-full transition-colors"
+              title="Minimize"
             >
-              <Minus className="h-3.5 w-3.5" />
+              <Minus className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsMaximized(!isMaximized)}
-              className="h-6 w-6 p-0 hover:bg-[#2C2C2E] text-[#8B98A5] hover:text-white rounded-full"
+              className="h-7 w-7 p-0 hover:bg-[#2C2C2E] text-[#FFFFFF] hover:text-white rounded-full transition-colors"
+              title={isMaximized ? "Restore" : "Maximize"}
             >
-              {isMaximized ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="h-6 w-6 p-0 hover:bg-[#FF3B30] text-[#8B98A5] hover:text-white rounded-full"
+              className="h-7 w-7 p-0 hover:bg-[#FF3B30] text-[#FFFFFF] hover:text-white rounded-full transition-colors"
+              title="Close"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
