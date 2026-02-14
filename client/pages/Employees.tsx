@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, Eye, Users, UserCheck, UserX } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, Users, UserCheck, UserX, KeyRound, Copy, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorCard from '@/components/ErrorCard';
@@ -32,8 +32,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { EmployeeModal } from '@/components/EmployeeModal';
 import type { UserProfile } from '@shared/api';
+
+interface ResetPasswordCredentials {
+  username: string;
+  password: string;
+  phoneNumber: string;
+}
 
 export default function Employees() {
   const { token } = useAuth();
@@ -42,6 +50,8 @@ export default function Employees() {
   const [selectedEmployee, setSelectedEmployee] = useState<UserProfile | null>(null);
   const [deleteEmployeeId, setDeleteEmployeeId] = useState<string | null>(null);
   const [viewEmployee, setViewEmployee] = useState<UserProfile | null>(null);
+  const [resetPasswordCredentials, setResetPasswordCredentials] = useState<ResetPasswordCredentials | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Fetch employees
   const { data: employeesData, isLoading, error } = useQuery<{ employees: UserProfile[] }>({
@@ -98,6 +108,33 @@ export default function Employees() {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
     },
   });
+
+  // Reset password mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/employees/${id}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to reset password');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setResetPasswordCredentials(data.credentials);
+    },
+  });
+
+  const handleCopy = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   const handleAddEmployee = () => {
     setSelectedEmployee(null);
@@ -243,18 +280,29 @@ export default function Employees() {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {employee.role !== 'admin' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleToggleActive(employee)}
-                            title={employee.isActive ? 'Nofaollashtirish' : 'Faollashtirish'}
-                          >
-                            {employee.isActive ? (
-                              <UserX className="h-4 w-4 text-orange-600" />
-                            ) : (
-                              <UserCheck className="h-4 w-4 text-green-600" />
-                            )}
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => resetPasswordMutation.mutate(employee._id)}
+                              title="Parolni tiklash"
+                              disabled={resetPasswordMutation.isPending}
+                            >
+                              <KeyRound className="h-4 w-4 text-blue-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleToggleActive(employee)}
+                              title={employee.isActive ? 'Nofaollashtirish' : 'Faollashtirish'}
+                            >
+                              {employee.isActive ? (
+                                <UserX className="h-4 w-4 text-orange-600" />
+                              ) : (
+                                <UserCheck className="h-4 w-4 text-green-600" />
+                              )}
+                            </Button>
+                          </>
                         )}
                         <Button
                           variant="ghost"
@@ -421,6 +469,106 @@ export default function Employees() {
             <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700">
               O'chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Password Dialog */}
+      <AlertDialog open={!!resetPasswordCredentials} onOpenChange={() => setResetPasswordCredentials(null)}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl">Parol muvaffaqiyatli tiklandi! 🔑</AlertDialogTitle>
+            <AlertDialogDescription>
+              Yangi parol yaratildi. Quyidagi ma'lumotlarni xodimga bering.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {resetPasswordCredentials && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Telefon raqam</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={resetPasswordCredentials.phoneNumber}
+                    readOnly
+                    className="font-mono bg-secondary"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleCopy(resetPasswordCredentials.phoneNumber, 'phone')}
+                  >
+                    {copiedField === 'phone' ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Login</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={resetPasswordCredentials.username}
+                    readOnly
+                    className="font-mono bg-secondary"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleCopy(resetPasswordCredentials.username, 'username')}
+                  >
+                    {copiedField === 'username' ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Yangi parol</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={resetPasswordCredentials.password}
+                    readOnly
+                    className="font-mono bg-secondary"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleCopy(resetPasswordCredentials.password, 'password')}
+                  >
+                    {copiedField === 'password' ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
+                  ⚠️ Muhim eslatma
+                </p>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                  Bu ma'lumotlarni xavfsiz joyda saqlang! Ularni keyinroq ko'ra olmaysiz.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setResetPasswordCredentials(null)} className="w-full">
+              Tushunarli, saqladim
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -185,4 +185,43 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/employees/:id/reset-password
+ * Reset employee password
+ */
+router.post('/:id/reset-password', async (req: Request, res: Response) => {
+  try {
+    const employee = await User.findById(req.params.id);
+    
+    if (!employee) {
+      return res.status(404).json({ error: 'Xodim topilmadi' });
+    }
+    
+    // Prevent resetting admin password
+    if (employee.role === 'admin') {
+      return res.status(400).json({ error: 'Admin parolini tiklab bo\'lmaydi' });
+    }
+    
+    // Generate new password from last name
+    const newPassword = generatePasswordFromName(employee.lastName);
+    const passwordHash = await hashPassword(newPassword);
+    
+    employee.passwordHash = passwordHash;
+    await employee.save();
+    
+    res.json({
+      success: true,
+      message: 'Parol muvaffaqiyatli tiklandi',
+      credentials: {
+        username: employee.username,
+        password: newPassword,
+        phoneNumber: employee.phoneNumber,
+      }
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
