@@ -700,7 +700,8 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
                   const productOptions: ComboboxOption[] = products.map(p => ({
                     value: p._id,
                     label: p.name,
-                    description: `Mavjud: ${p.quantity} ${p.unit} • Narx: ${p.sellingPrice.toLocaleString()} so'm`
+                    description: `Mavjud: ${p.quantity} ${p.unit} • Narx: ${p.sellingPrice.toLocaleString()} so'm`,
+                    keywords: `${p.name} ${p.sku || ''} ${p.barcode || ''}`
                   }));
 
                   return (

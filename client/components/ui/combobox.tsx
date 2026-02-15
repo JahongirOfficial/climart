@@ -20,6 +20,7 @@ export interface ComboboxOption {
   value: string
   label: string
   description?: string
+  keywords?: string
 }
 
 interface ComboboxProps {
@@ -73,6 +74,7 @@ export function Combobox({
                 <CommandItem
                   key={option.value}
                   value={option.value}
+                  keywords={[option.label, option.keywords || "", option.description || ""]}
                   onSelect={(currentValue) => {
                     onValueChange(currentValue === value ? "" : currentValue)
                     setOpen(false)
