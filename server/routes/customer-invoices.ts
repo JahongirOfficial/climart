@@ -244,11 +244,39 @@ router.put('/:id', async (req: Request, res: Response) => {
 // Update invoice payment status
 router.patch('/:id/payment', async (req: Request, res: Response) => {
   try {
-    const { paidAmount } = req.body;
+    const { paidAmount, paymentMethod = 'cash', notes = '' } = req.body;
     const invoice = await CustomerInvoice.findById(req.params.id);
 
     if (!invoice) {
       return res.status(404).json({ message: 'Customer invoice not found' });
+    }
+
+    const previousPaidAmount = invoice.paidAmount;
+    const paymentAmount = paidAmount - previousPaidAmount;
+
+    if (paymentAmount > 0) {
+      // Create payment record
+      const Payment = (await import('../models/Payment')).default;
+      const paymentCount = await Payment.countDocuments();
+      const paymentNumber = `IN-${new Date().getFullYear()}-${String(paymentCount + 1).padStart(4, '0')}`;
+
+      await Payment.create({
+        paymentNumber,
+        type: 'incoming',
+        paymentDate: new Date(),
+        amount: paymentAmount,
+        partner: invoice.customer,
+        partnerName: invoice.customerName,
+        account: paymentMethod === 'cash' ? 'cash' : 'bank',
+        paymentMethod: paymentMethod,
+        purpose: `To'lov: ${invoice.invoiceNumber}`,
+        category: 'sales',
+        linkedDocument: invoice._id,
+        linkedDocumentType: 'CustomerInvoice',
+        linkedDocumentNumber: invoice.invoiceNumber,
+        status: 'confirmed',
+        notes: notes,
+      });
     }
 
     invoice.paidAmount = paidAmount;

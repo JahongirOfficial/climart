@@ -70,12 +70,35 @@ router.put('/:id', async (req: Request, res: Response) => {
 // Add payment to invoice
 router.post('/:id/payment', async (req: Request, res: Response) => {
   try {
-    const { amount } = req.body;
+    const { amount, paymentMethod = 'cash', notes = '' } = req.body;
     const invoice = await SupplierInvoice.findById(req.params.id);
     
     if (!invoice) {
       return res.status(404).json({ message: 'Invoice not found' });
     }
+    
+    // Create payment record
+    const Payment = (await import('../models/Payment')).default;
+    const paymentCount = await Payment.countDocuments();
+    const paymentNumber = `OUT-${new Date().getFullYear()}-${String(paymentCount + 1).padStart(4, '0')}`;
+
+    await Payment.create({
+      paymentNumber,
+      type: 'outgoing',
+      paymentDate: new Date(),
+      amount: amount,
+      partner: invoice.supplier,
+      partnerName: invoice.supplierName,
+      account: paymentMethod === 'cash' ? 'cash' : 'bank',
+      paymentMethod: paymentMethod,
+      purpose: `To'lov: ${invoice.invoiceNumber}`,
+      category: 'purchases',
+      linkedDocument: invoice._id,
+      linkedDocumentType: 'SupplierInvoice',
+      linkedDocumentNumber: invoice.invoiceNumber,
+      status: 'confirmed',
+      notes: notes,
+    });
     
     invoice.paidAmount += amount;
     await invoice.save();

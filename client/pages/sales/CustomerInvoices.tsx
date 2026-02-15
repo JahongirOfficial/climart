@@ -187,7 +187,7 @@ const CustomerInvoices = () => {
 
     try {
       const newPaidAmount = selectedInvoice.paidAmount + amount;
-      await recordPayment(selectedInvoice._id, newPaidAmount);
+      await recordPayment(selectedInvoice._id, newPaidAmount, paymentMethod, notes);
       refetch();
     } catch (error) {
       throw error;

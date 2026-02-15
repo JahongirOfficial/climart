@@ -71,11 +71,16 @@ export const useCustomerInvoices = (filters?: { startDate?: string; endDate?: st
   });
 
   const paymentMutation = useMutation({
-    mutationFn: async ({ id, paidAmount }: { id: string; paidAmount: number }) => {
+    mutationFn: async ({ id, paidAmount, paymentMethod, notes }: { 
+      id: string; 
+      paidAmount: number;
+      paymentMethod?: string;
+      notes?: string;
+    }) => {
       const response = await fetch(`/api/customer-invoices/${id}/payment`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paidAmount }),
+        body: JSON.stringify({ paidAmount, paymentMethod, notes }),
       });
       if (!response.ok) {
         const err = await response.json();
@@ -85,6 +90,7 @@ export const useCustomerInvoices = (filters?: { startDate?: string; endDate?: st
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
     },
   });
 
@@ -96,6 +102,7 @@ export const useCustomerInvoices = (filters?: { startDate?: string; endDate?: st
     createInvoice: createMutation.mutateAsync,
     updateInvoice: (id: string, data: Partial<CustomerInvoice>) => updateMutation.mutateAsync({ id, data }),
     deleteInvoice: deleteMutation.mutateAsync,
-    recordPayment: (id: string, paidAmount: number) => paymentMutation.mutateAsync({ id, paidAmount }),
+    recordPayment: (id: string, paidAmount: number, paymentMethod?: string, notes?: string) => 
+      paymentMutation.mutateAsync({ id, paidAmount, paymentMethod, notes }),
   };
 };
