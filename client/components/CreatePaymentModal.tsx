@@ -111,7 +111,7 @@ export function CreatePaymentModal({ open, onClose, onSave, type }: CreatePaymen
         paymentData.account = formData.account;
         paymentData.paymentMethod = formData.paymentMethod;
         
-        if (formData.partner) {
+        if (formData.partner && formData.partner !== "none") {
           paymentData.partner = formData.partner;
           const partner = partners.find(p => p._id === formData.partner);
           if (partner) {
@@ -119,7 +119,7 @@ export function CreatePaymentModal({ open, onClose, onSave, type }: CreatePaymen
           }
         }
 
-        if (type === 'outgoing' && formData.category) {
+        if (type === 'outgoing' && formData.category && formData.category !== "none") {
           paymentData.category = formData.category;
         }
       }
@@ -240,14 +240,14 @@ export function CreatePaymentModal({ open, onClose, onSave, type }: CreatePaymen
                   {type === 'incoming' ? 'Kimdan' : 'Kimga'}
                 </Label>
                 <Select
-                  value={formData.partner}
-                  onValueChange={(value) => setFormData({ ...formData, partner: value })}
+                  value={formData.partner || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, partner: value === "none" ? "" : value })}
                 >
                   <SelectTrigger id="partner">
                     <SelectValue placeholder="Kontragentni tanlang" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tanlanmagan</SelectItem>
+                    <SelectItem value="none">Tanlanmagan</SelectItem>
                     {partners.map((partner) => (
                       <SelectItem key={partner._id} value={partner._id}>
                         {partner.name}
@@ -304,14 +304,14 @@ export function CreatePaymentModal({ open, onClose, onSave, type }: CreatePaymen
                 <div className="space-y-2">
                   <Label htmlFor="category">Xarajat moddasi</Label>
                   <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({ ...formData, category: value })}
+                    value={formData.category || "none"}
+                    onValueChange={(value) => setFormData({ ...formData, category: value === "none" ? "" : value })}
                   >
                     <SelectTrigger id="category">
                       <SelectValue placeholder="Kategoriyani tanlang" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tanlanmagan</SelectItem>
+                      <SelectItem value="none">Tanlanmagan</SelectItem>
                       {EXPENSE_CATEGORIES.map((cat) => (
                         <SelectItem key={cat.value} value={cat.value}>
                           {cat.label}
