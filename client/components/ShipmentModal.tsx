@@ -185,7 +185,6 @@ export const ShipmentModal = ({ open, onClose, onSave, orderId }: ShipmentModalP
           return false;
         }
       }
-      }
     }
     return true;
   };
