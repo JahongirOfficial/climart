@@ -11,7 +11,8 @@ export const useProducts = () => {
       if (!response.ok) throw new Error('Failed to fetch products');
       return response.json();
     },
-    staleTime: 1000 * 60 * 10, // 10 minutes cache for products
+    staleTime: 1000 * 60 * 30, // 30 minutes cache for products (increased from 10)
+    gcTime: 1000 * 60 * 60, // 1 hour garbage collection time
   });
 
   const createMutation = useMutation({

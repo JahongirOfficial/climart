@@ -12,8 +12,12 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const sevenDaysAgo = subDays(new Date(), 7);
 
-    // Fetch all products as plain JS objects (lean)
-    const products = await Product.find().sort({ createdAt: -1 }).lean();
+    // Fetch all products as plain JS objects (lean) with only necessary fields
+    const products = await Product.find()
+      .select('name sku barcode quantity unit costPrice sellingPrice minStock category brand supplier warehouse createdAt')
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
 
     // Aggregate sales for ALL products in the last 7 days in a SINGLE query
     const salesStats = await CustomerInvoice.aggregate([
@@ -29,7 +33,7 @@ router.get('/', async (req: Request, res: Response) => {
           totalSold: { $sum: '$items.quantity' }
         }
       }
-    ]);
+    ]).allowDiskUse(true);
 
     // Create a map for quick access: productId -> totalSold
     const salesMap = new Map();

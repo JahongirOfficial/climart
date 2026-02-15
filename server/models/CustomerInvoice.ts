@@ -165,7 +165,9 @@ const CustomerInvoiceSchema: Schema = new Schema(
 CustomerInvoiceSchema.index({ invoiceNumber: 1 }, { unique: true });
 CustomerInvoiceSchema.index({ customer: 1 });
 CustomerInvoiceSchema.index({ invoiceDate: 1 });
+CustomerInvoiceSchema.index({ invoiceDate: -1 }); // For descending sort
 CustomerInvoiceSchema.index({ dueDate: 1 });
 CustomerInvoiceSchema.index({ status: 1 });
+CustomerInvoiceSchema.index({ 'items.product': 1 }); // For product sales aggregation
 
 export default mongoose.models.CustomerInvoice || mongoose.model<ICustomerInvoice>('CustomerInvoice', CustomerInvoiceSchema);

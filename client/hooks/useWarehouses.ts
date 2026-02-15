@@ -23,6 +23,7 @@ export const useWarehouses = () => {
       return response.json();
     },
     staleTime: 1000 * 60 * 30, // 30 minutes cache for warehouses
+    gcTime: 1000 * 60 * 60, // 1 hour garbage collection
   });
 
   const createMutation = useMutation({

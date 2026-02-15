@@ -223,5 +223,8 @@ ProductSchema.index({ sku: 1 }, { unique: true, sparse: true });
 ProductSchema.index({ barcode: 1 }, { sparse: true });
 ProductSchema.index({ category: 1 });
 ProductSchema.index({ status: 1 });
+ProductSchema.index({ createdAt: -1 }); // For sorting by creation date
+ProductSchema.index({ name: 'text', sku: 'text', barcode: 'text' }); // Text search index
+ProductSchema.index({ category: 1, status: 1 }); // Compound index for filtering
 
 export default mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
