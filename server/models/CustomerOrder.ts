@@ -10,7 +10,7 @@ export interface ICustomerOrderItem {
 
 export interface ICustomerOrder extends Document {
   orderNumber: string;
-  customer: mongoose.Types.ObjectId;
+  customer?: mongoose.Types.ObjectId; // Optional for regular customers
   customerName: string;
   orderDate: Date;
   deliveryDate: Date;
@@ -61,7 +61,7 @@ const CustomerOrderSchema: Schema = new Schema(
     customer: {
       type: Schema.Types.ObjectId,
       ref: 'Partner',
-      required: true,
+      required: false, // Optional for regular customers
     },
     customerName: {
       type: String,

@@ -166,12 +166,18 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
     try {
       const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
 
-      const orderData = {
+      // Prepare order data - exclude customer field if it's "regular"
+      const orderData: any = {
         ...formData,
         items,
         totalAmount,
         status: order ? order.status : 'pending'
       };
+
+      // Remove customer field for regular customers
+      if (formData.customer === 'regular') {
+        delete orderData.customer;
+      }
 
       await onSave(orderData);
 
