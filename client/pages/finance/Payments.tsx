@@ -25,12 +25,15 @@ import {
   Check,
   X,
   AlertTriangle,
+  Download,
+  Upload,
 } from "lucide-react";
 import { useState } from "react";
 import { usePayments } from "@/hooks/usePayments";
 import { usePartners } from "@/hooks/usePartners";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { CreatePaymentModal } from "@/components/CreatePaymentModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +58,8 @@ const Payments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createModalType, setCreateModalType] = useState<'incoming' | 'outgoing' | 'transfer'>('incoming');
 
   const { payments, totals, loading, refetch } = usePayments({
     startDate: dateFilter.startDate,
@@ -147,6 +152,32 @@ const Payments = () => {
     }
   };
 
+  const handleCreatePayment = async (data: any) => {
+    try {
+      const response = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) throw new Error('Failed to create payment');
+
+      toast({
+        title: "To'lov yaratildi",
+        description: "To'lov muvaffaqiyatli yaratildi",
+      });
+
+      refetch();
+    } catch (error) {
+      toast({
+        title: "Xatolik",
+        description: "To'lovni yaratishda xatolik yuz berdi",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'incoming':
@@ -214,15 +245,24 @@ const Payments = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button>
+            <Button onClick={() => {
+              setCreateModalType('incoming');
+              setCreateModalOpen(true);
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               Kirim
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => {
+              setCreateModalType('outgoing');
+              setCreateModalOpen(true);
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               Chiqim
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => {
+              setCreateModalType('transfer');
+              setCreateModalOpen(true);
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               O'tkazma
             </Button>
@@ -476,6 +516,14 @@ const Payments = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Payment Modal */}
+      <CreatePaymentModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onSave={handleCreatePayment}
+        type={createModalType}
+      />
     </Layout>
   );
 };
