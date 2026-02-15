@@ -34,6 +34,7 @@ import { usePartners } from "@/hooks/usePartners";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { CreatePaymentModal } from "@/components/CreatePaymentModal";
+import { ImportPaymentsModal } from "@/components/ImportPaymentsModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,6 +61,7 @@ const Payments = () => {
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createModalType, setCreateModalType] = useState<'incoming' | 'outgoing' | 'transfer'>('incoming');
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const { payments, totals, loading, refetch } = usePayments({
     startDate: dateFilter.startDate,
@@ -265,6 +267,10 @@ const Payments = () => {
             }}>
               <Plus className="h-4 w-4 mr-2" />
               O'tkazma
+            </Button>
+            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import
             </Button>
           </div>
         </div>
@@ -523,6 +529,13 @@ const Payments = () => {
         onClose={() => setCreateModalOpen(false)}
         onSave={handleCreatePayment}
         type={createModalType}
+      />
+
+      {/* Import Payments Modal */}
+      <ImportPaymentsModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={() => refetch()}
       />
     </Layout>
   );

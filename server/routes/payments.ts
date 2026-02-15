@@ -1,8 +1,12 @@
 import { Router, Request, Response } from 'express';
 import Payment from '../models/Payment';
 import Partner from '../models/Partner';
+import multer from 'multer';
+import csv from 'csv-parser';
+import { Readable } from 'stream';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Get all payments with filters
 router.get('/', async (req: Request, res: Response) => {
@@ -173,6 +177,81 @@ router.delete('/:id', async (req: Request, res: Response) => {
     
     await Payment.findByIdAndDelete(req.params.id);
     res.json({ message: 'Payment deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
+// Import payments from CSV
+router.post('/import', upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const results: any[] = [];
+    const stream = Readable.from(req.file.buffer.toString());
+
+    stream
+      .pipe(csv())
+      .on('data', (data) => results.push(data))
+      .on('end', async () => {
+        try {
+          let imported = 0;
+          const errors: string[] = [];
+
+          for (const row of results) {
+            try {
+              // Map CSV columns to payment fields
+              const paymentData: any = {
+                type: row['Turi'] || row['type'],
+                paymentDate: new Date(row['Sana'] || row['date']),
+                amount: parseFloat(row['Summa'] || row['amount']),
+                purpose: row['Maqsad'] || row['purpose'] || 'Import qilingan',
+                account: row['Hisob'] || row['account'] || 'bank',
+                paymentMethod: row['To\'lov usuli'] || row['paymentMethod'] || 'bank_transfer',
+                status: 'confirmed',
+              };
+
+              // Add optional fields
+              if (row['Kontragent'] || row['partner']) {
+                paymentData.partnerName = row['Kontragent'] || row['partner'];
+              }
+
+              if (row['Kategoriya'] || row['category']) {
+                paymentData.category = row['Kategoriya'] || row['category'];
+              }
+
+              if (row['Izoh'] || row['notes']) {
+                paymentData.notes = row['Izoh'] || row['notes'];
+              }
+
+              // Generate payment number
+              const count = await Payment.countDocuments();
+              let prefix = 'PAY';
+              if (paymentData.type === 'incoming') prefix = 'IN';
+              if (paymentData.type === 'outgoing') prefix = 'OUT';
+              if (paymentData.type === 'transfer') prefix = 'TR';
+              
+              paymentData.paymentNumber = `${prefix}-${new Date().getFullYear()}-${String(count + imported + 1).padStart(4, '0')}`;
+
+              // Create payment
+              await Payment.create(paymentData);
+              imported++;
+            } catch (error) {
+              errors.push(`Row ${imported + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+          }
+
+          res.json({
+            imported,
+            total: results.length,
+            errors: errors.length > 0 ? errors : undefined,
+          });
+        } catch (error) {
+          res.status(500).json({ message: 'Import failed', error });
+        }
+      });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }
