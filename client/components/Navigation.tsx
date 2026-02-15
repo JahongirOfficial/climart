@@ -48,8 +48,6 @@ const purchasesSubMenu = [
 const salesSubMenu = [
   { id: "customer-orders", name: "Mijozlarning buyurtmalari", path: "/sales/customer-orders" },
   { id: "customer-invoices", name: "Xaridorlarning to'lov fakturalari", path: "/sales/customer-invoices" },
-  { id: "pending-invoices", name: "Kutilayotgan tan narxlar", path: "/sales/pending-invoices" },
-  { id: "corrected-invoices", name: "Tuzatilgan hisob-fakturalar", path: "/sales/corrected-invoices" },
   { id: "shipments", name: "Yuklab yuborish", path: "/sales/shipments" },
   { id: "tax-invoices", name: "Berilgan hisob-fakturalar", path: "/sales/tax-invoices" },
   { id: "customer-debts", name: "Mendan qarzdorlar", path: "/sales/customer-debts" },

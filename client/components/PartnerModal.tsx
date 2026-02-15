@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Partner } from "@shared/api";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { formatPhoneNumber, toDbFormat, toDisplayFormat } from "@/lib/phoneUtils";
 
 interface PartnerModalProps {
   open: boolean;
@@ -201,7 +202,7 @@ export const PartnerModal = ({ open, onClose, onSuccess, partner, initialType = 
                   <Input
                     id="phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })}
                     placeholder="+998 90 123 45 67"
                   />
                 </div>

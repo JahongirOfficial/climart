@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Copy, Check } from 'lucide-react';
 import type { UserProfile } from '@shared/api';
+import { formatPhoneNumber, toDbFormat, toDisplayFormat } from '@/lib/phoneUtils';
 
 interface EmployeeModalProps {
   isOpen: boolean;
@@ -143,13 +144,13 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
     if (employee) {
       setFirstName(employee.firstName);
       setLastName(employee.lastName);
-      setPhoneNumber(employee.phoneNumber);
+      setPhoneNumber(toDisplayFormat(employee.phoneNumber));
       setAddress('');
       setPermissions(employee.permissions);
     } else {
       setFirstName('');
       setLastName('');
-      setPhoneNumber('+998');
+      setPhoneNumber('+998 ');
       setAddress('');
       setPermissions([]);
     }
@@ -204,26 +205,6 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
       setError(err.message);
     },
   });
-
-  const formatPhoneNumber = (value: string) => {
-    const digits = value.replace(/\D/g, '');
-    
-    if (digits.startsWith('998')) {
-      const number = digits.slice(3);
-      if (number.length === 0) return '+998';
-      if (number.length <= 2) return `+998 ${number}`;
-      if (number.length <= 5) return `+998 ${number.slice(0, 2)} ${number.slice(2)}`;
-      if (number.length <= 7) return `+998 ${number.slice(0, 2)} ${number.slice(2, 5)} ${number.slice(5)}`;
-      return `+998 ${number.slice(0, 2)} ${number.slice(2, 5)} ${number.slice(5, 7)} ${number.slice(7, 9)}`;
-    } else if (digits.length > 0) {
-      if (digits.length <= 2) return `+998 ${digits}`;
-      if (digits.length <= 5) return `+998 ${digits.slice(0, 2)} ${digits.slice(2)}`;
-      if (digits.length <= 7) return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`;
-      return `+998 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)}`;
-    }
-    
-    return '+998';
-  };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPhoneNumber(formatPhoneNumber(e.target.value));
@@ -291,7 +272,7 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
       return;
     }
 
-    const cleanPhone = phoneNumber.replace(/\s/g, '');
+    const cleanPhone = toDbFormat(phoneNumber);
 
     mutation.mutate({
       firstName,

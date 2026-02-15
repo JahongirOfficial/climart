@@ -23,6 +23,7 @@ import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useModal } from "@/contexts/ModalContext";
 import { useTelegram } from "@/hooks/useTelegram";
+import { formatPhoneNumber } from "@/lib/phoneUtils";
 
 interface Chat {
   id: string;
@@ -336,9 +337,9 @@ const Telegram = () => {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+998901234567"
+                    placeholder="+998 90 123 45 67"
                     value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    onChange={(e) => setPhoneNumber(formatPhoneNumber(e.target.value))}
                     className="mt-1"
                   />
                 </div>

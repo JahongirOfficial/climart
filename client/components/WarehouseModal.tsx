@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatPhoneNumber, toDbFormat, toDisplayFormat } from "@/lib/phoneUtils";
 
 interface Warehouse {
   _id?: string;
@@ -179,7 +180,7 @@ export function WarehouseModal({ open, onClose, warehouse, onSuccess }: Warehous
                 id="phone"
                 value={formData.phone}
                 onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
+                  setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })
                 }
                 placeholder="+998 90 123 45 67"
               />
