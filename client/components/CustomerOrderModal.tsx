@@ -10,6 +10,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { CustomerOrder } from "@shared/api";
 import { Plus, Trash2, Loader2, UserPlus, Printer } from "lucide-react";
 import { PartnerModal } from "@/components/PartnerModal";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 
 interface CustomerOrderModalProps {
   open: boolean;
@@ -695,51 +696,26 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
               </div>
 
               <div className="space-y-2">
-                {items.map((item, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
-                    <div className="col-span-5 relative">
-                      <Label className="text-xs">Mahsulot</Label>
-                      <Input
-                        type="text"
-                        list={`products-${index}`}
-                        value={productSearchTerms[index] || item.productName}
-                        onChange={(e) => handleProductSearchChange(index, e.target.value)}
-                        onBlur={(e) => {
-                          // Delay to allow click on dropdown item
-                          setTimeout(() => {
-                            const selectedProduct = products.find(p => 
-                              p.name === e.target.value || 
-                              p._id === e.target.value
-                            );
-                            if (selectedProduct) {
-                              handleProductSelect(index, selectedProduct._id);
-                            }
-                          }, 200);
-                        }}
-                        placeholder="Qidirish..."
-                        className="text-sm"
-                        required
-                      />
-                      {productSearchTerms[index] && getFilteredProducts(index).length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                          {getFilteredProducts(index).slice(0, 10).map(product => (
-                            <div
-                              key={product._id}
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                handleProductSelect(index, product._id);
-                              }}
-                              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                            >
-                              <div className="font-medium">{product.name}</div>
-                              <div className="text-xs text-gray-500">
-                                Mavjud: {product.quantity} {product.unit} • Narx: {product.sellingPrice.toLocaleString()} so'm
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                {items.map((item, index) => {
+                  const productOptions: ComboboxOption[] = products.map(p => ({
+                    value: p._id,
+                    label: p.name,
+                    description: `Mavjud: ${p.quantity} ${p.unit} • Narx: ${p.sellingPrice.toLocaleString()} so'm`
+                  }));
+
+                  return (
+                    <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
+                      <div className="col-span-5">
+                        <Label className="text-xs">Mahsulot</Label>
+                        <Combobox
+                          options={productOptions}
+                          value={item.product}
+                          onValueChange={(value) => handleProductSelect(index, value)}
+                          placeholder="Mahsulot tanlang..."
+                          searchPlaceholder="Mahsulot qidirish..."
+                          emptyText="Mahsulot topilmadi"
+                        />
+                      </div>
 
                     <div className="col-span-2">
                       <Label className="text-xs">Miqdor</Label>
@@ -788,7 +764,8 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
                       </Button>
                     </div>
                   </div>
-                ))}
+                );
+                })}
               </div>
 
               <div className="mt-3 p-3 bg-gray-50 rounded-lg">
