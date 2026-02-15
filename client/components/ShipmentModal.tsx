@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useCustomerOrders } from "@/hooks/useCustomerOrders";
 import { useWarehouses } from "@/hooks/useWarehouses";
-import { Loader2, Plus, Trash2, AlertCircle } from "lucide-react";
+import { Loader2, Plus, Trash2, AlertCircle, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ShipmentModalProps {
@@ -48,7 +49,8 @@ export const ShipmentModal = ({ open, onClose, onSave, orderId }: ShipmentModalP
     shipmentDate: new Date().toISOString().split('T')[0],
     deliveryAddress: "",
     trackingNumber: "",
-    notes: ""
+    notes: "",
+    allowNegativeStock: false
   });
 
   const [items, setItems] = useState<ShipmentItem[]>([]);
@@ -176,6 +178,13 @@ export const ShipmentModal = ({ open, onClose, onSave, orderId }: ShipmentModalP
           showWarning(`${item.productName} uchun miqdor kiritilmagan!`);
           return false;
         }
+        
+        // Check stock availability if negative stock is not allowed
+        if (!formData.allowNegativeStock && warehouse.availableStock !== undefined && warehouse.quantity > warehouse.availableStock) {
+          showWarning(`${item.productName} uchun ${warehouse.warehouseName} omborida yetarli mahsulot yo'q! Mavjud: ${warehouse.availableStock}, Kerak: ${warehouse.quantity}`);
+          return false;
+        }
+      }
       }
     }
     return true;
@@ -314,6 +323,23 @@ export const ShipmentModal = ({ open, onClose, onSave, orderId }: ShipmentModalP
             </div>
           </div>
 
+          <div className="flex items-center space-x-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+            <Checkbox
+              id="allowNegativeStock"
+              checked={formData.allowNegativeStock}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, allowNegativeStock: checked as boolean }))}
+            />
+            <div className="flex-1">
+              <Label htmlFor="allowNegativeStock" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                Minusga sotishga ruxsat berish
+              </Label>
+              <p className="text-xs text-gray-600 mt-1">
+                Omborda mahsulot bo'lmasa ham sotish mumkin bo'ladi (qoldiq minusga tushadi)
+              </p>
+            </div>
+          </div>
+
           {items.length > 0 && (
             <div className="space-y-4">
               <Label className="text-lg font-semibold">Mahsulotlar va omborlar</Label>
@@ -389,8 +415,20 @@ export const ShipmentModal = ({ open, onClose, onSave, orderId }: ShipmentModalP
                           </div>
 
                           {warehouse.availableStock !== undefined && (
-                            <div className="w-32 text-xs text-gray-600">
-                              Mavjud: {warehouse.availableStock}
+                            <div className="w-32">
+                              <div className="text-xs text-gray-600">
+                                Mavjud: {warehouse.availableStock}
+                              </div>
+                              {!formData.allowNegativeStock && warehouse.quantity > warehouse.availableStock && (
+                                <div className="text-xs text-red-600 font-medium">
+                                  Yetarli emas!
+                                </div>
+                              )}
+                              {formData.allowNegativeStock && warehouse.quantity > warehouse.availableStock && (
+                                <div className="text-xs text-orange-600 font-medium">
+                                  Minus: -{warehouse.quantity - warehouse.availableStock}
+                                </div>
+                              )}
                             </div>
                           )}
                           
