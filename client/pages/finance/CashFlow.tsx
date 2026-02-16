@@ -124,9 +124,7 @@ const CashFlow = () => {
     );
   }
 
-  const netChange = data?.closing?.total && data?.opening?.total 
-    ? data.closing.total - data.opening.total 
-    : 0;
+  const netChange = (data?.closing?.total ?? 0) - (data?.opening?.total ?? 0);
 
   return (
     <Layout>

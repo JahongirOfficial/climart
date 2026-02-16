@@ -61,6 +61,18 @@ export function createServer() {
   
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  
+  // Error handling middleware for body parser errors
+  app.use((err: any, req: any, res: any, next: any) => {
+    if (err instanceof SyntaxError && 'body' in err) {
+      console.error('Body parser error:', err.message);
+      return res.status(400).json({ 
+        message: 'Invalid JSON format', 
+        error: err.message 
+      });
+    }
+    next(err);
+  });
 
   // Example API routes
   app.get("/api/ping", (_req, res) => {
