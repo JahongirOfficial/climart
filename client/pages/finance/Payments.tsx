@@ -407,6 +407,7 @@ const Payments = () => {
                   <th className="text-left p-4 font-medium">Turi</th>
                   <th className="text-left p-4 font-medium">Kontragent</th>
                   <th className="text-left p-4 font-medium">Maqsad</th>
+                  <th className="text-left p-4 font-medium">To'lov manbasi</th>
                   <th className="text-center p-4 font-medium">Hisob</th>
                   <th className="text-right p-4 font-medium">Summa</th>
                   <th className="text-center p-4 font-medium">Holat</th>
@@ -416,7 +417,7 @@ const Payments = () => {
               <tbody>
                 {filteredPayments.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center p-8">
+                    <td colSpan={10} className="text-center p-8">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <AlertTriangle className="h-12 w-12 mb-4 opacity-50" />
                         <p className="text-lg font-medium">To'lovlar topilmadi</p>
@@ -443,6 +444,17 @@ const Payments = () => {
                       </td>
                       <td className="p-4">
                         <div className="text-sm max-w-xs truncate">{payment.purpose}</div>
+                      </td>
+                      <td className="p-4">
+                        <div className="text-sm">
+                          {payment.type === 'transfer' ? (
+                            <span>
+                              {payment.fromAccount === 'cash' ? 'Kassa' : 'Bank'} → {payment.toAccount === 'cash' ? 'Kassa' : 'Bank'}
+                            </span>
+                          ) : (
+                            <span>{payment.category || '-'}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4 text-center">
                         <Badge variant="outline">

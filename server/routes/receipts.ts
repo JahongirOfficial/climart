@@ -148,6 +148,25 @@ router.post('/from-order/:orderId', async (req: Request, res: Response) => {
     const count = await Receipt.countDocuments();
     const receiptNumber = `QQ-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
 
+    // Map product names to product IDs
+    const receiptItems = [];
+    for (const item of order.items) {
+      // Try to find product by name
+      const product = await Product.findOne({ name: item.productName }).session(session);
+      
+      if (!product) {
+        throw new Error(`Product "${item.productName}" not found in database. Please create it first.`);
+      }
+
+      receiptItems.push({
+        product: product._id,
+        productName: item.productName,
+        quantity: item.quantity,
+        costPrice: item.price,
+        total: item.total,
+      });
+    }
+
     // Create receipt from order
     const receipt = new Receipt({
       receiptNumber,
@@ -157,40 +176,32 @@ router.post('/from-order/:orderId', async (req: Request, res: Response) => {
       orderNumber: order.orderNumber,
       receiptDate: new Date(),
       createdBy: req.user?.userId,
-      items: order.items.map(item => ({
-        product: req.body.productIds?.[item.productName], // Product ID mapping from frontend
-        productName: item.productName,
-        quantity: item.quantity,
-        costPrice: item.price,
-        total: item.total,
-      })),
+      items: receiptItems,
       totalAmount: order.totalAmount,
       notes: req.body.notes,
     });
 
     // Update warehouse quantities and cost prices
     for (const item of receipt.items) {
-      if (item.product) {
-        const product = await Product.findById(item.product).session(session);
+      const product = await Product.findById(item.product).session(session);
 
-        if (product) {
-          // Calculate weighted average cost price
-          const oldQuantity = product.quantity;
-          const oldCostPrice = product.costPrice;
-          const newQuantity = oldQuantity + item.quantity;
+      if (product) {
+        // Calculate weighted average cost price
+        const oldQuantity = product.quantity;
+        const oldCostPrice = product.costPrice;
+        const newQuantity = oldQuantity + item.quantity;
 
-          // Update cost price (weighted average)
-          if (newQuantity > 0) {
-            product.costPrice = ((oldQuantity * oldCostPrice) + (item.quantity * item.costPrice)) / newQuantity;
-          }
-          product.quantity = newQuantity;
-
-          await product.save({ session });
-
-          // Auto-correct negative sales
-          const { correctPendingInvoices } = require('../utils/inventory');
-          await correctPendingInvoices(item.product.toString(), item.costPrice, session);
+        // Update cost price (weighted average)
+        if (newQuantity > 0) {
+          product.costPrice = ((oldQuantity * oldCostPrice) + (item.quantity * item.costPrice)) / newQuantity;
         }
+        product.quantity = newQuantity;
+
+        await product.save({ session });
+
+        // Auto-correct negative sales
+        const { correctPendingInvoices } = require('../utils/inventory');
+        await correctPendingInvoices(item.product.toString(), item.costPrice, session);
       }
     }
 
@@ -202,9 +213,9 @@ router.post('/from-order/:orderId', async (req: Request, res: Response) => {
     await session.commitTransaction();
 
     res.status(201).json(receipt);
-  } catch (error) {
+  } catch (error: any) {
     await session.abortTransaction();
-    res.status(400).json({ message: 'Failed to create receipt from order', error });
+    res.status(400).json({ message: error.message || 'Failed to create receipt from order', error });
   } finally {
     session.endSession();
   }
