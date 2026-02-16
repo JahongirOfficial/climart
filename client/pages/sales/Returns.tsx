@@ -81,9 +81,9 @@ const Returns = () => {
   };
 
   const filteredReturns = returns.filter(ret => 
-    ret.returnNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ret.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ret.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    ret.returnNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ret.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ret.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Calculate KPIs

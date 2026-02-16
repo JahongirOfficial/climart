@@ -8,12 +8,22 @@ import Receipt from '../models/Receipt';
 import CustomerOrder from '../models/CustomerOrder';
 import Shipment from '../models/Shipment';
 import Payment from '../models/Payment';
+import Service from '../models/Service';
+import Contract from '../models/Contract';
+import CustomerReturn from '../models/CustomerReturn';
+import SupplierReturn from '../models/SupplierReturn';
+import Writeoff from '../models/Writeoff';
+import WarehouseTransfer from '../models/WarehouseTransfer';
+import WarehouseReceipt from '../models/WarehouseReceipt';
+import WarehouseExpense from '../models/WarehouseExpense';
+import InternalOrder from '../models/InternalOrder';
+import Inventory from '../models/Inventory';
 
 dotenv.config();
 
-// Real product data
+// Expanded to 200 real products
 const REAL_PRODUCTS = [
-  // Electronics
+  // Electronics (30 products)
   { name: 'Samsung Galaxy S24', category: 'Electronics', unit: 'dona', costPrice: 8500000, salePrice: 9500000 },
   { name: 'iPhone 15 Pro', category: 'Electronics', unit: 'dona', costPrice: 12000000, salePrice: 13500000 },
   { name: 'Xiaomi Redmi Note 13', category: 'Electronics', unit: 'dona', costPrice: 2500000, salePrice: 2800000 },

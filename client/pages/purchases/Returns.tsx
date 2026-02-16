@@ -94,9 +94,9 @@ const Returns = () => {
   };
 
   const filteredReturns = returns.filter(ret =>
-    (typeof ret.supplier === 'string' ? ret.supplier : ret.supplier.name)
+    (ret.supplierName || (typeof ret.supplier === 'string' ? ret.supplier : ret.supplier?.name) || '')
       .toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ret.returnNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ret.returnNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     ret.receiptNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
