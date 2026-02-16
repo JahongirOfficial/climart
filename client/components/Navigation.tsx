@@ -71,10 +71,11 @@ const contactsSubMenu = [
 
 const warehouseSubMenu = [
   { id: "receipt", name: "Kirim qilish", path: "/warehouse/receipt" },
-  { id: "expense", name: "Chiqim qilish", path: "/warehouse/expense" },
+  { id: "writeoff", name: "Chiqim qilish", path: "/warehouse/writeoff" },
   { id: "transfer", name: "Ko'chirish", path: "/warehouse/transfer" },
-  { id: "writeoff", name: "Xatlov", path: "/warehouse/writeoff" },
+  { id: "expense", name: "Xatlov", path: "/warehouse/expense" },
   { id: "internal-order", name: "Ichki zakaz", path: "/warehouse/internal-order" },
+  { id: "inventory", name: "Inventarizatsiya", path: "/warehouse/inventory" },
   { id: "balance", name: "Qoldiq", path: "/warehouse/balance" },
   { id: "turnover", name: "Aylanma", path: "/warehouse/turnover" },
   { id: "warehouses", name: "Omborlar", path: "/warehouse/warehouses" },

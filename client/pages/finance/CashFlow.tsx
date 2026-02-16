@@ -23,33 +23,35 @@ import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 
 interface CashFlowData {
-  openingBalance: {
+  opening: {
     cash: number;
     bank: number;
     total: number;
   };
-  closingBalance: {
+  closing: {
     cash: number;
     bank: number;
     total: number;
   };
-  movements: Array<{
+  incoming: {
+    cash: number;
+    bank: number;
+    total: number;
+  };
+  outgoing: {
+    cash: number;
+    bank: number;
+    total: number;
+  };
+  grouped: Array<{
     date: string;
-    cashInflow: number;
-    cashOutflow: number;
-    bankInflow: number;
-    bankOutflow: number;
+    cashIncoming: number;
+    cashOutgoing: number;
+    bankIncoming: number;
+    bankOutgoing: number;
     cashBalance: number;
     bankBalance: number;
-    totalBalance: number;
-    payments: Array<{
-      _id: string;
-      paymentNumber: string;
-      type: string;
-      amount: number;
-      partnerName?: string;
-      purpose: string;
-    }>;
+    payments: any[];
   }>;
 }
 
@@ -79,8 +81,9 @@ const CashFlow = () => {
 
     let csv = 'Sana,Kassa Kirim,Kassa Chiqim,Bank Kirim,Bank Chiqim,Kassa Balans,Bank Balans,Jami Balans\n';
     
-    data.movements.forEach(movement => {
-      csv += `${movement.date},${movement.cashInflow},${movement.cashOutflow},${movement.bankInflow},${movement.bankOutflow},${movement.cashBalance},${movement.bankBalance},${movement.totalBalance}\n`;
+    data.grouped.forEach(movement => {
+      const totalBalance = movement.cashBalance + movement.bankBalance;
+      csv += `${movement.date},${movement.cashIncoming},${movement.cashOutgoing},${movement.bankIncoming},${movement.bankOutgoing},${movement.cashBalance},${movement.bankBalance},${totalBalance}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -121,7 +124,9 @@ const CashFlow = () => {
     );
   }
 
-  const netChange = data.closingBalance.total - data.openingBalance.total;
+  const netChange = data?.closing?.total && data?.opening?.total 
+    ? data.closing.total - data.opening.total 
+    : 0;
 
   return (
     <Layout>
@@ -172,11 +177,11 @@ const CashFlow = () => {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Boshlang'ich Balans</p>
                 <p className="text-2xl font-bold mt-2">
-                  {data.openingBalance.total.toLocaleString()} so'm
+                  {(data?.opening?.total || 0).toLocaleString()} so'm
                 </p>
                 <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                  <span>Kassa: {data.openingBalance.cash.toLocaleString()}</span>
-                  <span>Bank: {data.openingBalance.bank.toLocaleString()}</span>
+                  <span>Kassa: {(data?.opening?.cash || 0).toLocaleString()}</span>
+                  <span>Bank: {(data?.opening?.bank || 0).toLocaleString()}</span>
                 </div>
               </div>
               <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
@@ -190,11 +195,11 @@ const CashFlow = () => {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Yakuniy Balans</p>
                 <p className="text-2xl font-bold mt-2">
-                  {data.closingBalance.total.toLocaleString()} so'm
+                  {(data?.closing?.total || 0).toLocaleString()} so'm
                 </p>
                 <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                  <span>Kassa: {data.closingBalance.cash.toLocaleString()}</span>
-                  <span>Bank: {data.closingBalance.bank.toLocaleString()}</span>
+                  <span>Kassa: {(data?.closing?.cash || 0).toLocaleString()}</span>
+                  <span>Bank: {(data?.closing?.bank || 0).toLocaleString()}</span>
                 </div>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
@@ -246,7 +251,7 @@ const CashFlow = () => {
                 </tr>
               </thead>
               <tbody>
-                {data.movements.length === 0 ? (
+                {data.grouped.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="text-center p-8">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
@@ -256,47 +261,50 @@ const CashFlow = () => {
                     </td>
                   </tr>
                 ) : (
-                  data.movements.map((movement, index) => (
-                    <tr key={index} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="p-4">
-                        <div className="font-medium">
-                          {format(new Date(movement.date), 'dd.MM.yyyy')}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {movement.payments.length} ta to'lov
-                        </div>
-                      </td>
-                      <td className="p-4 text-right">
-                        <span className="text-green-600 font-medium">
-                          +{movement.cashInflow.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <span className="text-red-600 font-medium">
-                          -{movement.cashOutflow.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <span className="text-green-600 font-medium">
-                          +{movement.bankInflow.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <span className="text-red-600 font-medium">
-                          -{movement.bankOutflow.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right font-medium">
-                        {movement.cashBalance.toLocaleString()}
-                      </td>
-                      <td className="p-4 text-right font-medium">
-                        {movement.bankBalance.toLocaleString()}
-                      </td>
-                      <td className="p-4 text-right font-bold">
-                        {movement.totalBalance.toLocaleString()}
-                      </td>
-                    </tr>
-                  ))
+                  data.grouped.map((movement, index) => {
+                    const totalBalance = movement.cashBalance + movement.bankBalance;
+                    return (
+                      <tr key={index} className="border-b hover:bg-muted/50 transition-colors">
+                        <td className="p-4">
+                          <div className="font-medium">
+                            {format(new Date(movement.date), 'dd.MM.yyyy')}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {movement.payments.length} ta to'lov
+                          </div>
+                        </td>
+                        <td className="p-4 text-right">
+                          <span className="text-green-600 font-medium">
+                            +{movement.cashIncoming.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          <span className="text-red-600 font-medium">
+                            -{movement.cashOutgoing.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          <span className="text-green-600 font-medium">
+                            +{movement.bankIncoming.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          <span className="text-red-600 font-medium">
+                            -{movement.bankOutgoing.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right font-medium">
+                          {movement.cashBalance.toLocaleString()}
+                        </td>
+                        <td className="p-4 text-right font-medium">
+                          {movement.bankBalance.toLocaleString()}
+                        </td>
+                        <td className="p-4 text-right font-bold">
+                          {totalBalance.toLocaleString()}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

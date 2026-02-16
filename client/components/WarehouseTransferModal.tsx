@@ -11,37 +11,35 @@ import { useProducts } from "@/hooks/useProducts";
 import { Loader2, Plus, Trash2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface WriteoffModalProps {
+interface WarehouseTransferModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (data: any) => Promise<void>;
 }
 
-interface WriteoffItem {
+interface TransferItem {
   product: string;
   productName: string;
   quantity: number;
-  costPrice: number;
-  total: number;
   availableStock: number;
 }
 
-export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => {
+export const WarehouseTransferModal = ({ open, onClose, onSave }: WarehouseTransferModalProps) => {
   const { warehouses, loading: warehousesLoading } = useWarehouses();
   const { products } = useProducts();
-  const { showWarning, showError } = useModal();
+  const { showError } = useModal();
 
   const [formData, setFormData] = useState({
-    warehouse: "",
-    warehouseName: "",
-    organization: "",
-    writeoffDate: new Date().toISOString().split('T')[0],
-    reason: "damaged" as 'damaged' | 'expired' | 'lost' | 'personal_use' | 'inventory_shortage' | 'other',
+    sourceWarehouse: "",
+    sourceWarehouseName: "",
+    destinationWarehouse: "",
+    destinationWarehouseName: "",
+    transferDate: new Date().toISOString().split('T')[0],
     notes: ""
   });
 
-  const [items, setItems] = useState<WriteoffItem[]>([
-    { product: "", productName: "", quantity: 0, costPrice: 0, total: 0, availableStock: 0 }
+  const [items, setItems] = useState<TransferItem[]>([
+    { product: "", productName: "", quantity: 0, availableStock: 0 }
   ]);
 
   const [saving, setSaving] = useState(false);
@@ -49,26 +47,34 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
 
   useEffect(() => {
     if (!open) {
-      // Reset form when modal closes
       setFormData({
-        warehouse: "",
-        warehouseName: "",
-        organization: "",
-        writeoffDate: new Date().toISOString().split('T')[0],
-        reason: "damaged",
+        sourceWarehouse: "",
+        sourceWarehouseName: "",
+        destinationWarehouse: "",
+        destinationWarehouseName: "",
+        transferDate: new Date().toISOString().split('T')[0],
         notes: ""
       });
-      setItems([{ product: "", productName: "", quantity: 0, costPrice: 0, total: 0, availableStock: 0 }]);
+      setItems([{ product: "", productName: "", quantity: 0, availableStock: 0 }]);
       setErrors([]);
     }
   }, [open]);
 
-  const handleWarehouseChange = (warehouseId: string) => {
+  const handleSourceWarehouseChange = (warehouseId: string) => {
     const warehouse = warehouses.find(w => w._id === warehouseId);
     setFormData(prev => ({
       ...prev,
-      warehouse: warehouseId,
-      warehouseName: warehouse?.name || ""
+      sourceWarehouse: warehouseId,
+      sourceWarehouseName: warehouse?.name || ""
+    }));
+  };
+
+  const handleDestinationWarehouseChange = (warehouseId: string) => {
+    const warehouse = warehouses.find(w => w._id === warehouseId);
+    setFormData(prev => ({
+      ...prev,
+      destinationWarehouse: warehouseId,
+      destinationWarehouseName: warehouse?.name || ""
     }));
   };
 
@@ -80,9 +86,7 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
         ...newItems[index],
         product: productId,
         productName: product.name,
-        costPrice: product.costPrice,
-        availableStock: product.quantity,
-        total: newItems[index].quantity * product.costPrice
+        availableStock: product.quantity
       };
       setItems(newItems);
     }
@@ -91,12 +95,11 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
   const handleQuantityChange = (index: number, quantity: number) => {
     const newItems = [...items];
     newItems[index].quantity = quantity;
-    newItems[index].total = quantity * newItems[index].costPrice;
     setItems(newItems);
   };
 
   const addItem = () => {
-    setItems([...items, { product: "", productName: "", quantity: 0, costPrice: 0, total: 0, availableStock: 0 }]);
+    setItems([...items, { product: "", productName: "", quantity: 0, availableStock: 0 }]);
   };
 
   const removeItem = (index: number) => {
@@ -111,8 +114,16 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
 
     const validationErrors: string[] = [];
 
-    if (!formData.warehouse) {
-      validationErrors.push("Ombor tanlanmagan");
+    if (!formData.sourceWarehouse) {
+      validationErrors.push("Manba ombor tanlanmagan");
+    }
+
+    if (!formData.destinationWarehouse) {
+      validationErrors.push("Maqsad ombor tanlanmagan");
+    }
+
+    if (formData.sourceWarehouse === formData.destinationWarehouse) {
+      validationErrors.push("Manba va maqsad omborlar bir xil bo'lishi mumkin emas");
     }
 
     if (items.some(item => !item.product)) {
@@ -123,7 +134,6 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
       validationErrors.push("Mahsulot miqdori 0 dan katta bo'lishi kerak");
     }
 
-    // Check stock availability
     for (const item of items) {
       if (item.product && item.quantity > item.availableStock) {
         validationErrors.push(`${item.productName} uchun omborda yetarli mahsulot yo'q! Mavjud: ${item.availableStock}`);
@@ -137,13 +147,10 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
 
     setSaving(true);
     try {
-      const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
-
       await onSave({
         ...formData,
         items: items.map(({ availableStock, ...item }) => item),
-        totalAmount,
-        status: 'draft'
+        status: 'pending'
       });
 
       onClose();
@@ -154,22 +161,13 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
     }
   };
 
-  const reasonLabels = {
-    damaged: "Shikastlangan (Brak)",
-    expired: "Yaroqlilik muddati tugagan",
-    lost: "Yo'qolgan",
-    personal_use: "Shaxsiy ehtiyoj",
-    inventory_shortage: "Inventarizatsiya kamomadi",
-    other: "Boshqa"
-  };
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Chiqim qilish (Списание)</DialogTitle>
+          <DialogTitle>Ko'chirish (Перемещение)</DialogTitle>
           <DialogDescription>
-            Zarar ko'rgan yoki eskirgan mahsulotlarni hisobdan chiqaring
+            Mahsulotlarni bir ombordan ikkinchisiga ko'chiring
           </DialogDescription>
         </DialogHeader>
 
@@ -189,8 +187,8 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="warehouse">Ombor *</Label>
-              <Select value={formData.warehouse} onValueChange={handleWarehouseChange} disabled={warehousesLoading}>
+              <Label htmlFor="sourceWarehouse">Qayerdan (Manba ombor) *</Label>
+              <Select value={formData.sourceWarehouse} onValueChange={handleSourceWarehouseChange} disabled={warehousesLoading}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tanlang..." />
                 </SelectTrigger>
@@ -205,44 +203,31 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
             </div>
 
             <div>
-              <Label htmlFor="writeoffDate">Sana *</Label>
-              <Input
-                id="writeoffDate"
-                type="date"
-                value={formData.writeoffDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, writeoffDate: e.target.value }))}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="reason">Sabab *</Label>
-              <Select value={formData.reason} onValueChange={(value: any) => setFormData(prev => ({ ...prev, reason: value }))}>
+              <Label htmlFor="destinationWarehouse">Qayerga (Maqsad ombor) *</Label>
+              <Select value={formData.destinationWarehouse} onValueChange={handleDestinationWarehouseChange} disabled={warehousesLoading}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Tanlang..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(reasonLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
+                  {warehouses.map(warehouse => (
+                    <SelectItem key={warehouse._id} value={warehouse._id}>
+                      {warehouse.name} ({warehouse.code})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            <div>
-              <Label htmlFor="organization">Tashkilot</Label>
-              <Input
-                id="organization"
-                type="text"
-                value={formData.organization}
-                onChange={(e) => setFormData(prev => ({ ...prev, organization: e.target.value }))}
-                placeholder="Tashkilot nomi"
-              />
-            </div>
+          <div>
+            <Label htmlFor="transferDate">Sana *</Label>
+            <Input
+              id="transferDate"
+              type="date"
+              value={formData.transferDate}
+              onChange={(e) => setFormData(prev => ({ ...prev, transferDate: e.target.value }))}
+              required
+            />
           </div>
 
           <div>
@@ -257,7 +242,7 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
             <div className="space-y-2">
               {items.map((item, index) => (
                 <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
-                  <div className="col-span-5">
+                  <div className="col-span-8">
                     <Label className="text-xs">Mahsulot</Label>
                     <Select value={item.product} onValueChange={(value) => handleProductChange(index, value)}>
                       <SelectTrigger>
@@ -273,7 +258,7 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
                     </Select>
                   </div>
 
-                  <div className="col-span-2">
+                  <div className="col-span-3">
                     <Label className="text-xs">Miqdor</Label>
                     <Input
                       type="number"
@@ -283,26 +268,6 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
                       onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)}
                       className="text-sm"
                       required
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <Label className="text-xs">Tan narxi</Label>
-                    <Input
-                      type="text"
-                      value={new Intl.NumberFormat('uz-UZ').format(item.costPrice)}
-                      readOnly
-                      className="text-sm bg-gray-50"
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <Label className="text-xs">Jami</Label>
-                    <Input
-                      type="text"
-                      value={new Intl.NumberFormat('uz-UZ').format(item.total)}
-                      readOnly
-                      className="text-sm bg-gray-50"
                     />
                   </div>
 
@@ -321,15 +286,6 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
                 </div>
               ))}
             </div>
-
-            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">Jami zarar:</span>
-                <span className="text-lg font-bold text-red-600">
-                  {new Intl.NumberFormat('uz-UZ').format(items.reduce((sum, item) => sum + item.total, 0))} so'm
-                </span>
-              </div>
-            </div>
           </div>
 
           <div>
@@ -346,7 +302,7 @@ export const WriteoffModal = ({ open, onClose, onSave }: WriteoffModalProps) => 
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Hisobdan chiqarish tasdiqlangandan keyin mahsulotlar ombor qoldig'idan avtomatik kamayadi va zarar sifatida qayd etiladi.
+              Ko'chirish tasdiqlangandan keyin mahsulotlar manba ombordan kamayadi va maqsad omborga qo'shiladi.
             </AlertDescription>
           </Alert>
 

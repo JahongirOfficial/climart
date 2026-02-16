@@ -74,6 +74,7 @@ const Expense = lazy(() => import("./pages/warehouse/Expense"));
 const Transfer = lazy(() => import("./pages/warehouse/Transfer"));
 const Writeoff = lazy(() => import("./pages/warehouse/Writeoff"));
 const InternalOrder = lazy(() => import("./pages/warehouse/InternalOrder"));
+const Inventory = lazy(() => import("./pages/warehouse/Inventory"));
 const Balance = lazy(() => import("./pages/warehouse/Balance"));
 const Turnover = lazy(() => import("./pages/warehouse/Turnover"));
 const Warehouses = lazy(() => import("./pages/warehouse/Warehouses"));
@@ -188,6 +189,7 @@ const App = () => (
                 <Route path="/warehouse/transfer" element={<ProtectedRoute><Transfer /></ProtectedRoute>} />
                 <Route path="/warehouse/writeoff" element={<ProtectedRoute><Writeoff /></ProtectedRoute>} />
                 <Route path="/warehouse/internal-order" element={<ProtectedRoute><InternalOrder /></ProtectedRoute>} />
+                <Route path="/warehouse/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
                 <Route path="/warehouse/balance" element={<ProtectedRoute><Balance /></ProtectedRoute>} />
                 <Route path="/warehouse/turnover" element={<ProtectedRoute><Turnover /></ProtectedRoute>} />
                 <Route path="/warehouse/warehouses" element={<ProtectedRoute><Warehouses /></ProtectedRoute>} />

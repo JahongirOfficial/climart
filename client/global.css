@@ -266,6 +266,35 @@
     transition: border-color 150ms ease-in-out, box-shadow 150ms ease-in-out;
   }
 
+  /* Hide browser's default validation icons (x mark) */
+  input:invalid,
+  input:required,
+  select:invalid,
+  select:required,
+  textarea:invalid,
+  textarea:required {
+    box-shadow: none;
+  }
+
+  /* Remove the "x" icon that appears in invalid inputs in some browsers */
+  input::-webkit-validation-bubble-message,
+  input::-webkit-validation-bubble-arrow,
+  input::-webkit-validation-bubble {
+    display: none;
+  }
+
+  /* Firefox */
+  input::-moz-error-message {
+    display: none;
+  }
+
+  /* Remove default invalid styling */
+  input:invalid:not(:focus):not(:placeholder-shown),
+  select:invalid:not(:focus),
+  textarea:invalid:not(:focus):not(:placeholder-shown) {
+    border-color: hsl(var(--input));
+  }
+
   /* ERP Table Row Hover - Only background color change */
   .erp-table-row {
     transition: background-color 150ms ease-in-out;

@@ -1,67 +1,90 @@
-import { useState, useEffect } from 'react';
-import { Writeoff } from '@shared/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-export const useWriteoffs = (warehouseId?: string) => {
-  const [writeoffs, setWriteoffs] = useState<Writeoff[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface WriteoffItem {
+  product: string;
+  productName: string;
+  quantity: number;
+  costPrice: number;
+  total: number;
+}
 
-  const fetchWriteoffs = async () => {
-    try {
-      setLoading(true);
-      const url = warehouseId ? `/api/writeoffs?warehouse=${warehouseId}` : '/api/writeoffs';
-      const response = await fetch(url);
+interface Writeoff {
+  _id: string;
+  writeoffNumber: string;
+  warehouse: string;
+  warehouseName: string;
+  organization?: string;
+  writeoffDate: string;
+  status: 'draft' | 'confirmed';
+  items: WriteoffItem[];
+  totalAmount: number;
+  reason: 'damaged' | 'expired' | 'lost' | 'personal_use' | 'inventory_shortage' | 'other';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const useWriteoffs = () => {
+  const queryClient = useQueryClient();
+
+  const { data: writeoffs = [], isLoading: loading, error, refetch } = useQuery<Writeoff[]>({
+    queryKey: ['writeoffs'],
+    queryFn: async () => {
+      const response = await fetch('/api/writeoffs');
       if (!response.ok) throw new Error('Failed to fetch writeoffs');
-      const data = await response.json();
-      setWriteoffs(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
+  });
 
-  useEffect(() => {
-    fetchWriteoffs();
-  }, [warehouseId]);
+  const createMutation = useMutation({
+    mutationFn: async (data: Partial<Writeoff>) => {
+      const response = await fetch('/api/writeoffs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create writeoff');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['writeoffs'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
 
-  const confirmWriteoff = async (id: string) => {
-    try {
+  const confirmMutation = useMutation({
+    mutationFn: async (id: string) => {
       const response = await fetch(`/api/writeoffs/${id}/confirm`, {
         method: 'PATCH',
       });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message);
-      }
-      await fetchWriteoffs();
-    } catch (err) {
-      throw err;
-    }
-  };
+      if (!response.ok) throw new Error('Failed to confirm writeoff');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['writeoffs'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
 
-  const deleteWriteoff = async (id: string) => {
-    try {
-      const response = await fetch(`/api/writeoffs/${id}`, {
-        method: 'DELETE',
-      });
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/writeoffs/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete writeoff');
-      await fetchWriteoffs();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const refetch = () => {
-    fetchWriteoffs();
-  };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['writeoffs'] });
+    },
+  });
 
   return {
     writeoffs,
     loading,
-    error,
+    error: error instanceof Error ? error.message : null,
     refetch,
-    confirmWriteoff,
-    deleteWriteoff,
+    createWriteoff: createMutation.mutateAsync,
+    confirmWriteoff: confirmMutation.mutateAsync,
+    deleteWriteoff: deleteMutation.mutateAsync,
   };
 };
