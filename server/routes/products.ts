@@ -186,8 +186,13 @@ router.post('/', async (req: Request, res: Response) => {
 
     await product.save();
     res.status(201).json(product);
-  } catch (error) {
-    res.status(400).json({ message: 'Invalid data', error });
+  } catch (error: any) {
+    console.error('Product creation error:', error);
+    res.status(400).json({ 
+      message: 'Invalid data', 
+      error: error.message,
+      details: error.errors || error
+    });
   }
 });
 
