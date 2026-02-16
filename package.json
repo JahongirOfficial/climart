@@ -26,7 +26,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "format.fix": "prettier --write .",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "test:full-cycle": "tsx server/scripts/test-full-cycle.ts"
   },
   "dependencies": {
     "@types/bcrypt": "^6.0.0",
