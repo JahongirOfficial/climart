@@ -36,9 +36,25 @@ router.get('/:id', async (req: Request, res: Response) => {
 // Create new customer order (no inventory validation - just creates order)
 router.post('/', async (req: Request, res: Response) => {
   try {
-    // Generate order number
-    const count = await CustomerOrder.countDocuments();
-    const orderNumber = `CO-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    // Generate unique order number by finding the last order
+    const currentYear = new Date().getFullYear();
+    const lastOrder = await CustomerOrder.findOne({
+      orderNumber: new RegExp(`^CO-${currentYear}-`)
+    }).sort({ orderNumber: -1 });
+
+    let orderNumber: string;
+    if (lastOrder && lastOrder.orderNumber) {
+      // Extract number from last order and increment
+      const match = lastOrder.orderNumber.match(/CO-\d{4}-(\d{3})/);
+      if (match) {
+        const lastNumber = parseInt(match[1], 10);
+        orderNumber = `CO-${currentYear}-${String(lastNumber + 1).padStart(3, '0')}`;
+      } else {
+        orderNumber = `CO-${currentYear}-001`;
+      }
+    } else {
+      orderNumber = `CO-${currentYear}-001`;
+    }
 
     // Create order without inventory validation
     const order = new CustomerOrder({
