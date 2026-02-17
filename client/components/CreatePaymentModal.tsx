@@ -58,8 +58,7 @@ export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData 
     paymentDate: new Date().toISOString().split('T')[0],
     amount: '',
     partner: '',
-    account: 'bank' as 'cash' | 'bank',
-    paymentMethod: 'bank_transfer' as 'cash' | 'bank_transfer' | 'card' | 'other',
+    paymentMethod: 'cash' as 'cash' | 'click' | 'bank_transfer' | 'card',
     purpose: '',
     category: '',
     fromAccount: 'cash' as 'cash' | 'bank',
@@ -73,8 +72,7 @@ export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData 
         paymentDate: new Date().toISOString().split('T')[0],
         amount: prefilledData?.amount ? String(prefilledData.amount) : '',
         partner: prefilledData?.partner || '',
-        account: 'bank',
-        paymentMethod: 'bank_transfer',
+        paymentMethod: 'cash',
         purpose: prefilledData?.purpose || '',
         category: prefilledData?.category || '',
         fromAccount: 'cash',
@@ -116,7 +114,6 @@ export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData 
         paymentData.fromAccount = formData.fromAccount;
         paymentData.toAccount = formData.toAccount;
       } else {
-        paymentData.account = formData.account;
         paymentData.paymentMethod = formData.paymentMethod;
         
         if (formData.partner && formData.partner !== "none") {
@@ -265,26 +262,7 @@ export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData 
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {/* Account */}
-                <div className="space-y-2">
-                  <Label htmlFor="account">Hisob *</Label>
-                  <Select
-                    value={formData.account}
-                    onValueChange={(value: 'cash' | 'bank') => 
-                      setFormData({ ...formData, account: value })
-                    }
-                  >
-                    <SelectTrigger id="account">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">Kassa</SelectItem>
-                      <SelectItem value="bank">Bank</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
+              <div className="grid grid-cols-1 gap-4">
                 {/* Payment Method */}
                 <div className="space-y-2">
                   <Label htmlFor="paymentMethod">To'lov usuli *</Label>
@@ -298,10 +276,10 @@ export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData 
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="cash">Naqd pul</SelectItem>
-                      <SelectItem value="bank_transfer">Bank o'tkazmasi</SelectItem>
+                      <SelectItem value="cash">Naqt</SelectItem>
+                      <SelectItem value="click">Click</SelectItem>
+                      <SelectItem value="bank_transfer">Bank o'tkazma</SelectItem>
                       <SelectItem value="card">Karta</SelectItem>
-                      <SelectItem value="other">Boshqa</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
