@@ -198,7 +198,7 @@ export const ContractModal = ({ open, onClose, onSuccess, contract, preselectedP
               <Input
                 id="totalAmount"
                 type="number"
-                value={formData.totalAmount}
+                value={formData.totalAmount || ''}
                 onChange={(e) => setFormData({ ...formData, totalAmount: e.target.value })}
                 placeholder="0"
               />
@@ -209,7 +209,7 @@ export const ContractModal = ({ open, onClose, onSuccess, contract, preselectedP
               <Input
                 id="creditLimit"
                 type="number"
-                value={formData.creditLimit}
+                value={formData.creditLimit || ''}
                 onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
                 placeholder="0"
               />

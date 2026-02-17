@@ -251,9 +251,10 @@ export const CustomerReturnModal = ({ open, onClose, onSave }: CustomerReturnMod
                         type="number"
                         min="0"
                         max={item.maxQuantity}
-                        value={item.quantity}
+                        value={item.quantity || ''}
                         onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
                         className="text-sm"
+                        placeholder="0"
                       />
                     </div>
 

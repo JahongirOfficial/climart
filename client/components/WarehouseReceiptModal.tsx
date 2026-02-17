@@ -298,9 +298,10 @@ export const WarehouseReceiptModal = ({ open, onClose, onSuccess, receipt }: War
                             type="number"
                             min="0"
                             step="0.01"
-                            value={item.quantity}
+                            value={item.quantity || ''}
                             onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
                             className="h-8 text-right"
+                            placeholder="0"
                           />
                         </td>
                         <td className="px-3 py-2">
@@ -308,9 +309,10 @@ export const WarehouseReceiptModal = ({ open, onClose, onSuccess, receipt }: War
                             type="number"
                             min="0"
                             step="0.01"
-                            value={item.costPrice}
+                            value={item.costPrice || ''}
                             onChange={(e) => updateItem(index, 'costPrice', parseFloat(e.target.value) || 0)}
                             className="h-8 text-right"
+                            placeholder="0"
                           />
                         </td>
                         <td className="px-3 py-2 text-right text-sm font-medium">

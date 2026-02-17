@@ -49,7 +49,7 @@ export function Combobox({
   const selectedOption = options.find((option) => option.value === value)
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -64,19 +64,23 @@ export function Combobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
+      <PopoverContent 
+        className="w-[--radix-popover-trigger-width] p-0" 
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
-          <CommandList>
+          <CommandList className="max-h-[300px] overflow-y-auto">
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
+                  value={option.label}
                   keywords={[option.label, option.keywords || "", option.description || ""]}
-                  onSelect={(currentValue) => {
-                    onValueChange(currentValue === value ? "" : currentValue)
+                  onSelect={() => {
+                    onValueChange(option.value)
                     setOpen(false)
                   }}
                 >

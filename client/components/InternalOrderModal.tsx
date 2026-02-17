@@ -298,6 +298,7 @@ export const InternalOrderModal = ({ open, onClose, onSave }: InternalOrderModal
                       value={item.requestedQuantity || ''}
                       onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)}
                       className="text-sm"
+                      placeholder="0"
                       required
                     />
                   </div>

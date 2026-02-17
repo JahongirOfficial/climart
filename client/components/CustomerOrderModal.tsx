@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Combobox } from "@/components/ui/combobox";
 import { usePartners } from "@/hooks/usePartners";
 import { useProducts } from "@/hooks/useProducts";
 import { CustomerOrder } from "@shared/api";
 import { Plus, Trash2, Loader2, UserPlus, Printer } from "lucide-react";
 import { PartnerModal } from "@/components/PartnerModal";
-import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 
 interface CustomerOrderModalProps {
   open: boolean;
@@ -729,9 +729,10 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
                       <Input
                         type="number"
                         min="1"
-                        value={item.quantity}
+                        value={item.quantity || ''}
                         onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
                         className="text-sm"
+                        placeholder="0"
                         required
                       />
                     </div>
@@ -741,9 +742,10 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
                       <Input
                         type="number"
                         min="0"
-                        value={item.price}
+                        value={item.price || ''}
                         onChange={(e) => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)}
                         className="text-sm"
+                        placeholder="0"
                         required
                       />
                     </div>

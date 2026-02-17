@@ -23,13 +23,16 @@ import {
   XCircle,
   Package,
   FileText,
-  Loader2
+  Loader2,
+  DollarSign
 } from "lucide-react";
 import { useState } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
 import { PurchaseOrderModal } from "@/components/PurchaseOrderModal";
 import { ViewOrderModal } from "@/components/ViewOrderModal";
+import { CreatePaymentModal } from "@/components/CreatePaymentModal";
+import { ReceiveOrderModal } from "@/components/ReceiveOrderModal";
 import { PurchaseOrder } from "@shared/api";
 
 const Orders = () => {
@@ -44,6 +47,10 @@ const Orders = () => {
   const [receivingOrder, setReceivingOrder] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentOrder, setPaymentOrder] = useState<PurchaseOrder | null>(null);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [orderToReceive, setOrderToReceive] = useState<PurchaseOrder | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
@@ -83,13 +90,36 @@ const Orders = () => {
     }
   };
 
-  const handleReceiveOrder = async (orderId: string) => {
+  const handleReceiveOrder = async (order: PurchaseOrder) => {
+    setOrderToReceive(order);
+    setShowReceiveModal(true);
+  };
+
+  const handleReceiveSave = async (distributions: any[]) => {
+    if (!orderToReceive) return;
+
     try {
-      setReceivingOrder(orderId);
-      await receiveOrder(orderId);
+      setReceivingOrder(orderToReceive._id);
+      
+      // Call API to receive order with warehouse distributions
+      const response = await fetch(`/api/purchase-orders/${orderToReceive._id}/receive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ distributions }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Buyurtmani qabul qilishda xatolik');
+      }
+
       showSuccess('Buyurtma muvaffaqiyatli qabul qilindi!');
+      setShowReceiveModal(false);
+      setOrderToReceive(null);
+      refetch();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Noma\'lum xatolik');
+      // Don't re-throw the error to prevent modal from showing error
     } finally {
       setReceivingOrder(null);
     }
@@ -135,6 +165,43 @@ const Orders = () => {
   const handleViewOrder = (order: PurchaseOrder) => {
     setViewingOrder(order);
     setShowViewModal(true);
+  };
+
+  const handlePayment = (order: PurchaseOrder) => {
+    setPaymentOrder(order);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSave = async (paymentData: any) => {
+    try {
+      // To'lovni buyurtma bilan bog'lash
+      const paymentWithLink = {
+        ...paymentData,
+        linkedDocument: paymentOrder?._id,
+        linkedDocumentType: 'PurchaseOrder',
+        linkedDocumentNumber: paymentOrder?.orderNumber,
+      };
+
+      // To'lovni API ga yuborish
+      const response = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentWithLink),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'To\'lov yaratishda xatolik');
+      }
+
+      setShowPaymentModal(false);
+      setPaymentOrder(null);
+      showSuccess('To\'lov muvaffaqiyatli amalga oshirildi!');
+      refetch(); // Buyurtmalar ro'yxatini yangilash
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Noma\'lum xatolik');
+      throw error; // Modal xatolikni ko'rsatishi uchun
+    }
   };
 
   const filteredOrders = orders.filter(order => {
@@ -353,9 +420,17 @@ const Orders = () => {
                           >
                             <Edit className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                           </button>
+                          <button
+                            onClick={() => handlePayment(order)}
+                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors flex items-center gap-1"
+                            title="To'lov qilish"
+                          >
+                            <DollarSign className="h-3 w-3" />
+                            To'lov
+                          </button>
                           {order.status === "pending" && (
                             <button
-                              onClick={() => handleReceiveOrder(order._id)}
+                              onClick={() => handleReceiveOrder(order)}
                               disabled={receivingOrder === order._id}
                               className="px-3 py-1.5 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-xs font-medium rounded transition-colors disabled:opacity-50 flex items-center gap-1"
                               title="Tovar keldi"
@@ -452,6 +527,38 @@ const Orders = () => {
             setViewingOrder(null);
           }}
           order={viewingOrder}
+        />
+
+        {/* Payment Modal */}
+        {paymentOrder && (
+          <CreatePaymentModal
+            open={showPaymentModal}
+            onClose={() => {
+              setShowPaymentModal(false);
+              setPaymentOrder(null);
+            }}
+            onSave={handlePaymentSave}
+            type="outgoing"
+            prefilledData={{
+              type: 'outgoing',
+              partner: typeof paymentOrder.supplier === 'string' ? paymentOrder.supplier : (paymentOrder.supplier?._id || ''),
+              partnerName: paymentOrder.supplierName,
+              amount: paymentOrder.totalAmount,
+              purpose: `To'lov: ${paymentOrder.orderNumber}`,
+              category: 'purchase'
+            }}
+          />
+        )}
+
+        {/* Receive Order Modal */}
+        <ReceiveOrderModal
+          open={showReceiveModal}
+          onClose={() => {
+            setShowReceiveModal(false);
+            setOrderToReceive(null);
+          }}
+          onSave={handleReceiveSave}
+          order={orderToReceive}
         />
 
         {/* Delete Confirmation Dialog */}

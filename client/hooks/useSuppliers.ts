@@ -9,7 +9,7 @@ export const useSuppliers = () => {
   const fetchSuppliers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/suppliers');
+      const response = await fetch('/api/partners?type=supplier');
       if (!response.ok) throw new Error('Failed to fetch suppliers');
       const data = await response.json();
       setSuppliers(data);
@@ -23,12 +23,12 @@ export const useSuppliers = () => {
 
   const createSupplier = async (supplierData: Partial<Supplier>) => {
     try {
-      const response = await fetch('/api/suppliers', {
+      const response = await fetch('/api/partners', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(supplierData),
+        body: JSON.stringify({ ...supplierData, type: 'supplier' }),
       });
 
       if (!response.ok) throw new Error('Failed to create supplier');
@@ -43,7 +43,7 @@ export const useSuppliers = () => {
 
   const updateSupplier = async (id: string, supplierData: Partial<Supplier>) => {
     try {
-      const response = await fetch(`/api/suppliers/${id}`, {
+      const response = await fetch(`/api/partners/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ export const useSuppliers = () => {
 
   const deleteSupplier = async (id: string) => {
     try {
-      const response = await fetch(`/api/suppliers/${id}`, {
+      const response = await fetch(`/api/partners/${id}`, {
         method: 'DELETE',
       });
 

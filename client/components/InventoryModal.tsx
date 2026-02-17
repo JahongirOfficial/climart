@@ -310,6 +310,7 @@ export const InventoryModal = ({ open, onClose, onSave }: InventoryModalProps) =
                             value={item.actualQuantity || ''}
                             onChange={(e) => handleActualQuantityChange(index, parseInt(e.target.value) || 0)}
                             className="h-8 text-right text-xs"
+                            placeholder="0"
                             required
                           />
                         </td>

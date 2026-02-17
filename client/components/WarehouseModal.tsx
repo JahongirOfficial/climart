@@ -17,6 +17,7 @@ interface Warehouse {
   contactPerson?: string;
   phone?: string;
   capacity?: number;
+  color?: string;
   isActive: boolean;
   notes?: string;
 }
@@ -38,6 +39,7 @@ export function WarehouseModal({ open, onClose, warehouse, onSuccess }: Warehous
     contactPerson: "",
     phone: "",
     capacity: 0,
+    color: "#3B82F6",
     isActive: true,
     notes: "",
   });
@@ -57,6 +59,7 @@ export function WarehouseModal({ open, onClose, warehouse, onSuccess }: Warehous
         contactPerson: "",
         phone: "",
         capacity: 0,
+        color: "#3B82F6",
         isActive: true,
         notes: "",
       });
@@ -146,19 +149,45 @@ export function WarehouseModal({ open, onClose, warehouse, onSuccess }: Warehous
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="address">
-              Manzil <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="address"
-              value={formData.address}
-              onChange={(e) =>
-                setFormData({ ...formData, address: e.target.value })
-              }
-              required
-              placeholder="Toshkent sh., Chilonzor tumani"
-            />
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="address">
+                Manzil <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) =>
+                  setFormData({ ...formData, address: e.target.value })
+                }
+                required
+                placeholder="Toshkent shahar, Chilonzor tumani"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="color">Rang</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="color"
+                  type="color"
+                  value={formData.color || "#3B82F6"}
+                  onChange={(e) =>
+                    setFormData({ ...formData, color: e.target.value })
+                  }
+                  className="h-10 w-20 cursor-pointer"
+                />
+                <Input
+                  type="text"
+                  value={formData.color || "#3B82F6"}
+                  onChange={(e) =>
+                    setFormData({ ...formData, color: e.target.value })
+                  }
+                  placeholder="#3B82F6"
+                  className="flex-1"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

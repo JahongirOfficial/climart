@@ -26,6 +26,14 @@ interface CreatePaymentModalProps {
   onClose: () => void;
   onSave: (data: any) => Promise<void>;
   type: 'incoming' | 'outgoing' | 'transfer';
+  prefilledData?: {
+    type?: 'incoming' | 'outgoing' | 'transfer';
+    partner?: string;
+    partnerName?: string;
+    amount?: number;
+    purpose?: string;
+    category?: string;
+  };
 }
 
 const EXPENSE_CATEGORIES = [
@@ -41,7 +49,7 @@ const EXPENSE_CATEGORIES = [
   { value: 'other', label: 'Boshqa' },
 ];
 
-export function CreatePaymentModal({ open, onClose, onSave, type }: CreatePaymentModalProps) {
+export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData }: CreatePaymentModalProps) {
   const { showWarning, showError } = useModal();
   const { partners } = usePartners();
   const [loading, setLoading] = useState(false);
@@ -63,18 +71,18 @@ export function CreatePaymentModal({ open, onClose, onSave, type }: CreatePaymen
     if (open) {
       setFormData({
         paymentDate: new Date().toISOString().split('T')[0],
-        amount: '',
-        partner: '',
+        amount: prefilledData?.amount ? String(prefilledData.amount) : '',
+        partner: prefilledData?.partner || '',
         account: 'bank',
         paymentMethod: 'bank_transfer',
-        purpose: '',
-        category: '',
+        purpose: prefilledData?.purpose || '',
+        category: prefilledData?.category || '',
         fromAccount: 'cash',
         toAccount: 'bank',
         notes: '',
       });
     }
-  }, [open, type]);
+  }, [open, type, prefilledData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,9 +193,9 @@ export function CreatePaymentModal({ open, onClose, onSave, type }: CreatePaymen
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                value={formData.amount || ''}
                 placeholder="0"
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 required
               />
             </div>

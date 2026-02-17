@@ -96,6 +96,30 @@ router.post('/', async (req: Request, res: Response) => {
     
     await payment.save();
     
+    // Agar to'lov purchase order bilan bog'langan bo'lsa, supplier invoice ni yangilash
+    if (req.body.linkedDocumentType === 'PurchaseOrder' && req.body.linkedDocument) {
+      const SupplierInvoice = require('../models/SupplierInvoice').default;
+      
+      // Purchase order ga tegishli invoice ni topish
+      const invoice = await SupplierInvoice.findOne({ 
+        order: req.body.linkedDocument 
+      });
+      
+      if (invoice) {
+        // Invoice ga to'lovni qo'shish
+        invoice.paidAmount += payment.amount;
+        
+        // Status avtomatik yangilanadi (pre-save hook orqali)
+        await invoice.save();
+        
+        // Payment ga invoice ma'lumotini qo'shish
+        payment.linkedDocument = invoice._id;
+        payment.linkedDocumentType = 'SupplierInvoice';
+        payment.linkedDocumentNumber = invoice.invoiceNumber;
+        await payment.save();
+      }
+    }
+    
     res.status(201).json(payment);
   } catch (error) {
     res.status(400).json({ message: 'Invalid data', error });

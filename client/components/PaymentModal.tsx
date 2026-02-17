@@ -111,8 +111,9 @@ export function PaymentModal({ open, onClose, onSave, invoice }: PaymentModalPro
               min="0"
               max={remaining}
               step="0.01"
-              value={amount}
+              value={amount || ''}
               onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+              placeholder="0"
               required
             />
             <div className="flex gap-2">

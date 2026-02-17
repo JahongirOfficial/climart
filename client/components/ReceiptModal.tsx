@@ -263,9 +263,10 @@ export function ReceiptModal({ open, onClose, onSave }: ReceiptModalProps) {
                         <Input
                           type="number"
                           min="1"
-                          value={item.quantity}
+                          value={item.quantity || ''}
                           onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
                           className="w-24 text-sm"
+                          placeholder="0"
                           required
                         />
                       </td>
@@ -274,9 +275,10 @@ export function ReceiptModal({ open, onClose, onSave }: ReceiptModalProps) {
                           type="number"
                           min="0"
                           step="0.01"
-                          value={item.costPrice}
+                          value={item.costPrice || ''}
                           onChange={(e) => handleItemChange(index, 'costPrice', parseFloat(e.target.value) || 0)}
                           className="w-32 text-sm"
+                          placeholder="0"
                           required
                         />
                       </td>

@@ -8,6 +8,7 @@ interface Warehouse {
   contactPerson?: string;
   phone?: string;
   capacity?: number;
+  color?: string;
   isActive: boolean;
   notes?: string;
 }

@@ -104,7 +104,7 @@ const SupplierInvoiceSchema: Schema = new Schema(
 );
 
 // Update status based on paid amount
-SupplierInvoiceSchema.pre('save', function(this: ISupplierInvoice, next: () => void) {
+SupplierInvoiceSchema.pre('save', function(this: ISupplierInvoice) {
   if (this.paidAmount === 0) {
     this.status = 'unpaid';
   } else if (this.paidAmount >= this.totalAmount) {
@@ -112,7 +112,6 @@ SupplierInvoiceSchema.pre('save', function(this: ISupplierInvoice, next: () => v
   } else {
     this.status = 'partial';
   }
-  next();
 });
 
 export default mongoose.models.SupplierInvoice || mongoose.model<ISupplierInvoice>('SupplierInvoice', SupplierInvoiceSchema);

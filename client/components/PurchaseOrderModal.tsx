@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Combobox } from "@/components/ui/combobox";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useProducts } from "@/hooks/useProducts";
 import { PurchaseOrder } from "@shared/api";
@@ -152,21 +153,20 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="supplier">Yetkazib beruvchi *</Label>
-              <select
-                id="supplier"
+              <Combobox
+                options={suppliers.map(s => ({
+                  value: s._id,
+                  label: s.name,
+                  description: s.phone ? `Tel: ${s.phone}` : undefined,
+                  keywords: `${s.name} ${s.phone || ''} ${s.email || ''}`
+                }))}
                 value={formData.supplier}
-                onChange={(e) => handleSupplierChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                required
+                onValueChange={handleSupplierChange}
+                placeholder="Yetkazib beruvchini tanlang..."
+                searchPlaceholder="Qidirish..."
+                emptyText="Yetkazib beruvchi topilmadi"
                 disabled={suppliersLoading}
-              >
-                <option value="">Tanlang...</option>
-                {suppliers.map(supplier => (
-                  <option key={supplier._id} value={supplier._id}>
-                    {supplier.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div>
@@ -195,19 +195,13 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
                 <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
                   <div className="col-span-5">
                     <Label className="text-xs">Mahsulot nomi</Label>
-                    <select
+                    <Combobox
+                      options={products.map(p => ({ value: p.name, label: p.name }))}
                       value={item.productName}
-                      onChange={(e) => handleProductSelect(index, e.target.value)}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      required
-                    >
-                      <option value="">Tanlang...</option>
-                      {products.map(product => (
-                        <option key={product._id} value={product.name}>
-                          {product.name}
-                        </option>
-                      ))}
-                    </select>
+                      onValueChange={(value) => handleProductSelect(index, value)}
+                      placeholder="Mahsulot qidiring..."
+                      emptyText="Mahsulot topilmadi"
+                    />
                   </div>
 
                   <div className="col-span-2">
@@ -215,7 +209,8 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
                     <Input
                       type="number"
                       min="1"
-                      value={item.quantity}
+                      value={item.quantity || ''}
+                      placeholder="0"
                       onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
                       className="text-sm"
                       required
@@ -227,7 +222,8 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
                     <Input
                       type="number"
                       min="0"
-                      value={item.price}
+                      value={item.price || ''}
+                      placeholder="0"
                       onChange={(e) => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)}
                       className="text-sm"
                       required

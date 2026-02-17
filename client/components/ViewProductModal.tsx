@@ -28,7 +28,9 @@ export const ViewProductModal = ({ open, onClose, product }: ViewProductModalPro
 
   const stockStatus = getStockStatus();
   const profit = product.sellingPrice - product.costPrice;
-  const profitMargin = ((profit / product.sellingPrice) * 100).toFixed(1);
+  const profitMargin = product.costPrice > 0 
+    ? (((product.sellingPrice - product.costPrice) / product.costPrice) * 100).toFixed(1)
+    : '0.0';
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

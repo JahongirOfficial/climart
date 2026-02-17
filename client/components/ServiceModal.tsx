@@ -159,8 +159,9 @@ export function ServiceModal({ open, onClose, onSave, service }: ServiceModalPro
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.price}
+                value={formData.price || ''}
                 onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                placeholder="0"
                 required
               />
             </div>
@@ -171,9 +172,9 @@ export function ServiceModal({ open, onClose, onSave, service }: ServiceModalPro
                 id="duration"
                 type="number"
                 min="0"
-                value={formData.duration}
+                value={formData.duration || ''}
                 onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
-                placeholder="60"
+                placeholder="0"
               />
             </div>
           </div>

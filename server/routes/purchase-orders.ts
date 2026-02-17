@@ -81,16 +81,50 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.patch('/:id/status', async (req: Request, res: Response) => {
   try {
     const { status } = req.body;
-    const order = await PurchaseOrder.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
+    const order = await PurchaseOrder.findById(req.params.id).populate('supplier');
+    
     if (!order) {
       return res.status(404).json({ message: 'Purchase order not found' });
     }
+
+    // Agar status "received" ga o'zgartirilsa, avtomatik supplier invoice yaratish
+    if (status === 'received' && order.status !== 'received') {
+      const SupplierInvoice = require('../models/SupplierInvoice').default;
+      
+      // Invoice raqamini generatsiya qilish
+      const invoiceCount = await SupplierInvoice.countDocuments();
+      const invoiceNumber = `INV-S-${new Date().getFullYear()}-${String(invoiceCount + 1).padStart(4, '0')}`;
+      
+      // To'lov muddatini hisoblash (30 kun)
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 30);
+      
+      // Supplier invoice yaratish
+      const invoice = new SupplierInvoice({
+        invoiceNumber,
+        supplier: order.supplier,
+        supplierName: order.supplierName,
+        order: order._id,
+        orderNumber: order.orderNumber,
+        invoiceDate: new Date(),
+        dueDate,
+        items: order.items,
+        totalAmount: order.totalAmount,
+        paidAmount: 0,
+        status: 'unpaid',
+        notes: `Avtomatik yaratilgan: ${order.orderNumber} buyurtmasi qabul qilindi`
+      });
+      
+      await invoice.save();
+    }
+
+    // Statusni yangilash
+    order.status = status;
+    await order.save();
+    
     res.json(order);
   } catch (error) {
+    console.error('Error updating order status:', error);
     res.status(400).json({ message: 'Invalid data', error });
   }
 });
@@ -104,6 +138,95 @@ router.delete('/:id', async (req: Request, res: Response) => {
     }
     res.json({ message: 'Purchase order deleted successfully' });
   } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
+// Receive order with warehouse distributions
+router.post('/:id/receive', async (req: Request, res: Response) => {
+  try {
+    const { distributions } = req.body;
+    const order = await PurchaseOrder.findById(req.params.id).populate('supplier');
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Purchase order not found' });
+    }
+
+    if (order.status === 'received') {
+      return res.status(400).json({ message: 'Order already received' });
+    }
+
+    // Import models
+    const Product = require('../models/Product').default;
+    const SupplierInvoice = require('../models/SupplierInvoice').default;
+
+    // Update product quantities in each warehouse
+    for (const dist of distributions) {
+      for (const item of dist.items) {
+        const product = await Product.findById(item.product);
+        if (product) {
+          // Add quantity to product's total
+          product.quantity += item.quantity;
+          
+          // Update warehouse-specific quantity
+          const warehouseIndex = product.stockByWarehouse?.findIndex(
+            (wq: any) => wq.warehouse.toString() === dist.warehouse
+          );
+          
+          if (warehouseIndex !== undefined && warehouseIndex >= 0) {
+            product.stockByWarehouse[warehouseIndex].quantity += item.quantity;
+          } else {
+            if (!product.stockByWarehouse) {
+              product.stockByWarehouse = [];
+            }
+            product.stockByWarehouse.push({
+              warehouse: dist.warehouse,
+              warehouseName: dist.warehouseName,
+              quantity: item.quantity,
+              reserved: 0
+            });
+          }
+          
+          await product.save();
+        }
+      }
+    }
+
+    // Update order status
+    order.status = 'received';
+    await order.save();
+
+    // Create supplier invoice
+    const invoiceCount = await SupplierInvoice.countDocuments();
+    const invoiceNumber = `INV-S-${new Date().getFullYear()}-${String(invoiceCount + 1).padStart(4, '0')}`;
+    
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 30);
+    
+    const invoice = new SupplierInvoice({
+      invoiceNumber,
+      supplier: order.supplier,
+      supplierName: order.supplierName,
+      order: order._id,
+      orderNumber: order.orderNumber,
+      invoiceDate: new Date(),
+      dueDate,
+      items: order.items,
+      totalAmount: order.totalAmount,
+      paidAmount: 0,
+      status: 'unpaid',
+      notes: `Avtomatik yaratilgan: ${order.orderNumber} buyurtmasi qabul qilindi`
+    });
+    
+    await invoice.save();
+
+    res.json({ 
+      message: 'Order received successfully',
+      order,
+      invoice
+    });
+  } catch (error) {
+    console.error('Error receiving order:', error);
     res.status(500).json({ message: 'Server error', error });
   }
 });

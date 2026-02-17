@@ -437,9 +437,10 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
                         type="number"
                         step={products.find(p => p._id === item.product)?.unitType === 'uncount' ? "any" : "1"}
                         min="0"
-                        value={item.quantity}
+                        value={item.quantity || ''}
                         onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value) || 0)}
                         className="text-sm mt-1"
+                        placeholder="0"
                         required
                       />
                     </div>
@@ -449,9 +450,10 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
                       <Input
                         type="number"
                         min="0"
-                        value={item.sellingPrice}
+                        value={item.sellingPrice || ''}
                         onChange={(e) => handleItemChange(index, 'sellingPrice', parseFloat(e.target.value) || 0)}
                         className="text-sm mt-1"
+                        placeholder="0"
                         required
                       />
                     </div>

@@ -259,7 +259,7 @@ const Returns = () => {
                       {ret.returnNumber}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                      {typeof ret.supplier === 'string' ? ret.supplier : ret.supplier.name}
+                      {typeof ret.supplier === 'string' ? ret.supplier : (ret.supplier?.name || '-')}
                     </td>
                     <td className="px-6 py-4 text-sm text-blue-600 hover:underline cursor-pointer">
                       {ret.receiptNumber || '-'}

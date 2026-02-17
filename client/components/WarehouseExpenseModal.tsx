@@ -175,7 +175,7 @@ export const WarehouseExpenseModal = ({ open, onClose, onSave }: WarehouseExpens
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.amount}
+                value={formData.amount || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
                 placeholder="0"
                 required

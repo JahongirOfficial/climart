@@ -7,6 +7,7 @@ export interface IWarehouse extends Document {
   contactPerson?: string;
   phone?: string;
   capacity?: number;
+  color?: string;
   isActive: boolean;
   notes?: string;
   createdAt: Date;
@@ -41,6 +42,10 @@ const WarehouseSchema: Schema = new Schema(
     capacity: {
       type: Number,
       min: 0,
+    },
+    color: {
+      type: String,
+      default: '#3B82F6', // Default blue color
     },
     isActive: {
       type: Boolean,

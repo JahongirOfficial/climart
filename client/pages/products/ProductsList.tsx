@@ -17,6 +17,7 @@ import {
 import { useState, useMemo } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import { useProducts } from "@/hooks/useProducts";
+import { useWarehouses } from "@/hooks/useWarehouses";
 import { ProductModal } from "@/components/ProductModal";
 import { ViewProductModal } from "@/components/ViewProductModal";
 import { Product } from "@shared/api";
@@ -25,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const ProductsList = () => {
   const { products, loading, error, refetch, createProduct, updateProduct, deleteProduct } = useProducts();
+  const { warehouses } = useWarehouses();
   const { showSuccess, showError } = useModal();
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
@@ -32,6 +34,15 @@ const ProductsList = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Create warehouse lookup map
+  const warehouseMap = useMemo(() => {
+    const map = new Map();
+    warehouses.forEach(wh => {
+      map.set(wh._id, { name: wh.name, color: wh.color || '#3B82F6' });
+    });
+    return map;
+  }, [warehouses]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
@@ -291,12 +302,42 @@ const ProductsList = () => {
                         {product.category || '-'}
                       </td>
                       <td className="px-6 py-4">
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {product.quantity} {product.unit || 'dona'}
-                          </p>
-                          {product.minQuantity && (
-                            <p className="text-xs text-gray-500">Min: {product.minQuantity}</p>
+                        <div className="space-y-1">
+                          {product.stockByWarehouse && product.stockByWarehouse.length > 0 ? (
+                            <>
+                              <div className="flex flex-wrap gap-1.5">
+                                {product.stockByWarehouse.map((stock: any) => {
+                                  const warehouse = warehouseMap.get(stock.warehouse);
+                                  const color = warehouse?.color || '#3B82F6';
+                                  return (
+                                    <span
+                                      key={stock.warehouse}
+                                      className="inline-flex items-center px-2.5 py-1 text-sm font-bold rounded-md border-2"
+                                      style={{ 
+                                        color: color,
+                                        borderColor: color,
+                                        backgroundColor: `${color}15`
+                                      }}
+                                      title={warehouse?.name || 'Noma\'lum ombor'}
+                                    >
+                                      {stock.quantity}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                Jami: {product.quantity} {product.unit || 'dona'}
+                              </p>
+                            </>
+                          ) : (
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {product.quantity} {product.unit || 'dona'}
+                              </p>
+                              {product.minQuantity && (
+                                <p className="text-xs text-gray-500">Min: {product.minQuantity}</p>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>

@@ -12,21 +12,28 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
-  Loader2
+  Loader2,
+  Package
 } from "lucide-react";
 import { useState } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import { useSupplierInvoices } from "@/hooks/useSupplierInvoices";
+import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
 import { PaymentModal } from "@/components/PaymentModal";
-import { SupplierInvoice } from "@shared/api";
+import { CreatePaymentModal } from "@/components/CreatePaymentModal";
+import { SupplierInvoice, PurchaseOrder } from "@shared/api";
 
 const SuppliersAccounts = () => {
-  const { invoices, loading, error, refetch, createPayment } = useSupplierInvoices();
+  const { invoices, loading: invoicesLoading, error: invoicesError, refetch: refetchInvoices, createPayment } = useSupplierInvoices();
+  const { orders, loading: ordersLoading, error: ordersError, refetch: refetchOrders } = usePurchaseOrders();
   const { showSuccess } = useModal();
   const [searchTerm, setSearchTerm] = useState("");
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<SupplierInvoice | null>(null);
+  const [showOrderPaymentModal, setShowOrderPaymentModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
+  const [viewMode, setViewMode] = useState<'invoices' | 'orders'>('orders');
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
@@ -84,9 +91,51 @@ const SuppliersAccounts = () => {
     invoice.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredOrders = orders.filter(order =>
+    order.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const handlePayment = async (invoice: SupplierInvoice) => {
     setSelectedInvoice(invoice);
     setShowPaymentModal(true);
+  };
+
+  const handleOrderPayment = (order: PurchaseOrder) => {
+    setSelectedOrder(order);
+    setShowOrderPaymentModal(true);
+  };
+
+  const handleOrderPaymentSave = async (paymentData: any) => {
+    try {
+      // To'lovni buyurtma bilan bog'lash
+      const paymentWithLink = {
+        ...paymentData,
+        linkedDocument: selectedOrder?._id,
+        linkedDocumentType: 'PurchaseOrder',
+        linkedDocumentNumber: selectedOrder?.orderNumber,
+      };
+
+      // To'lovni API ga yuborish
+      const response = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentWithLink),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'To\'lov yaratishda xatolik');
+      }
+
+      setShowOrderPaymentModal(false);
+      setSelectedOrder(null);
+      showSuccess('To\'lov muvaffaqiyatli amalga oshirildi!');
+      refetchOrders(); // Buyurtmalar ro'yxatini yangilash
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Noma\'lum xatolik');
+      throw error; // Modal xatolikni ko'rsatishi uchun
+    }
   };
 
   const handleSavePayment = async (amount: number, notes: string) => {
@@ -96,12 +145,19 @@ const SuppliersAccounts = () => {
       setPayingInvoice(selectedInvoice._id);
       await createPayment(selectedInvoice._id, amount, notes);
       showSuccess('To\'lov muvaffaqiyatli amalga oshirildi!');
-      refetch();
+      refetchInvoices();
     } catch (error) {
       throw error;
     } finally {
       setPayingInvoice(null);
     }
+  };
+
+  const loading = invoicesLoading || ordersLoading;
+  const error = invoicesError || ordersError;
+  const refetch = () => {
+    refetchInvoices();
+    refetchOrders();
   };
 
   // Calculate totals
@@ -219,6 +275,38 @@ const SuppliersAccounts = () => {
 
         {/* Main Content */}
         <Card>
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <div className="flex">
+              <button
+                onClick={() => setViewMode('orders')}
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  viewMode === 'orders'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Buyurtmalar ({orders.length})
+                </div>
+              </button>
+              <button
+                onClick={() => setViewMode('invoices')}
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  viewMode === 'invoices'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Hisoblar ({invoices.length})
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Search */}
           <div className="p-4 border-b border-gray-200">
             <div className="flex flex-col md:flex-row gap-3">
@@ -226,7 +314,7 @@ const SuppliersAccounts = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   type="search"
-                  placeholder="Hisob raqami, buyurtma yoki yetkazib beruvchini qidiring..."
+                  placeholder={viewMode === 'invoices' ? "Hisob raqami, buyurtma yoki yetkazib beruvchini qidiring..." : "Buyurtma raqami yoki yetkazib beruvchini qidiring..."}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -236,131 +324,230 @@ const SuppliersAccounts = () => {
           </div>
 
           {/* Invoices Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Hisob raqami
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Yetkazib beruvchi
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Buyurtma
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Sana
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Muddat
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Jami summa
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    To'langan
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Qoldiq
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Amallar
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {filteredInvoices.map((invoice) => {
-                  const remainingAmount = invoice.totalAmount - invoice.paidAmount;
-                  const isOverdue = getDaysUntilDue(invoice.dueDate) < 0 && invoice.status !== 'paid';
+          {viewMode === 'invoices' && (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Hisob raqami
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Yetkazib beruvchi
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Buyurtma
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Sana
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Muddat
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Jami summa
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      To'langan
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Qoldiq
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Amallar
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {filteredInvoices.map((invoice) => {
+                    const remainingAmount = invoice.totalAmount - invoice.paidAmount;
+                    const isOverdue = getDaysUntilDue(invoice.dueDate) < 0 && invoice.status !== 'paid';
 
-                  return (
-                    <tr
-                      key={invoice._id}
-                      className={`hover:bg-gray-50 transition-colors ${isOverdue ? 'bg-red-50/30' : ''
-                        }`}
-                    >
-                      <td className="px-6 py-4 text-sm font-medium text-primary">
-                        {invoice.invoiceNumber}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                        {invoice.supplierName}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-blue-600 hover:underline cursor-pointer">
-                        {invoice.orderNumber || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {formatDate(invoice.invoiceDate)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        <div className="flex flex-col">
-                          <span>{formatDate(invoice.dueDate)}</span>
-                          {isOverdue && (
-                            <span className="text-xs text-red-600 font-semibold">
-                              {Math.abs(getDaysUntilDue(invoice.dueDate))} kun o'tib ketgan
-                            </span>
-                          )}
-                          {!isOverdue && invoice.status !== 'paid' && getDaysUntilDue(invoice.dueDate) <= 3 && (
-                            <span className="text-xs text-yellow-600 font-semibold">
-                              {getDaysUntilDue(invoice.dueDate)} kun qoldi
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        {formatCurrency(invoice.totalAmount)}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-green-600">
-                        {formatCurrency(invoice.paidAmount)}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-red-600">
-                        {formatCurrency(remainingAmount)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border rounded ${getStatusColor(invoice.status, invoice.dueDate)}`}>
-                          {getStatusIcon(invoice.status, invoice.dueDate)}
-                          {getStatusLabel(invoice.status, invoice.dueDate)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-                            title="Ko'rish"
-                          >
-                            <Eye className="h-4 w-4 text-gray-600" />
-                          </button>
-                          {remainingAmount > 0 && (
+                    return (
+                      <tr
+                        key={invoice._id}
+                        className={`hover:bg-gray-50 transition-colors ${isOverdue ? 'bg-red-50/30' : ''
+                          }`}
+                      >
+                        <td className="px-6 py-4 text-sm font-medium text-primary">
+                          {invoice.invoiceNumber}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                          {invoice.supplierName}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-blue-600 hover:underline cursor-pointer">
+                          {invoice.orderNumber || '-'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {formatDate(invoice.invoiceDate)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          <div className="flex flex-col">
+                            <span>{formatDate(invoice.dueDate)}</span>
+                            {isOverdue && (
+                              <span className="text-xs text-red-600 font-semibold">
+                                {Math.abs(getDaysUntilDue(invoice.dueDate))} kun o'tib ketgan
+                              </span>
+                            )}
+                            {!isOverdue && invoice.status !== 'paid' && getDaysUntilDue(invoice.dueDate) <= 3 && (
+                              <span className="text-xs text-yellow-600 font-semibold">
+                                {getDaysUntilDue(invoice.dueDate)} kun qoldi
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                          {formatCurrency(invoice.totalAmount)}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-green-600">
+                          {formatCurrency(invoice.paidAmount)}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-red-600">
+                          {formatCurrency(remainingAmount)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border rounded ${getStatusColor(invoice.status, invoice.dueDate)}`}>
+                            {getStatusIcon(invoice.status, invoice.dueDate)}
+                            {getStatusLabel(invoice.status, invoice.dueDate)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                              title="Ko'rish"
+                            >
+                              <Eye className="h-4 w-4 text-gray-600" />
+                            </button>
+                            {remainingAmount > 0 && (
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                onClick={() => handlePayment(invoice)}
+                                disabled={payingInvoice === invoice._id}
+                              >
+                                {payingInvoice === invoice._id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  'To\'lash'
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Orders Table */}
+          {viewMode === 'orders' && (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Buyurtma raqami
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Yetkazib beruvchi
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Sana
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Tovarlar
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Summa
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Amallar
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {filteredOrders.map((order) => {
+                    return (
+                      <tr key={order._id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 text-sm font-medium text-primary">
+                          {order.orderNumber}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                          {order.supplierName}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {formatDate(order.orderDate)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {order.items.reduce((sum, item) => sum + item.quantity, 0)} dona
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border rounded ${
+                            order.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                            order.status === 'received' ? 'bg-green-50 text-green-700 border-green-200' :
+                            'bg-red-50 text-red-700 border-red-200'
+                          }`}>
+                            {order.status === 'pending' ? <Clock className="h-3 w-3" /> :
+                             order.status === 'received' ? <CheckCircle className="h-3 w-3" /> :
+                             <AlertTriangle className="h-3 w-3" />}
+                            {order.status === 'pending' ? 'Kutilmoqda' :
+                             order.status === 'received' ? 'Qabul qilindi' :
+                             'Bekor qilindi'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                          {formatCurrency(order.totalAmount)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                              title="Ko'rish"
+                            >
+                              <Eye className="h-4 w-4 text-gray-600" />
+                            </button>
                             <Button
                               size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                              onClick={() => handlePayment(invoice)}
-                              disabled={payingInvoice === invoice._id}
+                              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1"
+                              onClick={() => handleOrderPayment(order)}
                             >
-                              {payingInvoice === invoice._id ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                'To\'lash'
-                              )}
+                              <DollarSign className="h-3 w-3" />
+                              To'lov
                             </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Empty State */}
-          {filteredInvoices.length === 0 && (
+          {((viewMode === 'invoices' && filteredInvoices.length === 0) || (viewMode === 'orders' && filteredOrders.length === 0)) && (
             <div className="text-center py-12">
-              <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 font-medium">Hisoblar topilmadi</p>
+              {viewMode === 'invoices' ? (
+                <>
+                  <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 font-medium">Hisoblar topilmadi</p>
+                </>
+              ) : (
+                <>
+                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 font-medium">Buyurtmalar topilmadi</p>
+                </>
+              )}
               <p className="text-sm text-gray-500 mt-1">
                 Qidiruv shartini o'zgartiring
               </p>
@@ -370,7 +557,7 @@ const SuppliersAccounts = () => {
           {/* Pagination */}
           <div className="p-4 border-t border-gray-200 flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              Jami {filteredInvoices.length} ta hisob
+              Jami {viewMode === 'invoices' ? filteredInvoices.length : filteredOrders.length} ta {viewMode === 'invoices' ? 'hisob' : 'buyurtma'}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled>
@@ -396,16 +583,16 @@ const SuppliersAccounts = () => {
                 To'lov tizimi haqida ma'lumot
               </h3>
               <ul className="text-sm text-gray-700 space-y-1">
-                <li>• <strong>Avtomatik hisoblash</strong> - Qabul qilingan tovarlar asosida hisob yaratiladi</li>
+                <li>• <strong>Hisoblar</strong> - Qabul qilingan tovarlar uchun yaratilgan hisoblar</li>
+                <li>• <strong>Buyurtmalar</strong> - Taminotchiga berilgan buyurtmalar (tovar hali kelmagan)</li>
                 <li>• <strong>To'lov muddatlari</strong> - Har bir hisob uchun to'lov muddati belgilanadi</li>
                 <li>• <strong>Status nazorati</strong> - To'lanmagan, qisman va to'liq to'langan holatlar</li>
-                <li>• <strong>Kreditorlik qarzi</strong> - Barcha to'lanmagan hisoblar yig'indisi</li>
               </ul>
             </div>
           </div>
         </Card>
 
-        {/* Payment Modal */}
+        {/* Payment Modal for Invoices */}
         <PaymentModal
           open={showPaymentModal}
           onClose={() => {
@@ -415,6 +602,27 @@ const SuppliersAccounts = () => {
           onSave={handleSavePayment}
           invoice={selectedInvoice}
         />
+
+        {/* Payment Modal for Orders */}
+        {selectedOrder && (
+          <CreatePaymentModal
+            open={showOrderPaymentModal}
+            onClose={() => {
+              setShowOrderPaymentModal(false);
+              setSelectedOrder(null);
+            }}
+            onSave={handleOrderPaymentSave}
+            type="outgoing"
+            prefilledData={{
+              type: 'outgoing',
+              partner: typeof selectedOrder.supplier === 'string' ? selectedOrder.supplier : (selectedOrder.supplier?._id || ''),
+              partnerName: selectedOrder.supplierName,
+              amount: selectedOrder.totalAmount,
+              purpose: `To'lov: ${selectedOrder.orderNumber}`,
+              category: 'purchase'
+            }}
+          />
+        )}
       </div>
     </Layout>
   );
