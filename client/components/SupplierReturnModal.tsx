@@ -27,9 +27,10 @@ interface SupplierReturnModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (data: any) => Promise<void>;
+  receipt?: any | null;
 }
 
-export function SupplierReturnModal({ open, onClose, onSave }: SupplierReturnModalProps) {
+export function SupplierReturnModal({ open, onClose, onSave, receipt }: SupplierReturnModalProps) {
   const { suppliers } = useSuppliers();
   const { receipts } = useReceipts();
   const { showWarning, showError } = useModal();
@@ -48,7 +49,30 @@ export function SupplierReturnModal({ open, onClose, onSave }: SupplierReturnMod
   ]);
 
   useEffect(() => {
-    if (!open) {
+    if (open && receipt) {
+      // Pre-fill from receipt
+      const supplierId = typeof receipt.supplier === 'string' ? receipt.supplier : receipt.supplier._id;
+      const supplierName = typeof receipt.supplier === 'string' ? receipt.supplier : receipt.supplier.name;
+      
+      setFormData({
+        supplier: supplierId,
+        supplierName: supplierName,
+        receipt: receipt._id,
+        receiptNumber: receipt.receiptNumber,
+        returnDate: new Date().toISOString().split('T')[0],
+        reason: "brak",
+        notes: "",
+      });
+
+      // Pre-fill items from receipt
+      setItems(receipt.items.map((item: any) => ({
+        product: typeof item.product === 'string' ? item.product : item.product._id,
+        productName: item.productName,
+        quantity: 1,
+        costPrice: item.costPrice,
+        total: item.costPrice,
+      })));
+    } else if (!open) {
       setFormData({
         supplier: "",
         supplierName: "",
@@ -60,7 +84,7 @@ export function SupplierReturnModal({ open, onClose, onSave }: SupplierReturnMod
       });
       setItems([{ product: "", productName: "", quantity: 1, costPrice: 0, total: 0 }]);
     }
-  }, [open]);
+  }, [open, receipt]);
 
   const handleSupplierChange = (supplierId: string) => {
     const supplier = suppliers.find(s => s._id === supplierId);

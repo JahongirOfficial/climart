@@ -29,7 +29,8 @@
     "typecheck": "tsc",
     "test:full-cycle": "tsx server/scripts/test-full-cycle.ts",
     "test:comprehensive": "tsx server/scripts/test-comprehensive.ts",
-    "test:supplier-invoices": "tsx server/scripts/test-supplier-invoices.ts"
+    "test:supplier-invoices": "tsx server/scripts/test-supplier-invoices.ts",
+    "test:customer-orders": "tsx server/scripts/test-customer-orders.ts"
   },
   "dependencies": {
     "@types/bcrypt": "^6.0.0",

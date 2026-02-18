@@ -13,13 +13,15 @@ import {
   AlertTriangle,
   Loader2,
   XCircle,
-  Trash2
+  Trash2,
+  Undo2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import { useReceipts } from "@/hooks/useReceipts";
 import { ViewReceiptModal } from "@/components/ViewReceiptModal";
 import { ReceiptModal } from "@/components/ReceiptModal";
+import { SupplierReturnModal } from "@/components/SupplierReturnModal";
 import { Receipt } from "@shared/api";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -36,7 +38,9 @@ const Receipts = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showViewModal, setShowViewModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
   const [viewingReceipt, setViewingReceipt] = useState<Receipt | null>(null);
+  const [returningReceipt, setReturningReceipt] = useState<Receipt | null>(null);
   const [deletingReceipt, setDeletingReceipt] = useState<string | null>(null);
 
   const formatCurrency = (amount: number) => {
@@ -92,6 +96,33 @@ const Receipts = () => {
       showError(error instanceof Error ? error.message : 'Noma\'lum xatolik');
     } finally {
       setDeletingReceipt(null);
+    }
+  };
+
+  const handleReturnReceipt = (receipt: Receipt) => {
+    setReturningReceipt(receipt);
+    setShowReturnModal(true);
+  };
+
+  const handleSaveReturn = async (returnData: any) => {
+    try {
+      const response = await fetch('/api/supplier-returns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(returnData)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Qaytarishni saqlashda xatolik');
+      }
+
+      showSuccess('Tovar qaytarish muvaffaqiyatli yaratildi!');
+      refetch();
+      setShowReturnModal(false);
+      setReturningReceipt(null);
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -307,6 +338,13 @@ const Receipts = () => {
                             <Eye className="h-4 w-4 text-gray-600" />
                           </button>
                           <button
+                            onClick={() => handleReturnReceipt(receipt)}
+                            className="p-1.5 hover:bg-orange-50 rounded transition-colors"
+                            title="Qaytarish"
+                          >
+                            <Undo2 className="h-4 w-4 text-orange-600" />
+                          </button>
+                          <button
                             onClick={() => handleDeleteReceipt(receipt._id)}
                             disabled={deletingReceipt === receipt._id}
                             className="p-1.5 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
@@ -396,6 +434,17 @@ const Receipts = () => {
           open={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onSave={handleSaveReceipt}
+        />
+
+        {/* Supplier Return Modal */}
+        <SupplierReturnModal
+          open={showReturnModal}
+          onClose={() => {
+            setShowReturnModal(false);
+            setReturningReceipt(null);
+          }}
+          receipt={returningReceipt}
+          onSave={handleSaveReturn}
         />
       </div>
     </Layout>
