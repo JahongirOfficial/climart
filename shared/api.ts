@@ -197,3 +197,47 @@ export interface CustomerInvoice {
   createdAt: string;
   updatedAt: string;
 }
+
+// Debt Management Types
+export interface DebtSummary {
+  id: string;
+  supplier: string;
+  lastOperationDate: string;
+  totalDebt: number;
+  paidAmount: number;
+  returnedAmount: number;
+  remainingDebt: number;
+  dueDate?: string;
+  status: 'ok' | 'due-soon' | 'overdue';
+  receipts: Array<{
+    receiptNumber: string;
+    receiptDate: string;
+    totalAmount: number;
+  }>;
+  payments: Array<{
+    paymentNumber: string;
+    paymentDate: string;
+    amount: number;
+  }>;
+}
+
+export interface PaymentScheduleItem {
+  date: string;
+  amount: number;
+  remainingAmount: number;
+  supplier: string;
+  invoiceNumber: string;
+  status: string;
+}
+
+export interface OverduePayment {
+  id: string;
+  supplier: string;
+  invoiceNumber: string;
+  dueDate: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  daysOverdue: number;
+  status: string;
+}

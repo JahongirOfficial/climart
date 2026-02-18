@@ -32,6 +32,11 @@ router.get('/summary', async (req: Request, res: Response) => {
     // Get payments by supplier
     const paymentsSummary = await Payment.aggregate([
       {
+        $match: {
+          supplier: { $exists: true, $ne: null }
+        }
+      },
+      {
         $group: {
           _id: '$supplier',
           totalPaid: { $sum: '$amount' },
@@ -69,9 +74,9 @@ router.get('/summary', async (req: Request, res: Response) => {
 
     // Combine all data
     const debtsData = debtsSummary.map(debt => {
-      const payments = paymentsSummary.find(p => p._id.toString() === debt._id.toString());
-      const returns = returnsSummary.find(r => r._id.toString() === debt._id.toString());
-      const invoice = invoicesSummary.find(i => i._id.toString() === debt._id.toString());
+      const payments = paymentsSummary.find(p => p._id?.toString() === debt._id?.toString());
+      const returns = returnsSummary.find(r => r._id?.toString() === debt._id?.toString());
+      const invoice = invoicesSummary.find(i => i._id?.toString() === debt._id?.toString());
       
       const totalPaid = payments?.totalPaid || 0;
       const totalReturned = returns?.totalReturned || 0;
@@ -93,7 +98,7 @@ router.get('/summary', async (req: Request, res: Response) => {
       
       return {
         id: debt._id,
-        supplier: debt.supplierName,
+        supplier: debt.supplierName || 'Unknown',
         lastOperationDate: debt.lastOperationDate,
         totalDebt: debt.totalReceived,
         paidAmount: totalPaid,
@@ -101,14 +106,15 @@ router.get('/summary', async (req: Request, res: Response) => {
         remainingDebt: Math.max(0, remainingDebt),
         dueDate: invoice?.dueDate,
         status,
-        receipts: debt.receipts,
+        receipts: debt.receipts || [],
         payments: payments?.payments || []
       };
     });
 
     res.json(debtsData);
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error });
+    console.error('Error in /api/debts/summary:', error);
+    res.status(500).json({ message: 'Server error', error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -125,7 +131,8 @@ router.get('/payment-schedule', async (req: Request, res: Response) => {
 
     const schedule = upcomingPayments.map(invoice => ({
       date: invoice.dueDate,
-      amount: invoice.totalAmount - invoice.paidAmount,
+      amount: invoice.totalAmount,
+      remainingAmount: invoice.totalAmount - invoice.paidAmount,
       supplier: invoice.supplierName,
       invoiceNumber: invoice.invoiceNumber,
       status: invoice.status

@@ -346,9 +346,9 @@ const Returns = () => {
               Yetkazib beruvchilar bo'yicha statistika
             </h3>
             <div className="space-y-3">
-              {Array.from(new Set(returns.map(r => typeof r.supplier === 'string' ? r.supplier : r.supplier.name))).map(supplierName => {
+              {Array.from(new Set(returns.map(r => typeof r.supplier === 'string' ? r.supplier : r.supplier?.name || 'Noma\'lum'))).map(supplierName => {
                 const supplierReturns = returns.filter(r =>
-                  (typeof r.supplier === 'string' ? r.supplier : r.supplier.name) === supplierName
+                  (typeof r.supplier === 'string' ? r.supplier : r.supplier?.name || 'Noma\'lum') === supplierName
                 );
                 const supplierTotal = supplierReturns.reduce((sum, r) => sum + r.totalAmount, 0);
                 const supplierItems = supplierReturns.reduce((sum, r) =>

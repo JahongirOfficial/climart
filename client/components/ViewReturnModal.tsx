@@ -44,7 +44,9 @@ export const ViewReturnModal = ({ open, onClose, returnData }: ViewReturnModalPr
         return colors[reason] || colors['boshqa'];
     };
 
-    const supplierName = typeof returnData.supplier === 'string' ? returnData.supplierName : returnData.supplier.name;
+    const supplierName = typeof returnData.supplier === 'string' 
+        ? returnData.supplierName 
+        : (returnData.supplier?.name || returnData.supplierName || 'Noma\'lum');
 
     return (
         <Dialog open={open} onOpenChange={onClose}>

@@ -13,7 +13,8 @@ import {
   Clock,
   CheckCircle,
   Loader2,
-  Package
+  Package,
+  Undo2
 } from "lucide-react";
 import { useState } from "react";
 import { useModal } from "@/contexts/ModalContext";
@@ -21,6 +22,7 @@ import { useSupplierInvoices } from "@/hooks/useSupplierInvoices";
 import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
 import { PaymentModal } from "@/components/PaymentModal";
 import { CreatePaymentModal } from "@/components/CreatePaymentModal";
+import { SupplierReturnModal } from "@/components/SupplierReturnModal";
 import { SupplierInvoice, PurchaseOrder } from "@shared/api";
 
 const SuppliersAccounts = () => {
@@ -33,6 +35,8 @@ const SuppliersAccounts = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<SupplierInvoice | null>(null);
   const [showOrderPaymentModal, setShowOrderPaymentModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returningOrder, setReturningOrder] = useState<PurchaseOrder | null>(null);
   const [viewMode, setViewMode] = useState<'invoices' | 'orders'>('orders');
 
   const formatCurrency = (amount: number) => {
@@ -150,6 +154,33 @@ const SuppliersAccounts = () => {
       throw error;
     } finally {
       setPayingInvoice(null);
+    }
+  };
+
+  const handleReturnOrder = (order: PurchaseOrder) => {
+    setReturningOrder(order);
+    setShowReturnModal(true);
+  };
+
+  const handleSaveReturn = async (returnData: any) => {
+    try {
+      const response = await fetch('/api/supplier-returns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(returnData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Qaytarishni saqlashda xatolik');
+      }
+
+      showSuccess('Tovar qaytarish muvaffaqiyatli yaratildi!');
+      refetch();
+      setShowReturnModal(false);
+      setReturningOrder(null);
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -524,6 +555,17 @@ const SuppliersAccounts = () => {
                               <DollarSign className="h-3 w-3" />
                               To'lov
                             </Button>
+                            {order.status === 'received' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-orange-300 text-orange-700 hover:bg-orange-50 flex items-center gap-1"
+                                onClick={() => handleReturnOrder(order)}
+                              >
+                                <Undo2 className="h-3 w-3" />
+                                Qaytarish
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -623,6 +665,22 @@ const SuppliersAccounts = () => {
             }}
           />
         )}
+
+        {/* Supplier Return Modal */}
+        <SupplierReturnModal
+          open={showReturnModal}
+          onClose={() => {
+            setShowReturnModal(false);
+            setReturningOrder(null);
+          }}
+          onSave={handleSaveReturn}
+          receipt={returningOrder ? {
+            _id: returningOrder._id,
+            supplier: returningOrder.supplier,
+            receiptNumber: returningOrder.orderNumber,
+            items: returningOrder.items
+          } : null}
+        />
       </div>
     </Layout>
   );

@@ -77,6 +77,7 @@ router.get('/low-stock', async (req: Request, res: Response) => {
 import WarehouseReceipt from '../models/WarehouseReceipt';
 import Writeoff from '../models/Writeoff';
 import CustomerReturn from '../models/CustomerReturn';
+import SupplierReturn from '../models/SupplierReturn';
 
 // ... other imports ...
 
@@ -147,6 +148,21 @@ router.get('/:id/history', async (req: Request, res: Response) => {
           documentNumber: ret.returnNumber,
           change: item.quantity,
           note: `Mijoz: ${ret.customerName}`
+        });
+      }
+    });
+
+    // 5. Supplier Returns (Outflows)
+    const supplierReturns = await SupplierReturn.find({ 'items.product': productId });
+    supplierReturns.forEach(ret => {
+      const item = ret.items.find(i => i.product.toString() === productId);
+      if (item) {
+        history.push({
+          date: ret.returnDate,
+          type: 'Ta\'minotchiga qaytarish',
+          documentNumber: ret.returnNumber,
+          change: -item.quantity,
+          note: `Ta\'minotchi: ${ret.supplierName}, Sabab: ${ret.reason}`
         });
       }
     });

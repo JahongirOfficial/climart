@@ -45,6 +45,17 @@ export function Combobox({
   disabled = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  // Auto-focus search input when popover opens
+  React.useEffect(() => {
+    if (open && inputRef.current) {
+      // Small delay to ensure popover is fully rendered
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 0)
+    }
+  }, [open])
 
   const selectedOption = options.find((option) => option.value === value)
 
@@ -65,13 +76,16 @@ export function Combobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[--radix-popover-trigger-width] p-0" 
+        className="w-[--radix-popover-trigger-width] p-0 z-[9999]" 
         align="start"
+        side="bottom"
+        sideOffset={5}
+        avoidCollisions={false}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <Command>
-          <CommandInput placeholder={searchPlaceholder} />
-          <CommandList className="max-h-[300px] overflow-y-auto">
+        <Command className="overflow-hidden">
+          <CommandInput ref={inputRef} placeholder={searchPlaceholder} />
+          <CommandList className="max-h-[300px]">
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
@@ -83,6 +97,7 @@ export function Combobox({
                     onValueChange(option.value)
                     setOpen(false)
                   }}
+                  className="cursor-pointer"
                 >
                   <Check
                     className={cn(

@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { useSuppliers } from "@/hooks/useSuppliers";
-import { useReceipts } from "@/hooks/useReceipts";
+import { useProducts } from "@/hooks/useProducts";
+import { Combobox } from "@/components/ui/combobox";
 
 interface ReturnItem {
   product: string;
@@ -32,14 +33,12 @@ interface SupplierReturnModalProps {
 
 export function SupplierReturnModal({ open, onClose, onSave, receipt }: SupplierReturnModalProps) {
   const { suppliers } = useSuppliers();
-  const { receipts } = useReceipts();
+  const { products } = useProducts();
   const { showWarning, showError } = useModal();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     supplier: "",
     supplierName: "",
-    receipt: "",
-    receiptNumber: "",
     returnDate: new Date().toISOString().split('T')[0],
     reason: "brak",
     notes: "",
@@ -57,8 +56,6 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
       setFormData({
         supplier: supplierId,
         supplierName: supplierName,
-        receipt: receipt._id,
-        receiptNumber: receipt.receiptNumber,
         returnDate: new Date().toISOString().split('T')[0],
         reason: "brak",
         notes: "",
@@ -76,8 +73,6 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
       setFormData({
         supplier: "",
         supplierName: "",
-        receipt: "",
-        receiptNumber: "",
         returnDate: new Date().toISOString().split('T')[0],
         reason: "brak",
         notes: "",
@@ -92,29 +87,21 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
       ...formData,
       supplier: supplierId,
       supplierName: supplier?.name || "",
-      receipt: "",
-      receiptNumber: "",
     });
-    setItems([{ product: "", productName: "", quantity: 1, costPrice: 0, total: 0 }]);
   };
 
-  const handleReceiptChange = (receiptId: string) => {
-    const receipt = receipts.find(r => r._id === receiptId);
-    if (receipt) {
-      setFormData({
-        ...formData,
-        receipt: receiptId,
-        receiptNumber: receipt.receiptNumber,
-      });
-
-      // Pre-fill items from receipt
-      setItems(receipt.items.map(item => ({
-        product: typeof item.product === 'string' ? item.product : item.product._id,
-        productName: item.productName,
-        quantity: 1,
-        costPrice: item.costPrice,
-        total: item.costPrice,
-      })));
+  const handleProductChange = (index: number, productId: string) => {
+    const product = products.find(p => p._id === productId);
+    if (product) {
+      const newItems = [...items];
+      newItems[index] = {
+        ...newItems[index],
+        product: productId,
+        productName: product.name,
+        costPrice: product.costPrice || 0,
+        total: newItems[index].quantity * (product.costPrice || 0),
+      };
+      setItems(newItems);
     }
   };
 
@@ -177,13 +164,9 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
     }
   };
 
-  const supplierReceipts = receipts.filter(r =>
-    (typeof r.supplier === 'string' ? r.supplier : r.supplier._id) === formData.supplier
-  );
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Tovar qaytarish</DialogTitle>
           <DialogDescription>
@@ -191,44 +174,21 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Supplier and Receipt */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="supplier">Yetkazib beruvchi *</Label>
-              <select
-                id="supplier"
-                value={formData.supplier}
-                onChange={(e) => handleSupplierChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
-              >
-                <option value="">Tanlang...</option>
-                {suppliers.map((supplier) => (
-                  <option key={supplier._id} value={supplier._id}>
-                    {supplier.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="receipt">Qabul hujjati</Label>
-              <select
-                id="receipt"
-                value={formData.receipt}
-                onChange={(e) => handleReceiptChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                disabled={!formData.supplier}
-              >
-                <option value="">Tanlang...</option>
-                {supplierReceipts.map((receipt) => (
-                  <option key={receipt._id} value={receipt._id}>
-                    {receipt.receiptNumber} - {new Date(receipt.receiptDate).toLocaleDateString('uz-UZ')}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto flex-1">
+          {/* Supplier */}
+          <div className="space-y-2">
+            <Label htmlFor="supplier">Yetkazib beruvchi *</Label>
+            <Combobox
+              options={suppliers.map(s => ({
+                label: s.name,
+                value: s._id
+              }))}
+              value={formData.supplier}
+              onValueChange={handleSupplierChange}
+              placeholder="Yetkazib beruvchini tanlang..."
+              searchPlaceholder="Qidirish..."
+              emptyText="Yetkazib beruvchi topilmadi"
+            />
           </div>
 
           {/* Date and Reason */}
@@ -246,18 +206,19 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
 
             <div className="space-y-2">
               <Label htmlFor="reason">Qaytarish sababi *</Label>
-              <select
-                id="reason"
+              <Combobox
+                options={[
+                  { label: 'Brak (ishlamaydi)', value: 'brak' },
+                  { label: 'Nuqson (yoriq, singan)', value: 'nuqson' },
+                  { label: 'Noto\'g\'ri model', value: 'noto\'g\'ri_model' },
+                  { label: 'Boshqa sabab', value: 'boshqa' }
+                ]}
                 value={formData.reason}
-                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
-              >
-                <option value="brak">Brak (ishlamaydi)</option>
-                <option value="nuqson">Nuqson (yoriq, singan)</option>
-                <option value="noto'g'ri_model">Noto'g'ri model</option>
-                <option value="boshqa">Boshqa sabab</option>
-              </select>
+                onValueChange={(value) => setFormData({ ...formData, reason: value })}
+                placeholder="Sabab tanlang..."
+                searchPlaceholder="Qidirish..."
+                emptyText="Sabab topilmadi"
+              />
             </div>
           </div>
 
@@ -286,12 +247,17 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
                   {items.map((item, index) => (
                     <tr key={index}>
                       <td className="px-3 py-2">
-                        <Input
-                          value={item.productName}
-                          onChange={(e) => handleItemChange(index, 'productName', e.target.value)}
-                          className="text-sm"
-                          placeholder="Mahsulot nomi"
-                          required
+                        <Combobox
+                          options={products.map(p => ({
+                            label: p.name,
+                            value: p._id
+                          }))}
+                          value={item.product}
+                          onValueChange={(value) => handleProductChange(index, value)}
+                          placeholder="Mahsulot tanlang..."
+                          searchPlaceholder="Qidirish..."
+                          emptyText="Mahsulot topilmadi"
+                          className="w-full"
                         />
                       </td>
                       <td className="px-3 py-2">

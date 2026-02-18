@@ -235,7 +235,7 @@ const ProductsList = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   type="search"
-                  placeholder="Mahsulot nomi, SKU yoki kategoriyani qidiring..."
+                  placeholder="Mahsulot nomi yoki kategoriyani qidiring..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -251,9 +251,6 @@ const ProductsList = () => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Mahsulot
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    SKU
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Kategoriya
@@ -294,9 +291,6 @@ const ProductsList = () => {
                             <p className="text-xs text-gray-500 mt-0.5">{product.description}</p>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 wrap-text">
-                        {product.sku || '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 wrap-text">
                         {product.category || '-'}

@@ -42,7 +42,9 @@ export const ViewOrderModal = ({ open, onClose, order }: ViewOrderModalProps) =>
     }
   };
 
-  const supplierName = typeof order.supplier === 'string' ? order.supplierName : order.supplier.name;
+  const supplierName = typeof order.supplier === 'string' 
+    ? order.supplierName 
+    : (order.supplier?.name || order.supplierName || 'Noma\'lum');
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

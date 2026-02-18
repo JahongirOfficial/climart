@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { useWarehouses } from "@/hooks/useWarehouses";
 import { useProducts } from "@/hooks/useProducts";
 import { Loader2, Plus, Trash2, AlertCircle } from "lucide-react";
@@ -65,8 +65,13 @@ export const WarehouseTransferModal = ({ open, onClose, onSave }: WarehouseTrans
     setFormData(prev => ({
       ...prev,
       sourceWarehouse: warehouseId,
-      sourceWarehouseName: warehouse?.name || ""
+      sourceWarehouseName: warehouse?.name || "",
+      // Manba ombor o'zgarganda maqsad omborni tozalash
+      destinationWarehouse: prev.destinationWarehouse === warehouseId ? "" : prev.destinationWarehouse,
+      destinationWarehouseName: prev.destinationWarehouse === warehouseId ? "" : prev.destinationWarehouseName
     }));
+    // Mahsulotlar ro'yxatini tozalash
+    setItems([{ product: "", productName: "", quantity: 0, availableStock: 0 }]);
   };
 
   const handleDestinationWarehouseChange = (warehouseId: string) => {
@@ -80,16 +85,44 @@ export const WarehouseTransferModal = ({ open, onClose, onSave }: WarehouseTrans
 
   const handleProductChange = (index: number, productId: string) => {
     const product = products.find(p => p._id === productId);
-    if (product) {
+    if (product && formData.sourceWarehouse) {
+      // Manba ombordagi mahsulot miqdorini topamiz
+      const warehouseStock = product.stockByWarehouse?.find(
+        s => s.warehouse === formData.sourceWarehouse
+      );
+      const availableStock = warehouseStock?.quantity || 0;
+
       const newItems = [...items];
       newItems[index] = {
         ...newItems[index],
         product: productId,
         productName: product.name,
-        availableStock: product.quantity
+        availableStock
       };
       setItems(newItems);
     }
+  };
+
+  // Manba ombordagi mahsulotlarni filterlash
+  const getAvailableProducts = () => {
+    if (!formData.sourceWarehouse) return [];
+    
+    return products
+      .filter(product => {
+        const warehouseStock = product.stockByWarehouse?.find(
+          s => s.warehouse === formData.sourceWarehouse
+        );
+        return warehouseStock && warehouseStock.quantity > 0;
+      })
+      .map(product => {
+        const warehouseStock = product.stockByWarehouse?.find(
+          s => s.warehouse === formData.sourceWarehouse
+        );
+        return {
+          value: product._id,
+          label: `${product.name} (Mavjud: ${warehouseStock?.quantity || 0})`
+        };
+      });
   };
 
   const handleQuantityChange = (index: number, quantity: number) => {
@@ -188,34 +221,30 @@ export const WarehouseTransferModal = ({ open, onClose, onSave }: WarehouseTrans
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="sourceWarehouse">Qayerdan (Manba ombor) *</Label>
-              <Select value={formData.sourceWarehouse} onValueChange={handleSourceWarehouseChange} disabled={warehousesLoading}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tanlang..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {warehouses.map(warehouse => (
-                    <SelectItem key={warehouse._id} value={warehouse._id}>
-                      {warehouse.name} ({warehouse.code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={warehouses.map(w => ({ value: w._id, label: `${w.name} (${w.code})` }))}
+                value={formData.sourceWarehouse}
+                onValueChange={handleSourceWarehouseChange}
+                placeholder="Tanlang..."
+                searchPlaceholder="Qidirish..."
+                emptyText="Ombor topilmadi"
+                disabled={warehousesLoading}
+              />
             </div>
 
             <div>
               <Label htmlFor="destinationWarehouse">Qayerga (Maqsad ombor) *</Label>
-              <Select value={formData.destinationWarehouse} onValueChange={handleDestinationWarehouseChange} disabled={warehousesLoading}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tanlang..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {warehouses.map(warehouse => (
-                    <SelectItem key={warehouse._id} value={warehouse._id}>
-                      {warehouse.name} ({warehouse.code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={warehouses
+                  .filter(w => w._id !== formData.sourceWarehouse)
+                  .map(w => ({ value: w._id, label: `${w.name} (${w.code})` }))}
+                value={formData.destinationWarehouse}
+                onValueChange={handleDestinationWarehouseChange}
+                placeholder="Tanlang..."
+                searchPlaceholder="Qidirish..."
+                emptyText="Ombor topilmadi"
+                disabled={warehousesLoading || !formData.sourceWarehouse}
+              />
             </div>
           </div>
 
@@ -244,18 +273,15 @@ export const WarehouseTransferModal = ({ open, onClose, onSave }: WarehouseTrans
                 <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
                   <div className="col-span-8">
                     <Label className="text-xs">Mahsulot</Label>
-                    <Select value={item.product} onValueChange={(value) => handleProductChange(index, value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Tanlang..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products.map(product => (
-                          <SelectItem key={product._id} value={product._id}>
-                            {product.name} (Mavjud: {product.quantity})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Combobox
+                      options={getAvailableProducts()}
+                      value={item.product}
+                      onValueChange={(value) => handleProductChange(index, value)}
+                      placeholder="Tanlang..."
+                      searchPlaceholder="Qidirish..."
+                      emptyText={formData.sourceWarehouse ? "Mahsulot topilmadi" : "Avval manba omborni tanlang"}
+                      disabled={!formData.sourceWarehouse}
+                    />
                   </div>
 
                   <div className="col-span-3">
@@ -265,10 +291,16 @@ export const WarehouseTransferModal = ({ open, onClose, onSave }: WarehouseTrans
                       min="0"
                       max={item.availableStock}
                       value={item.quantity || ''}
+                      placeholder="0"
                       onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)}
                       className="text-sm"
                       required
                     />
+                    {item.availableStock > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Mavjud: {item.availableStock}
+                      </p>
+                    )}
                   </div>
 
                   <div className="col-span-1">

@@ -20,7 +20,6 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
   const { showWarning, showError } = useModal();
   const [formData, setFormData] = useState({
     name: "",
-    sku: "",
     category: "",
     quantity: "" as any,
     costPrice: "" as any,
@@ -94,15 +93,10 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
     setFormData(prev => ({ ...prev, image: "" }));
   };
 
-  const generateSKU = () => {
-    return `PRD-${Math.floor(100000 + Math.random() * 900000)}`;
-  };
-
   useEffect(() => {
     if (product) {
       setFormData({
         name: product.name,
-        sku: product.sku || "",
         category: product.category || "",
         quantity: product.quantity,
         costPrice: product.costPrice,
@@ -120,7 +114,6 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
     } else if (open) {
       setFormData({
         name: "",
-        sku: generateSKU(),
         category: "",
         quantity: "",
         costPrice: "",
@@ -210,16 +203,6 @@ export const ProductModal = ({ open, onClose, onSave, product }: ProductModalPro
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Masalan: Kran Grohe Eurosmart"
                 required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sku">SKU</Label>
-              <Input
-                id="sku"
-                value={formData.sku}
-                onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-                placeholder="GRH-KRN-001"
               />
             </div>
 

@@ -28,7 +28,7 @@ import {
   Download,
   Upload,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo, memo, useCallback } from "react";
 import { usePayments } from "@/hooks/usePayments";
 import { usePartners } from "@/hooks/usePartners";
 import { format } from "date-fns";
@@ -45,6 +45,100 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+// Jadval qatori komponenti - memo bilan optimizatsiya
+const PaymentRow = memo(({ 
+  payment, 
+  onConfirm, 
+  onCancel, 
+  onDelete,
+  getTypeIcon,
+  getTypeBadge,
+  getStatusBadge
+}: any) => {
+  return (
+    <tr className="border-b hover:bg-muted/50 transition-colors">
+      <td className="p-4">
+        <div className="flex items-center gap-2">
+          {getTypeIcon(payment.type)}
+          <span className="font-medium">{payment.paymentNumber}</span>
+        </div>
+      </td>
+      <td className="p-4">
+        <div className="text-sm">
+          {format(new Date(payment.paymentDate), 'dd.MM.yyyy')}
+        </div>
+      </td>
+      <td className="p-4">{getTypeBadge(payment.type)}</td>
+      <td className="p-4">
+        <div className="font-medium">{payment.partnerName || '-'}</div>
+      </td>
+      <td className="p-4">
+        <div className="text-sm max-w-xs truncate">{payment.purpose}</div>
+      </td>
+      <td className="p-4">
+        <div className="text-sm">
+          {payment.type === 'transfer' ? (
+            <span>
+              {payment.fromAccount === 'cash' ? 'Kassa' : 'Bank'} → {payment.toAccount === 'cash' ? 'Kassa' : 'Bank'}
+            </span>
+          ) : (
+            <span>{payment.category || '-'}</span>
+          )}
+        </div>
+      </td>
+      <td className="p-4 text-center">
+        <Badge variant="outline">
+          {payment.account === 'cash' ? 'Kassa' : 'Bank'}
+        </Badge>
+      </td>
+      <td className="p-4 text-right">
+        <div className={`font-medium ${
+          payment.type === 'incoming' ? 'text-green-600' : 
+          payment.type === 'outgoing' ? 'text-red-600' : 
+          'text-blue-600'
+        }`}>
+          {payment.type === 'incoming' && '+'}
+          {payment.type === 'outgoing' && '-'}
+          {payment.amount.toLocaleString()} so'm
+        </div>
+      </td>
+      <td className="p-4 text-center">{getStatusBadge(payment.status)}</td>
+      <td className="p-4">
+        <div className="flex items-center justify-center gap-2">
+          {payment.status === 'draft' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onConfirm(payment._id)}
+              title="Tasdiqlash"
+            >
+              <Check className="h-4 w-4 text-green-600" />
+            </Button>
+          )}
+          {payment.status === 'confirmed' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onCancel(payment._id)}
+              title="Bekor qilish"
+            >
+              <X className="h-4 w-4 text-red-600" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(payment._id)}
+            title="O'chirish"
+          >
+            <Trash2 className="h-4 w-4 text-red-600" />
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 const Payments = () => {
   const { toast } = useToast();
@@ -63,24 +157,40 @@ const Payments = () => {
   const [createModalType, setCreateModalType] = useState<'incoming' | 'outgoing' | 'transfer'>('incoming');
   const [importModalOpen, setImportModalOpen] = useState(false);
 
+  // Faqat sana filtri bilan API chaqiramiz
   const { payments, totals, loading, refetch } = usePayments({
     startDate: dateFilter.startDate,
     endDate: dateFilter.endDate,
-    type: typeFilter !== "all" ? typeFilter as any : undefined,
-    account: accountFilter !== "all" ? accountFilter as any : undefined,
-    status: statusFilter !== "all" ? statusFilter as any : undefined,
-    partner: partnerFilter || undefined,
   });
 
   const { partners } = usePartners();
 
-  const filteredPayments = payments.filter(payment =>
-    payment.paymentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    payment.partnerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    payment.purpose.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Client-side filterlash - sahifa qayta render bo'lmaydi
+  const filteredPayments = useMemo(() => {
+    return payments.filter(payment => {
+      // Search filter
+      const matchesSearch = searchTerm === "" || 
+        payment.paymentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        payment.partnerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        payment.purpose.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const handleDelete = async () => {
+      // Type filter
+      const matchesType = typeFilter === "all" || payment.type === typeFilter;
+
+      // Account filter
+      const matchesAccount = accountFilter === "all" || payment.account === accountFilter;
+
+      // Status filter
+      const matchesStatus = statusFilter === "all" || payment.status === statusFilter;
+
+      // Partner filter
+      const matchesPartner = partnerFilter === "" || payment.partnerName?.toLowerCase().includes(partnerFilter.toLowerCase());
+
+      return matchesSearch && matchesType && matchesAccount && matchesStatus && matchesPartner;
+    });
+  }, [payments, searchTerm, typeFilter, accountFilter, statusFilter, partnerFilter]);
+
+  const handleDelete = useCallback(async () => {
     if (!selectedPayment) return;
 
     try {
@@ -106,9 +216,9 @@ const Payments = () => {
       setDeleteDialogOpen(false);
       setSelectedPayment(null);
     }
-  };
+  }, [selectedPayment, toast, refetch]);
 
-  const handleConfirm = async (id: string) => {
+  const handleConfirm = useCallback(async (id: string) => {
     try {
       const response = await fetch(`/api/payments/${id}/confirm`, {
         method: 'PATCH',
@@ -129,9 +239,9 @@ const Payments = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [toast, refetch]);
 
-  const handleCancel = async (id: string) => {
+  const handleCancel = useCallback(async (id: string) => {
     try {
       const response = await fetch(`/api/payments/${id}/cancel`, {
         method: 'PATCH',
@@ -152,9 +262,9 @@ const Payments = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [toast, refetch]);
 
-  const handleCreatePayment = async (data: any) => {
+  const handleCreatePayment = useCallback(async (data: any) => {
     try {
       const response = await fetch('/api/payments', {
         method: 'POST',
@@ -178,9 +288,9 @@ const Payments = () => {
       });
       throw error;
     }
-  };
+  }, [toast, refetch]);
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = useCallback((type: string) => {
     switch (type) {
       case 'incoming':
         return <ArrowDownCircle className="h-4 w-4 text-green-600" />;
@@ -191,9 +301,9 @@ const Payments = () => {
       default:
         return null;
     }
-  };
+  }, []);
 
-  const getTypeBadge = (type: string) => {
+  const getTypeBadge = useCallback((type: string) => {
     switch (type) {
       case 'incoming':
         return <Badge className="bg-green-100 text-green-800 border-green-200">Kirim</Badge>;
@@ -204,9 +314,9 @@ const Payments = () => {
       default:
         return null;
     }
-  };
+  }, []);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = useCallback((status: string) => {
     switch (status) {
       case 'confirmed':
         return <Badge className="bg-green-100 text-green-800 border-green-200">Tasdiqlangan</Badge>;
@@ -217,7 +327,7 @@ const Payments = () => {
       default:
         return null;
     }
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -426,89 +536,19 @@ const Payments = () => {
                   </tr>
                 ) : (
                   filteredPayments.map((payment) => (
-                    <tr key={payment._id} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          {getTypeIcon(payment.type)}
-                          <span className="font-medium">{payment.paymentNumber}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="text-sm">
-                          {format(new Date(payment.paymentDate), 'dd.MM.yyyy')}
-                        </div>
-                      </td>
-                      <td className="p-4">{getTypeBadge(payment.type)}</td>
-                      <td className="p-4">
-                        <div className="font-medium">{payment.partnerName || '-'}</div>
-                      </td>
-                      <td className="p-4">
-                        <div className="text-sm max-w-xs truncate">{payment.purpose}</div>
-                      </td>
-                      <td className="p-4">
-                        <div className="text-sm">
-                          {payment.type === 'transfer' ? (
-                            <span>
-                              {payment.fromAccount === 'cash' ? 'Kassa' : 'Bank'} → {payment.toAccount === 'cash' ? 'Kassa' : 'Bank'}
-                            </span>
-                          ) : (
-                            <span>{payment.category || '-'}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4 text-center">
-                        <Badge variant="outline">
-                          {payment.account === 'cash' ? 'Kassa' : 'Bank'}
-                        </Badge>
-                      </td>
-                      <td className="p-4 text-right">
-                        <div className={`font-medium ${
-                          payment.type === 'incoming' ? 'text-green-600' : 
-                          payment.type === 'outgoing' ? 'text-red-600' : 
-                          'text-blue-600'
-                        }`}>
-                          {payment.type === 'incoming' && '+'}
-                          {payment.type === 'outgoing' && '-'}
-                          {payment.amount.toLocaleString()} so'm
-                        </div>
-                      </td>
-                      <td className="p-4 text-center">{getStatusBadge(payment.status)}</td>
-                      <td className="p-4">
-                        <div className="flex items-center justify-center gap-2">
-                          {payment.status === 'draft' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleConfirm(payment._id)}
-                              title="Tasdiqlash"
-                            >
-                              <Check className="h-4 w-4 text-green-600" />
-                            </Button>
-                          )}
-                          {payment.status === 'confirmed' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleCancel(payment._id)}
-                              title="Bekor qilish"
-                            >
-                              <X className="h-4 w-4 text-red-600" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPayment(payment._id);
-                              setDeleteDialogOpen(true);
-                            }}
-                            title="O'chirish"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                    <PaymentRow
+                      key={payment._id}
+                      payment={payment}
+                      onConfirm={handleConfirm}
+                      onCancel={handleCancel}
+                      onDelete={(id: string) => {
+                        setSelectedPayment(id);
+                        setDeleteDialogOpen(true);
+                      }}
+                      getTypeIcon={getTypeIcon}
+                      getTypeBadge={getTypeBadge}
+                      getStatusBadge={getStatusBadge}
+                    />
                   ))
                 )}
               </tbody>

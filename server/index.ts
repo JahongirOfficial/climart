@@ -40,6 +40,7 @@ import authRouter from "./routes/auth";
 import employeesRouter from "./routes/employees";
 import reportsRouter from "./routes/reports";
 import telegramRouter from "./routes/telegram";
+import priceListsRouter from "./routes/price-lists";
 
 // Connect to MongoDB
 connectDB().then(() => {
@@ -134,6 +135,7 @@ export function createServer() {
   app.use("/api/profit-loss", profitLossRouter);
   app.use("/api/mutual-settlements", mutualSettlementsRouter);
   app.use("/api/reports", reportsRouter);
+  app.use("/api/price-lists", priceListsRouter);
 
   return app;
 }

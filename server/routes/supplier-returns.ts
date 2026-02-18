@@ -42,26 +42,53 @@ router.post('/', async (req: Request, res: Response) => {
   
   try {
     // Generate return number
-    const count = await SupplierReturn.countDocuments();
-    const returnNumber = `VQ-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const lastReturn = await SupplierReturn.findOne().sort({ createdAt: -1 });
+    let returnNumber;
+    
+    if (lastReturn && lastReturn.returnNumber) {
+      const lastNum = parseInt(lastReturn.returnNumber.split('-')[2]);
+      returnNumber = `VQ-${new Date().getFullYear()}-${String(lastNum + 1).padStart(3, '0')}`;
+    } else {
+      returnNumber = `VQ-${new Date().getFullYear()}-001`;
+    }
     
     const supplierReturn = new SupplierReturn({
       ...req.body,
       returnNumber,
     });
     
-    // Decrease warehouse quantities
+    // Decrease warehouse quantities from stockByWarehouse
     for (const item of supplierReturn.items) {
       const product = await Product.findById(item.product).session(session);
       
       if (!product) {
-        throw new Error(`Product ${item.productName} not found`);
+        throw new Error(`Mahsulot ${item.productName} topilmadi`);
       }
       
-      // Decrease quantity
-      product.quantity -= item.quantity;
-      if (product.quantity < 0) {
-        throw new Error(`Insufficient quantity for ${item.productName}`);
+      // Check if product has stockByWarehouse
+      if (!product.stockByWarehouse || Object.keys(product.stockByWarehouse).length === 0) {
+        throw new Error(`${item.productName} hali omborga qabul qilinmagan`);
+      }
+      
+      // Calculate total quantity across all warehouses
+      const totalQuantity = Object.values(product.stockByWarehouse || {}).reduce((sum: number, qty) => sum + (qty as number), 0);
+      
+      if (totalQuantity < item.quantity) {
+        throw new Error(`${item.productName} uchun yetarli miqdor yo'q (mavjud: ${totalQuantity}, kerak: ${item.quantity})`);
+      }
+      
+      // Decrease from warehouses proportionally or from first available
+      let remainingToDecrease = item.quantity;
+      const warehouses = Object.keys(product.stockByWarehouse || {});
+      
+      for (const warehouseId of warehouses) {
+        if (remainingToDecrease <= 0) break;
+        
+        const currentStock = product.stockByWarehouse.get(warehouseId) || 0;
+        const decreaseAmount = Math.min(currentStock, remainingToDecrease);
+        
+        product.stockByWarehouse.set(warehouseId, currentStock - decreaseAmount);
+        remainingToDecrease -= decreaseAmount;
       }
       
       await product.save({ session });
@@ -71,9 +98,9 @@ router.post('/', async (req: Request, res: Response) => {
     await session.commitTransaction();
     
     res.status(201).json(supplierReturn);
-  } catch (error) {
+  } catch (error: any) {
     await session.abortTransaction();
-    res.status(400).json({ message: 'Invalid data', error });
+    res.status(400).json({ message: error.message || 'Noto\'g\'ri ma\'lumot' });
   } finally {
     session.endSession();
   }
@@ -155,15 +182,24 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const supplierReturn = await SupplierReturn.findById(req.params.id).session(session);
     
     if (!supplierReturn) {
-      throw new Error('Return not found');
+      throw new Error('Qaytarish topilmadi');
     }
     
-    // Reverse warehouse quantities (add back)
+    // Reverse warehouse quantities (add back to stockByWarehouse)
     for (const item of supplierReturn.items) {
       const product = await Product.findById(item.product).session(session);
       
       if (product) {
-        product.quantity += item.quantity;
+        // Add back to first warehouse or distribute
+        const warehouses = Object.keys(product.stockByWarehouse || {});
+        if (warehouses.length > 0) {
+          const firstWarehouse = warehouses[0];
+          const currentStock = product.stockByWarehouse.get(firstWarehouse) || 0;
+          product.stockByWarehouse.set(firstWarehouse, currentStock + item.quantity);
+        } else {
+          // If no warehouses, this shouldn't happen but handle gracefully
+          console.warn(`Product ${product.name} has no warehouses`);
+        }
         await product.save({ session });
       }
     }
@@ -171,10 +207,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
     await SupplierReturn.findByIdAndDelete(req.params.id).session(session);
     await session.commitTransaction();
     
-    res.json({ message: 'Return deleted and warehouse updated' });
-  } catch (error) {
+    res.json({ message: 'Qaytarish o\'chirildi va ombor yangilandi' });
+  } catch (error: any) {
     await session.abortTransaction();
-    res.status(500).json({ message: 'Server error', error });
+    res.status(500).json({ message: error.message || 'Server xatosi' });
   } finally {
     session.endSession();
   }
