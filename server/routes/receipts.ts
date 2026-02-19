@@ -3,6 +3,8 @@ import Receipt from '../models/Receipt';
 import Product from '../models/Product';
 import PurchaseOrder from '../models/PurchaseOrder';
 import mongoose from 'mongoose';
+import { logAudit } from '../utils/auditLogger';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
@@ -52,8 +54,7 @@ router.post('/', async (req: Request, res: Response) => {
 
   try {
     // Generate receipt number
-    const count = await Receipt.countDocuments();
-    const receiptNumber = `QQ-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const receiptNumber = await generateDocNumber('QQ');
 
     const receipt = new Receipt({
       ...req.body,
@@ -117,6 +118,16 @@ router.post('/', async (req: Request, res: Response) => {
     await receipt.save({ session });
     await session.commitTransaction();
 
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'create',
+      entity: 'Receipt',
+      entityId: receipt._id.toString(),
+      entityName: `${receipt.receiptNumber} - ${receipt.supplierName || ''}`,
+      ipAddress: req.ip,
+    });
+
     res.status(201).json(receipt);
   } catch (error) {
     await session.abortTransaction();
@@ -145,8 +156,7 @@ router.post('/from-order/:orderId', async (req: Request, res: Response) => {
     }
 
     // Generate receipt number
-    const count = await Receipt.countDocuments();
-    const receiptNumber = `QQ-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const receiptNumber = await generateDocNumber('QQ');
 
     // Map product names to product IDs
     const receiptItems = [];
@@ -255,6 +265,16 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     await Receipt.findByIdAndDelete(req.params.id).session(session);
     await session.commitTransaction();
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'delete',
+      entity: 'Receipt',
+      entityId: req.params.id,
+      entityName: `${receipt.receiptNumber} - ${receipt.supplierName || ''}`,
+      ipAddress: req.ip,
+    });
 
     res.json({ message: 'Receipt deleted and warehouse updated' });
   } catch (error) {

@@ -20,6 +20,7 @@ import { useSupplierReturns } from "../../hooks/useSupplierReturns";
 import { SupplierReturnModal } from "@/components/SupplierReturnModal";
 import { ViewReturnModal } from "@/components/ViewReturnModal";
 import { SupplierReturn } from "@shared/api";
+import { ExportButton } from "@/components/ExportButton";
 
 const Returns = () => {
   const { returns, loading, error, refetch, createReturn, deleteReturn } = useSupplierReturns();
@@ -148,13 +149,20 @@ const Returns = () => {
                 Yetkazib beruvchiga tovarlarni qaytarish va ombor zaxirasini kamaytirish
               </p>
             </div>
-            <Button
-              onClick={handleCreateReturn}
-              className="bg-primary hover:bg-primary/90 text-white gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Yangi qaytarish
-            </Button>
+            <div className="flex gap-2">
+              <ExportButton
+                data={filteredReturns}
+                filename="yetkazuvchi-qaytarishlar"
+                fieldsToInclude={["returnNumber", "returnDate", "totalAmount", "reason", "status"]}
+              />
+              <Button
+                onClick={handleCreateReturn}
+                className="bg-primary hover:bg-primary/90 text-white gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Yangi qaytarish
+              </Button>
+            </div>
           </div>
 
           {/* KPI Cards */}

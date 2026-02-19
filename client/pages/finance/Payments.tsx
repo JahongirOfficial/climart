@@ -45,6 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ExportButton } from "@/components/ExportButton";
 
 // Jadval qatori komponenti - memo bilan optimizatsiya
 const PaymentRow = memo(({ 
@@ -382,6 +383,11 @@ const Payments = () => {
               <Upload className="h-4 w-4 mr-2" />
               Import
             </Button>
+            <ExportButton
+              data={filteredPayments}
+              filename="tolovlar"
+              fieldsToInclude={["paymentNumber", "paymentDate", "type", "partnerName", "purpose", "category", "account", "amount", "status"]}
+            />
           </div>
         </div>
 

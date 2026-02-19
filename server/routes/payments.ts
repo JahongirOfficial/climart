@@ -4,6 +4,8 @@ import Partner from '../models/Partner';
 import multer from 'multer';
 import csv from 'csv-parser';
 import { Readable } from 'stream';
+import { logAudit } from '../utils/auditLogger';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -81,13 +83,12 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     // Generate payment number based on type
-    const count = await Payment.countDocuments();
     let prefix = 'PAY';
     if (req.body.type === 'incoming') prefix = 'IN';
     if (req.body.type === 'outgoing') prefix = 'OUT';
     if (req.body.type === 'transfer') prefix = 'TR';
-    
-    const paymentNumber = `${prefix}-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+
+    const paymentNumber = await generateDocNumber(prefix, { padWidth: 4 });
     
     const payment = new Payment({
       ...req.body,
@@ -120,6 +121,16 @@ router.post('/', async (req: Request, res: Response) => {
       }
     }
     
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'create',
+      entity: 'Payment',
+      entityId: payment._id.toString(),
+      entityName: `${payment.paymentNumber} - ${payment.partnerName || ''} - ${payment.amount?.toLocaleString()} so'm`,
+      ipAddress: req.ip,
+    });
+
     res.status(201).json(payment);
   } catch (error) {
     res.status(400).json({ message: 'Invalid data', error });
@@ -199,6 +210,16 @@ router.delete('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Payment not found' });
     }
     
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'delete',
+      entity: 'Payment',
+      entityId: req.params.id,
+      entityName: `${payment.paymentNumber} - ${payment.partnerName || ''} - ${payment.amount?.toLocaleString()} so'm`,
+      ipAddress: req.ip,
+    });
+
     await Payment.findByIdAndDelete(req.params.id);
     res.json({ message: 'Payment deleted' });
   } catch (error) {
@@ -251,13 +272,12 @@ router.post('/import', upload.single('file'), async (req: Request, res: Response
               }
 
               // Generate payment number
-              const count = await Payment.countDocuments();
-              let prefix = 'PAY';
-              if (paymentData.type === 'incoming') prefix = 'IN';
-              if (paymentData.type === 'outgoing') prefix = 'OUT';
-              if (paymentData.type === 'transfer') prefix = 'TR';
-              
-              paymentData.paymentNumber = `${prefix}-${new Date().getFullYear()}-${String(count + imported + 1).padStart(4, '0')}`;
+              let importPrefix = 'PAY';
+              if (paymentData.type === 'incoming') importPrefix = 'IN';
+              if (paymentData.type === 'outgoing') importPrefix = 'OUT';
+              if (paymentData.type === 'transfer') importPrefix = 'TR';
+
+              paymentData.paymentNumber = await generateDocNumber(importPrefix, { padWidth: 4 });
 
               // Create payment
               await Payment.create(paymentData);

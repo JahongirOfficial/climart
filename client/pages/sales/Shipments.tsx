@@ -12,6 +12,7 @@ import { TaxInvoiceModal } from "@/components/TaxInvoiceModal";
 import { useTaxInvoices } from "@/hooks/useTaxInvoices";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { ExportButton } from "@/components/ExportButton";
 
 const Shipments = () => {
   const { shipments, loading, error, refetch, updateStatus, deleteShipment } = useShipments();
@@ -301,6 +302,11 @@ const Shipments = () => {
             <h1 className="text-3xl font-bold text-gray-900">Yetkazib berish</h1>
             <p className="text-gray-600 mt-1">Mijozlarga yetkazib berishni kuzatish</p>
           </div>
+          <ExportButton
+            data={filteredShipments}
+            filename="yetkazish"
+            fieldsToInclude={["shipmentNumber", "customerName", "shipmentDate", "trackingNumber", "totalAmount", "status"]}
+          />
         </div>
 
         {/* KPI Cards */}

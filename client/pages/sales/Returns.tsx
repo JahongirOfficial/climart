@@ -19,6 +19,7 @@ import { useState } from "react";
 import { useCustomerReturns } from "@/hooks/useCustomerReturns";
 import { CustomerReturnModal } from "@/components/CustomerReturnModal";
 import { useToast } from "@/hooks/use-toast";
+import { ExportButton } from "@/components/ExportButton";
 
 const Returns = () => {
   const { returns, loading, error, refetch, createReturn, updateStatus, deleteReturn } = useCustomerReturns();
@@ -317,10 +318,17 @@ const Returns = () => {
             <h1 className="text-3xl font-bold text-gray-900">Mijozlardan qaytarish</h1>
             <p className="text-gray-600 mt-1">Mijozlardan qaytarilgan mahsulotlarni boshqaring</p>
           </div>
-          <Button onClick={handleCreate} className="w-full md:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Yangi qaytarish
-          </Button>
+          <div className="flex gap-2">
+            <ExportButton
+              data={filteredReturns}
+              filename="qaytarishlar"
+              fieldsToInclude={["returnNumber", "customerName", "returnDate", "totalAmount", "reason", "status"]}
+            />
+            <Button onClick={handleCreate} className="w-full md:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Yangi qaytarish
+            </Button>
+          </div>
         </div>
 
         {/* KPI Cards */}

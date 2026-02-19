@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Product } from '@shared/api';
 
-interface ProcurementProduct extends Product {
+interface ProcurementProduct extends Omit<Product, 'status'> {
   dailyAverageSales: number;
   lastWeekSales: number;
   supplier: string;

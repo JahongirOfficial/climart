@@ -3,6 +3,7 @@ import Product from '../models/Product';
 import CustomerInvoice from '../models/CustomerInvoice';
 import QRCode from 'qrcode';
 import { subDays } from 'date-fns';
+import { logAudit } from '../utils/auditLogger';
 
 const router = Router();
 
@@ -80,6 +81,27 @@ import CustomerReturn from '../models/CustomerReturn';
 import SupplierReturn from '../models/SupplierReturn';
 
 // ... other imports ...
+
+// Search product by barcode or SKU (for POS)
+router.get('/search/barcode/:code', async (req: Request, res: Response) => {
+  try {
+    const { code } = req.params;
+    const product = await Product.findOne({
+      $or: [
+        { barcode: code },
+        { sku: code }
+      ]
+    }).lean();
+
+    if (!product) {
+      return res.status(404).json({ message: 'Mahsulot topilmadi' });
+    }
+
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
 
 // Get product history (Ledger)
 router.get('/:id/history', async (req: Request, res: Response) => {
@@ -201,6 +223,17 @@ router.post('/', async (req: Request, res: Response) => {
     product.qrCode = await QRCode.toDataURL(qrData);
 
     await product.save();
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'create',
+      entity: 'Product',
+      entityId: product._id.toString(),
+      entityName: product.name,
+      ipAddress: req.ip,
+    });
+
     res.status(201).json(product);
   } catch (error: any) {
     console.error('Product creation error:', error);
@@ -233,6 +266,17 @@ router.put('/:id', async (req: Request, res: Response) => {
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'update',
+      entity: 'Product',
+      entityId: product._id.toString(),
+      entityName: product.name,
+      ipAddress: req.ip,
+    });
+
     res.json(product);
   } catch (error) {
     res.status(400).json({ message: 'Invalid data', error });
@@ -246,6 +290,17 @@ router.delete('/:id', async (req: Request, res: Response) => {
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'delete',
+      entity: 'Product',
+      entityId: req.params.id,
+      entityName: product.name,
+      ipAddress: req.ip,
+    });
+
     res.json({ message: 'Product deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });

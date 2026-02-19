@@ -4,13 +4,13 @@ import Product from '../models/Product';
 import Warehouse from '../models/Warehouse';
 import Writeoff from '../models/Writeoff';
 import WarehouseReceipt from '../models/WarehouseReceipt';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
 // Helper function to generate unique inventory number
 async function generateInventoryNumber(): Promise<string> {
-  const count = await Inventory.countDocuments();
-  return `INV-${String(count + 1).padStart(6, '0')}`;
+  return generateDocNumber('INV', { withYear: false, padWidth: 6 });
 }
 
 // Get all inventories
@@ -230,8 +230,7 @@ router.post('/:id/create-writeoff', async (req: Request, res: Response) => {
     }
     
     // Generate writeoff number
-    const writeoffCount = await Writeoff.countDocuments();
-    const writeoffNumber = `WO-${String(writeoffCount + 1).padStart(6, '0')}`;
+    const writeoffNumber = await generateDocNumber('WO', { withYear: false, padWidth: 6 });
     
     const writeoff = new Writeoff({
       writeoffNumber,
@@ -286,8 +285,7 @@ router.post('/:id/create-receipt', async (req: Request, res: Response) => {
     }
     
     // Generate receipt number
-    const receiptCount = await WarehouseReceipt.countDocuments();
-    const receiptNumber = `WR-${String(receiptCount + 1).padStart(6, '0')}`;
+    const receiptNumber = await generateDocNumber('WR', { withYear: false, padWidth: 6 });
     
     const receipt = new WarehouseReceipt({
       receiptNumber,

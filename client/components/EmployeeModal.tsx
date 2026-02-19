@@ -73,6 +73,8 @@ const availablePermissions = [
       { id: 'sales.returns', label: 'Tovarni qaytarib olish' },
       { id: 'sales.returns-report', label: 'Qaytarilgan mahsulot hisboti' },
       { id: 'sales.profitability', label: 'Foydalilik' },
+      { id: 'sales.pending-invoices', label: 'Kutilayotgan fakturalar' },
+      { id: 'sales.corrected-invoices', label: 'Tuzatilgan fakturalar' },
     ]
   },
   { 
@@ -103,6 +105,7 @@ const availablePermissions = [
       { id: 'warehouse.transfer', label: 'Ko\'chirish' },
       { id: 'warehouse.writeoff', label: 'Xatlov' },
       { id: 'warehouse.internal-order', label: 'Ichki zakaz' },
+      { id: 'warehouse.inventory', label: 'Inventarizatsiya' },
       { id: 'warehouse.balance', label: 'Qoldiq' },
       { id: 'warehouse.turnover', label: 'Aylanma' },
       { id: 'warehouse.warehouses', label: 'Omborlar' },
@@ -118,12 +121,20 @@ const availablePermissions = [
       { id: 'finance.mutual-settlements', label: 'O\'zaro hisob kitob' },
     ]
   },
-  { 
-    id: 'tasks', 
+  {
+    id: 'tasks',
     label: 'Vazifalar',
     subPermissions: [
       { id: 'tasks.add', label: 'Vazifa qo\'shish' },
       { id: 'tasks.my-tasks', label: 'Mening vazifalarim' },
+    ]
+  },
+  {
+    id: 'retail',
+    label: 'Chakana savdo',
+    subPermissions: [
+      { id: 'retail.channels', label: 'Savdo kanallari' },
+      { id: 'retail.statistics', label: 'Statistika' },
     ]
   },
 ];

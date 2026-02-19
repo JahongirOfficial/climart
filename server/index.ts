@@ -41,6 +41,8 @@ import employeesRouter from "./routes/employees";
 import reportsRouter from "./routes/reports";
 import telegramRouter from "./routes/telegram";
 import priceListsRouter from "./routes/price-lists";
+import auditRouter from "./routes/audit";
+import tasksRouter from "./routes/tasks";
 
 // Connect to MongoDB
 connectDB().then(() => {
@@ -136,6 +138,8 @@ export function createServer() {
   app.use("/api/mutual-settlements", mutualSettlementsRouter);
   app.use("/api/reports", reportsRouter);
   app.use("/api/price-lists", priceListsRouter);
+  app.use("/api/audit", auditRouter);
+  app.use("/api/tasks", tasksRouter);
 
   return app;
 }

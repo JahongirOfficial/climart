@@ -2,13 +2,13 @@ import { Router, Request, Response } from 'express';
 import WarehouseReceipt from '../models/WarehouseReceipt';
 import Product from '../models/Product';
 import Warehouse from '../models/Warehouse';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
 // Helper function to generate unique receipt number
 async function generateReceiptNumber(): Promise<string> {
-  const count = await WarehouseReceipt.countDocuments();
-  return `WR-${String(count + 1).padStart(6, '0')}`;
+  return generateDocNumber('WR', { withYear: false, padWidth: 6 });
 }
 
 // Get all warehouse receipts

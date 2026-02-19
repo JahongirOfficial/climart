@@ -43,7 +43,7 @@ export function ReceiveOrderModal({ open, onClose, onSave, order }: ReceiveOrder
     if (order && open) {
       // Initialize distributions for each item
       const distributions: ItemDistribution[] = order.items.map(item => ({
-        product: item.product,
+        product: (typeof item.product === 'object' && item.product ? item.product._id : item.product) as string,
         productName: item.productName,
         totalQuantity: item.quantity,
         distributions: warehouses.length > 0 ? [{

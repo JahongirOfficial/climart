@@ -4,6 +4,7 @@ import CustomerInvoice from '../models/CustomerInvoice';
 import Product from '../models/Product';
 import Partner from '../models/Partner';
 import mongoose from 'mongoose';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
@@ -44,8 +45,7 @@ router.post('/', async (req: Request, res: Response) => {
 
   try {
     // Generate return number
-    const count = await CustomerReturn.countDocuments();
-    const returnNumber = `CR-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const returnNumber = await generateDocNumber('CR');
 
     // Validate invoice exists
     const invoice = await CustomerInvoice.findById(req.body.invoice).session(session);

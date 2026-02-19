@@ -6,6 +6,8 @@ export interface ICustomerInvoiceItem {
   quantity: number;
   sellingPrice: number;
   costPrice: number;
+  discount: number;
+  discountAmount: number;
   total: number;
   warehouse: mongoose.Types.ObjectId;
   warehouseName: string;
@@ -25,6 +27,8 @@ export interface ICustomerInvoice extends Document {
   shippedStatus: 'not_shipped' | 'partial' | 'shipped';
   items: ICustomerInvoiceItem[];
   totalAmount: number;
+  discountTotal: number;
+  finalAmount: number;
   paidAmount: number;
   shippedAmount: number;
   notes?: string;
@@ -57,6 +61,17 @@ const CustomerInvoiceItemSchema = new Schema({
   costPrice: {
     type: Number,
     required: true,
+    min: 0,
+  },
+  discount: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
+  },
+  discountAmount: {
+    type: Number,
+    default: 0,
     min: 0,
   },
   total: {
@@ -129,6 +144,16 @@ const CustomerInvoiceSchema: Schema = new Schema(
     totalAmount: {
       type: Number,
       required: true,
+      min: 0,
+    },
+    discountTotal: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    finalAmount: {
+      type: Number,
+      default: 0,
       min: 0,
     },
     paidAmount: {

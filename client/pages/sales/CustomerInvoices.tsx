@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ExportButton } from "@/components/ExportButton";
 
 const CustomerInvoices = () => {
   const [dateFilter, setDateFilter] = useState<{ startDate: string; endDate: string }>({
@@ -364,10 +365,17 @@ const CustomerInvoices = () => {
             <h1 className="text-3xl font-bold text-gray-900">Mijozlar hisob-fakturalari</h1>
             <p className="text-gray-600 mt-1">Mijozlarga berilgan hisob-fakturalarni boshqaring</p>
           </div>
-          <Button onClick={handleCreate} className="w-full md:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Yangi hisob-faktura
-          </Button>
+          <div className="flex gap-2">
+            <ExportButton
+              data={filteredInvoices}
+              filename="hisob-fakturalar"
+              fieldsToInclude={["invoiceNumber", "customerName", "invoiceDate", "totalAmount", "paidAmount", "status"]}
+            />
+            <Button onClick={handleCreate} className="w-full md:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Yangi hisob-faktura
+            </Button>
+          </div>
         </div>
 
         {/* KPI Cards */}

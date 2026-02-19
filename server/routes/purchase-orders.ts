@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import PurchaseOrder from '../models/PurchaseOrder';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
@@ -45,8 +46,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     // Generate order number
-    const count = await PurchaseOrder.countDocuments();
-    const orderNumber = `ZP-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const orderNumber = await generateDocNumber('ZP');
 
     const order = new PurchaseOrder({
       ...req.body,
@@ -92,8 +92,7 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
       const SupplierInvoice = require('../models/SupplierInvoice').default;
       
       // Invoice raqamini generatsiya qilish
-      const invoiceCount = await SupplierInvoice.countDocuments();
-      const invoiceNumber = `INV-S-${new Date().getFullYear()}-${String(invoiceCount + 1).padStart(4, '0')}`;
+      const invoiceNumber = await generateDocNumber('INV-S', { padWidth: 4 });
       
       // To'lov muddatini hisoblash (30 kun)
       const dueDate = new Date();
@@ -197,8 +196,7 @@ router.post('/:id/receive', async (req: Request, res: Response) => {
     await order.save();
 
     // Create supplier invoice
-    const invoiceCount = await SupplierInvoice.countDocuments();
-    const invoiceNumber = `INV-S-${new Date().getFullYear()}-${String(invoiceCount + 1).padStart(4, '0')}`;
+    const invoiceNumber = await generateDocNumber('INV-S', { padWidth: 4 });
     
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 30);

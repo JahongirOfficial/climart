@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import SupplierInvoice from '../models/SupplierInvoice';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
@@ -35,8 +36,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     // Generate invoice number
-    const count = await SupplierInvoice.countDocuments();
-    const invoiceNumber = `SF-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const invoiceNumber = await generateDocNumber('SF');
     
     const invoice = new SupplierInvoice({
       ...req.body,
@@ -79,8 +79,7 @@ router.post('/:id/payment', async (req: Request, res: Response) => {
     
     // Create payment record
     const Payment = (await import('../models/Payment')).default;
-    const paymentCount = await Payment.countDocuments();
-    const paymentNumber = `OUT-${new Date().getFullYear()}-${String(paymentCount + 1).padStart(4, '0')}`;
+    const paymentNumber = await generateDocNumber('OUT', { padWidth: 4 });
 
     await Payment.create({
       paymentNumber,

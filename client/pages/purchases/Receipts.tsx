@@ -25,6 +25,7 @@ import { SupplierReturnModal } from "@/components/SupplierReturnModal";
 import { Receipt } from "@shared/api";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
+import { ExportButton } from "@/components/ExportButton";
 
 const Receipts = () => {
   const [dateFilter, setDateFilter] = useState<{ startDate: string; endDate: string }>({
@@ -176,13 +177,20 @@ const Receipts = () => {
                 Tovarlarni omborga qabul qilish va zaxirani yangilash
               </p>
             </div>
-            <Button
-              onClick={handleCreateReceipt}
-              className="bg-primary hover:bg-primary/90 text-white gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Yangi qabul
-            </Button>
+            <div className="flex gap-2">
+              <ExportButton
+                data={filteredReceipts}
+                filename="qabullar"
+                fieldsToInclude={["receiptNumber", "orderNumber", "receiptDate", "totalAmount"]}
+              />
+              <Button
+                onClick={handleCreateReceipt}
+                className="bg-primary hover:bg-primary/90 text-white gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Yangi qabul
+              </Button>
+            </div>
           </div>
 
           {/* KPI Cards */}

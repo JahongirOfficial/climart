@@ -3,6 +3,7 @@ import InternalOrder from '../models/InternalOrder';
 import WarehouseTransfer from '../models/WarehouseTransfer';
 import Product from '../models/Product';
 import mongoose from 'mongoose';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
@@ -24,8 +25,7 @@ router.post('/', async (req: Request, res: Response) => {
   session.startTransaction();
 
   try {
-    const count = await InternalOrder.countDocuments();
-    const orderNumber = `IO-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const orderNumber = await generateDocNumber('IO');
 
     for (const item of req.body.items) {
       const product = await Product.findById(item.product).session(session);
@@ -63,8 +63,7 @@ router.patch('/:id/approve', async (req: Request, res: Response) => {
     order.status = 'approved';
     await order.save({ session });
 
-    const transferCount = await WarehouseTransfer.countDocuments();
-    const transferNumber = `WT-${new Date().getFullYear()}-${String(transferCount + 1).padStart(3, '0')}`;
+    const transferNumber = await generateDocNumber('WT');
 
     const transfer = new WarehouseTransfer({
       transferNumber,

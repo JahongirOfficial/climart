@@ -23,6 +23,7 @@ import { ViewProductModal } from "@/components/ViewProductModal";
 import { Product } from "@shared/api";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ExportButton } from "@/components/ExportButton";
 
 const ProductsList = () => {
   const { products, loading, error, refetch, createProduct, updateProduct, deleteProduct } = useProducts();
@@ -178,10 +179,17 @@ const ProductsList = () => {
                 Barcha mahsulotlar va ularning zaxirasi
               </p>
             </div>
-            <Button className="bg-primary hover:bg-primary/90 text-white gap-2" onClick={handleCreateProduct}>
-              <Plus className="h-4 w-4" />
-              Yangi mahsulot
-            </Button>
+            <div className="flex gap-2">
+              <ExportButton
+                data={filteredProducts}
+                filename="mahsulotlar"
+                fieldsToInclude={["name", "sku", "category", "unit", "quantity", "costPrice", "sellingPrice"]}
+              />
+              <Button className="bg-primary hover:bg-primary/90 text-white gap-2" onClick={handleCreateProduct}>
+                <Plus className="h-4 w-4" />
+                Yangi mahsulot
+              </Button>
+            </div>
           </div>
 
           {/* KPI Cards */}

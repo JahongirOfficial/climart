@@ -11,6 +11,7 @@ import {
   Banknote,
   CheckSquare,
   UserCog,
+  Store,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTelegramModal } from "@/contexts/TelegramContext";
@@ -24,7 +25,8 @@ const allModules = [
   { id: "warehouse", name: "Ombor", icon: Warehouse, path: "/warehouse", hasSubmenu: true, adminOnly: false },
   { id: "finance", name: "Pul", icon: Banknote, path: "/finance", hasSubmenu: true, adminOnly: false },
   { id: "tasks", name: "Vazifalar", icon: CheckSquare, path: "/tasks", hasSubmenu: true, adminOnly: false },
-  { id: "employees", name: "Xodimlar", icon: UserCog, path: "/employees", hasSubmenu: false, adminOnly: true },
+  { id: "retail", name: "Chakana savdo", icon: Store, path: "/retail", hasSubmenu: true, adminOnly: false },
+  { id: "employees", name: "Xodimlar", icon: UserCog, path: "/employees", hasSubmenu: true, adminOnly: true },
 ];
 
 const dashboardSubMenu = [
@@ -54,6 +56,8 @@ const salesSubMenu = [
   { id: "returns", name: "Tovarni qaytarib olish", path: "/sales/returns" },
   { id: "returns-report", name: "Qaytarilgan mahsulot hisboti", path: "/sales/returns-report" },
   { id: "profitability", name: "Foydalilik", path: "/sales/profitability" },
+  { id: "pending-invoices", name: "Kutilayotgan fakturalar", path: "/sales/pending-invoices" },
+  { id: "corrected-invoices", name: "Tuzatilgan fakturalar", path: "/sales/corrected-invoices" },
 ];
 
 const productsSubMenu = [
@@ -91,6 +95,18 @@ const financeSubMenu = [
 const tasksSubMenu = [
   { id: "add-task", name: "Vazifa qo'shish", path: "/tasks/add" },
   { id: "my-tasks", name: "Mening vazifalarim", path: "/tasks/my-tasks" },
+];
+
+const retailSubMenu = [
+  { id: "channels", name: "Savdo kanallari", path: "/retail/channels" },
+  { id: "statistics", name: "Statistika", path: "/retail/statistics" },
+];
+
+const employeesSubMenu = [
+  { id: "list", name: "Xodimlar ro'yxati", path: "/employees" },
+  { id: "add-employee", name: "Xodim qo'shish", path: "/solutions/add-employee" },
+  { id: "performance", name: "Samaradorlik", path: "/solutions/employee-performance" },
+  { id: "kpi", name: "KPI", path: "/solutions/kpi" },
 ];
 
 export const Navigation = () => {
@@ -152,6 +168,10 @@ export const Navigation = () => {
       newActiveSubmenu = "finance";
     } else if (location.pathname.startsWith("/tasks")) {
       newActiveSubmenu = "tasks";
+    } else if (location.pathname.startsWith("/retail")) {
+      newActiveSubmenu = "retail";
+    } else if (location.pathname.startsWith("/employees") || location.pathname.startsWith("/solutions")) {
+      newActiveSubmenu = "employees";
     }
 
     // Only update if the section actually changed
@@ -187,6 +207,8 @@ export const Navigation = () => {
               (module.id === "warehouse" && activeSubmenu === "warehouse") ||
               (module.id === "finance" && activeSubmenu === "finance") ||
               (module.id === "tasks" && activeSubmenu === "tasks") ||
+              (module.id === "retail" && activeSubmenu === "retail") ||
+              (module.id === "employees" && activeSubmenu === "employees") ||
               (!module.hasSubmenu && location.pathname === module.path);
 
             return (
@@ -431,6 +453,62 @@ export const Navigation = () => {
           <div className="overflow-x-auto">
             <div className="flex gap-1 px-4 py-2 min-w-min">
               {filterSubmenuItems(tasksSubMenu, 'tasks').map((item) => {
+                const isSubActive = location.pathname === item.path;
+
+                return (
+                  <Link
+                    key={item.id}
+                    to={item.path}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium rounded transition-all duration-200 whitespace-nowrap",
+                      isSubActive
+                        ? "bg-white dark:bg-gray-800 text-primary shadow-sm"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                    )}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Retail Submenu */}
+      {activeSubmenu === "retail" && (
+        <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 transition-colors duration-1000">
+          <div className="overflow-x-auto">
+            <div className="flex gap-1 px-4 py-2 min-w-min">
+              {filterSubmenuItems(retailSubMenu, 'retail').map((item) => {
+                const isSubActive = location.pathname === item.path;
+
+                return (
+                  <Link
+                    key={item.id}
+                    to={item.path}
+                    className={cn(
+                      "px-4 py-2 text-sm font-medium rounded transition-all duration-200 whitespace-nowrap",
+                      isSubActive
+                        ? "bg-white dark:bg-gray-800 text-primary shadow-sm"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                    )}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Employees Submenu */}
+      {activeSubmenu === "employees" && (
+        <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 transition-colors duration-1000">
+          <div className="overflow-x-auto">
+            <div className="flex gap-1 px-4 py-2 min-w-min">
+              {employeesSubMenu.map((item) => {
                 const isSubActive = location.pathname === item.path;
 
                 return (

@@ -1,14 +1,13 @@
 import { Router, Request, Response } from 'express';
 import Contract from '../models/Contract';
 import Partner from '../models/Partner';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
 // Helper function to generate unique contract number
 async function generateContractNumber(): Promise<string> {
-  const count = await Contract.countDocuments();
-  const year = new Date().getFullYear();
-  return `SH-${year}-${String(count + 1).padStart(4, '0')}`;
+  return generateDocNumber('SH', { padWidth: 4 });
 }
 
 // Get all contracts

@@ -6,13 +6,14 @@ import Payment from '../models/Payment';
 import CustomerInvoice from '../models/CustomerInvoice';
 import CustomerReturn from '../models/CustomerReturn';
 import SupplierReturn from '../models/SupplierReturn';
+import { logAudit } from '../utils/auditLogger';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
 // Helper function to generate unique partner code
 async function generatePartnerCode(): Promise<string> {
-  const count = await Partner.countDocuments();
-  return `P${String(count + 1).padStart(6, '0')}`;
+  return generateDocNumber('P', { withYear: false, padWidth: 6 });
 }
 
 // Get all partners with statistics
@@ -168,6 +169,17 @@ router.post('/', async (req: Request, res: Response) => {
     const code = await generatePartnerCode();
     const partner = new Partner({ ...req.body, code });
     await partner.save();
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'create',
+      entity: 'Partner',
+      entityId: partner._id.toString(),
+      entityName: partner.name,
+      ipAddress: req.ip,
+    });
+
     res.status(201).json(partner);
   } catch (error) {
     res.status(400).json({ message: 'Invalid data', error });
@@ -186,7 +198,17 @@ router.put('/:id', async (req: Request, res: Response) => {
     if (!partner) {
       return res.status(404).json({ message: 'Partner not found' });
     }
-    
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'update',
+      entity: 'Partner',
+      entityId: partner._id.toString(),
+      entityName: partner.name,
+      ipAddress: req.ip,
+    });
+
     res.json(partner);
   } catch (error) {
     res.status(400).json({ message: 'Invalid data', error });
@@ -205,7 +227,17 @@ router.delete('/:id', async (req: Request, res: Response) => {
     if (!partner) {
       return res.status(404).json({ message: 'Partner not found' });
     }
-    
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'delete',
+      entity: 'Partner',
+      entityId: req.params.id,
+      entityName: partner.name,
+      ipAddress: req.ip,
+    });
+
     res.json({ message: 'Partner deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });

@@ -25,6 +25,8 @@ interface InvoiceItem {
   quantity: number;
   sellingPrice: number;
   costPrice: number;
+  discount: number;
+  discountAmount: number;
   total: number;
   warehouse: string;
   warehouseName: string;
@@ -39,6 +41,7 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
 
   const [showOrderSelect, setShowOrderSelect] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState("");
+  const [creditInfo, setCreditInfo] = useState<{ hasCreditLimit: boolean; creditLimit: number; currentDebt: number; available: number } | null>(null);
 
   const [formData, setFormData] = useState({
     customer: "",
@@ -51,9 +54,9 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
     notes: ""
   });
 
-  const [items, setItems] = useState<InvoiceItem[]>([
-    { product: "", productName: "", quantity: 1, sellingPrice: 0, costPrice: 0, total: 0, warehouse: "", warehouseName: "" }
-  ]);
+  const emptyItem: InvoiceItem = { product: "", productName: "", quantity: 1, sellingPrice: 0, costPrice: 0, discount: 0, discountAmount: 0, total: 0, warehouse: "", warehouseName: "" };
+
+  const [items, setItems] = useState<InvoiceItem[]>([{ ...emptyItem }]);
 
   const [saving, setSaving] = useState(false);
 
@@ -75,6 +78,8 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
         quantity: item.quantity,
         sellingPrice: item.sellingPrice,
         costPrice: item.costPrice,
+        discount: item.discount || 0,
+        discountAmount: item.discountAmount || 0,
         total: item.total,
         warehouse: (typeof item.warehouse === 'object' && item.warehouse ? item.warehouse._id : item.warehouse) as string || "",
         warehouseName: item.warehouseName || ""
@@ -90,17 +95,29 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: ""
       });
-      setItems([{ product: "", productName: "", quantity: 1, sellingPrice: 0, costPrice: 0, total: 0, warehouse: "", warehouseName: "" }]);
+      setItems([{ ...emptyItem }]);
     }
   }, [invoice, open]);
 
-  const handleCustomerChange = (customerId: string) => {
+  const handleCustomerChange = async (customerId: string) => {
     const customer = partners.find(p => p._id === customerId);
     setFormData(prev => ({
       ...prev,
       customer: customerId,
       customerName: customer?.name || ""
     }));
+
+    // Fetch credit limit info
+    if (customerId) {
+      try {
+        const res = await fetch(`/api/customer-invoices/credit-check/${customerId}`);
+        if (res.ok) {
+          setCreditInfo(await res.json());
+        }
+      } catch { setCreditInfo(null); }
+    } else {
+      setCreditInfo(null);
+    }
   };
 
   const handleWarehouseChange = (warehouseId: string) => {
@@ -145,6 +162,8 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
         quantity: oItem.quantity,
         sellingPrice: oItem.price,
         costPrice: product ? product.costPrice : 0,
+        discount: 0,
+        discountAmount: 0,
         total: oItem.total,
         warehouse: formData.warehouse,
         warehouseName: formData.warehouseName
@@ -156,6 +175,12 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
     setSelectedOrder("");
   };
 
+  const recalcItemTotal = (item: InvoiceItem): InvoiceItem => {
+    const subtotal = item.quantity * item.sellingPrice;
+    const discountAmt = subtotal * (item.discount / 100);
+    return { ...item, discountAmount: Math.round(discountAmt), total: Math.round(subtotal - discountAmt) };
+  };
+
   const handleItemChange = (index: number, field: keyof InvoiceItem, value: string | number) => {
     const newItems = [...items];
     if (field === 'warehouse') {
@@ -165,8 +190,8 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
       newItems[index] = { ...newItems[index], [field]: value };
     }
 
-    if (field === 'quantity' || field === 'sellingPrice') {
-      newItems[index].total = newItems[index].quantity * newItems[index].sellingPrice;
+    if (field === 'quantity' || field === 'sellingPrice' || field === 'discount') {
+      newItems[index] = recalcItemTotal(newItems[index]);
     }
 
     setItems(newItems);
@@ -184,12 +209,12 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
       warehouse: newItems[index].warehouse || formData.warehouse,
       warehouseName: newItems[index].warehouseName || formData.warehouseName
     };
-    newItems[index].total = newItems[index].quantity * newItems[index].sellingPrice;
+    newItems[index] = recalcItemTotal(newItems[index]);
     setItems(newItems);
   };
 
   const addItem = () => {
-    setItems([...items, { product: "", productName: "", quantity: 1, sellingPrice: 0, costPrice: 0, total: 0, warehouse: formData.warehouse, warehouseName: formData.warehouseName }]);
+    setItems([...items, { ...emptyItem, warehouse: formData.warehouse, warehouseName: formData.warehouseName }]);
   };
 
   const removeItem = (index: number) => {
@@ -208,13 +233,17 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
 
     setSaving(true);
     try {
+      const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.sellingPrice), 0);
+      const discountTotal = items.reduce((sum, item) => sum + item.discountAmount, 0);
       const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
 
       // Remove empty warehouse field
       const dataToSave: any = {
         ...formData,
         items,
-        totalAmount,
+        totalAmount: subtotal,
+        discountTotal,
+        finalAmount: totalAmount,
         paidAmount: invoice ? invoice.paidAmount : 0,
         shippedAmount: invoice ? invoice.shippedAmount : 0,
         status: invoice ? invoice.status : 'unpaid',
@@ -314,6 +343,11 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
                   </option>
                 ))}
               </select>
+              {creditInfo?.hasCreditLimit && (
+                <div className={`mt-1 text-xs px-2 py-1 rounded ${creditInfo.available > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                  Kredit limit: {new Intl.NumberFormat('uz-UZ').format(creditInfo.creditLimit)} | Qarz: {new Intl.NumberFormat('uz-UZ').format(creditInfo.currentDebt)} | Mavjud: {new Intl.NumberFormat('uz-UZ').format(Math.max(0, creditInfo.available))}
+                </div>
+              )}
             </div>
 
             <div>
@@ -431,7 +465,7 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
                   </div>
 
                   <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <Label className="text-xs font-semibold">Miqdor *</Label>
                       <Input
                         type="number"
@@ -445,7 +479,7 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
                       />
                     </div>
 
-                    <div className="col-span-4">
+                    <div className="col-span-3">
                       <Label className="text-xs font-semibold">Sotish narxi (dona) *</Label>
                       <Input
                         type="number"
@@ -458,9 +492,27 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
                       />
                     </div>
 
+                    <div className="col-span-2">
+                      <Label className="text-xs font-semibold">Chegirma %</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={item.discount || ''}
+                        onChange={(e) => handleItemChange(index, 'discount', parseFloat(e.target.value) || 0)}
+                        className="text-sm mt-1"
+                        placeholder="0"
+                      />
+                    </div>
+
                     <div className="col-span-5">
                       <Label className="text-xs font-semibold">Jami</Label>
-                      <div className="mt-1 px-3 py-2 bg-blue-50 border border-blue-100 rounded-md text-blue-700 font-bold">
+                      <div className="mt-1 px-3 py-2 bg-blue-50 border border-blue-100 rounded-md text-blue-700 font-bold text-sm">
+                        {item.discountAmount > 0 && (
+                          <span className="text-red-500 text-xs line-through mr-2">
+                            {new Intl.NumberFormat('uz-UZ').format(item.quantity * item.sellingPrice)}
+                          </span>
+                        )}
                         {new Intl.NumberFormat('uz-UZ').format(item.total)} so'm
                       </div>
                     </div>
@@ -485,7 +537,17 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
                 <div className="text-gray-600">
                   Jami <span className="font-bold text-gray-900">{items.length}</span> turdagi tovarlar
                 </div>
-                <div className="text-right">
+                <div className="text-right space-y-1">
+                  {items.some(item => item.discountAmount > 0) && (
+                    <>
+                      <div className="text-xs text-gray-500">
+                        Summa: {new Intl.NumberFormat('uz-UZ').format(items.reduce((sum, item) => sum + (item.quantity * item.sellingPrice), 0))} so'm
+                      </div>
+                      <div className="text-xs text-red-500 font-semibold">
+                        Chegirma: -{new Intl.NumberFormat('uz-UZ').format(items.reduce((sum, item) => sum + item.discountAmount, 0))} so'm
+                      </div>
+                    </>
+                  )}
                   <div className="text-sm text-gray-500 uppercase tracking-wider font-semibold italic">Jami to'lov:</div>
                   <div className="text-2xl font-black text-primary">
                     {new Intl.NumberFormat('uz-UZ').format(items.reduce((sum, item) => sum + item.total, 0))} so'm

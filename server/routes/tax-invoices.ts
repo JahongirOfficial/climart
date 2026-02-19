@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import TaxInvoice from '../models/TaxInvoice';
 import Shipment from '../models/Shipment';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
@@ -36,8 +37,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     // Generate invoice number
-    const count = await TaxInvoice.countDocuments();
-    const invoiceNumber = `TI-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+    const invoiceNumber = await generateDocNumber('TI', { padWidth: 4 });
 
     // Validate shipment exists
     const shipment = await Shipment.findById(req.body.shipment);

@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useCustomerDebts, useReconciliationReport } from "@/hooks/useCustomerDebts";
 import { CustomerPaymentModal } from "@/components/CustomerPaymentModal";
 import { useToast } from "@/hooks/use-toast";
+import { ExportButton } from "@/components/ExportButton";
 
 const CustomerDebts = () => {
   const [startDate, setStartDate] = useState(
@@ -196,6 +197,11 @@ const CustomerDebts = () => {
             <h1 className="text-3xl font-bold text-gray-900">Mendan qarzdorlar</h1>
             <p className="text-gray-600 mt-1">Mijozlarning qarzdorligi va o'zaro hisob-kitoblar</p>
           </div>
+          <ExportButton
+            data={filteredDebts}
+            filename="qarzdorlar"
+            fieldsToInclude={["customerName", "customerPhone", "totalSales", "totalPaid", "totalReturns", "debt"]}
+          />
         </div>
 
         {/* Filters */}

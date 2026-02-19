@@ -6,6 +6,7 @@ const JWT_EXPIRATION = '8h'; // 8 hours
 
 export interface TokenPayload {
   userId: string;
+  name: string;
   role: 'admin' | 'employee';
   permissions: string[];
 }

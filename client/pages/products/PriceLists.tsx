@@ -27,6 +27,7 @@ import { usePriceLists } from "@/hooks/usePriceLists";
 import { useToast } from "@/hooks/use-toast";
 import { PriceListModal } from "@/components/PriceListModal";
 import { format } from "date-fns";
+import { ExportButton } from "@/components/ExportButton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -219,10 +220,17 @@ const PriceLists = () => {
               Mahsulotlar va xizmatlar narxlarini boshqaring
             </p>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Yangi narxlar ro'yxati
-          </Button>
+          <div className="flex gap-2">
+            <ExportButton
+              data={filteredPriceLists}
+              filename="narxlar-royxati"
+              fieldsToInclude={["number", "name", "status", "validFrom", "validTo"]}
+            />
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Yangi narxlar ro'yxati
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}

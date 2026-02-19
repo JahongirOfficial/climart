@@ -47,7 +47,7 @@ export const WarehouseReceiptModal = ({ open, onClose, onSuccess, receipt }: War
   useEffect(() => {
     if (receipt) {
       setFormData({
-        warehouse: typeof receipt.warehouse === 'string' ? receipt.warehouse : receipt.warehouse,
+        warehouse: (typeof receipt.warehouse === 'object' && receipt.warehouse ? receipt.warehouse._id : receipt.warehouse) as string,
         organization: receipt.organization || "",
         receiptDate: receipt.receiptDate.split('T')[0],
         reason: receipt.reason,

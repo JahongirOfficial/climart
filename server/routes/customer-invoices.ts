@@ -1,9 +1,45 @@
 import { Router, Request, Response } from 'express';
 import CustomerInvoice from '../models/CustomerInvoice';
 import Product from '../models/Product';
+import Contract from '../models/Contract';
 import mongoose from 'mongoose';
+import { logAudit } from '../utils/auditLogger';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
+
+// Check customer credit limit
+router.get('/credit-check/:customerId', async (req: Request, res: Response) => {
+  try {
+    const { customerId } = req.params;
+
+    const activeContract = await Contract.findOne({
+      partner: customerId,
+      status: 'active',
+      creditLimit: { $gt: 0 }
+    }).sort({ isDefault: -1, createdAt: -1 });
+
+    if (!activeContract || !activeContract.creditLimit) {
+      return res.json({ hasCreditLimit: false, creditLimit: 0, currentDebt: 0, available: 0 });
+    }
+
+    const existingInvoices = await CustomerInvoice.aggregate([
+      { $match: { customer: new mongoose.Types.ObjectId(customerId), status: { $in: ['unpaid', 'partial'] } } },
+      { $group: { _id: null, totalDebt: { $sum: { $subtract: [{ $ifNull: ['$finalAmount', '$totalAmount'] }, '$paidAmount'] } } } }
+    ]);
+
+    const currentDebt = existingInvoices[0]?.totalDebt || 0;
+
+    res.json({
+      hasCreditLimit: true,
+      creditLimit: activeContract.creditLimit,
+      currentDebt: Math.round(currentDebt),
+      available: Math.round(activeContract.creditLimit - currentDebt)
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
 
 // Get pending invoices (with costPricePending items)
 router.get('/pending', async (req: Request, res: Response) => {
@@ -145,12 +181,36 @@ router.post('/', async (req: Request, res: Response) => {
 
   try {
     // Generate invoice number
-    const count = await CustomerInvoice.countDocuments();
-    const invoiceNumber = `CF-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const invoiceNumber = await generateDocNumber('CF');
+
+    // Credit limit check
+    const warnings = [];
+    const customerId = req.body.customer;
+    const invoiceAmount = req.body.finalAmount || req.body.totalAmount || 0;
+
+    const activeContract = await Contract.findOne({
+      partner: customerId,
+      status: 'active',
+      creditLimit: { $gt: 0 }
+    }).sort({ isDefault: -1, createdAt: -1 }).session(session);
+
+    if (activeContract && activeContract.creditLimit) {
+      // Calculate current outstanding debt
+      const existingInvoices = await CustomerInvoice.aggregate([
+        { $match: { customer: new mongoose.Types.ObjectId(customerId), status: { $in: ['unpaid', 'partial'] } } },
+        { $group: { _id: null, totalDebt: { $sum: { $subtract: [{ $ifNull: ['$finalAmount', '$totalAmount'] }, '$paidAmount'] } } } }
+      ]).session(session);
+
+      const currentDebt = existingInvoices[0]?.totalDebt || 0;
+      const totalAfterInvoice = currentDebt + invoiceAmount;
+
+      if (totalAfterInvoice > activeContract.creditLimit) {
+        warnings.push(`Kredit limit ogohlantirish: Mijoz qarzi (${Math.round(currentDebt).toLocaleString()} + ${Math.round(invoiceAmount).toLocaleString()} = ${Math.round(totalAfterInvoice).toLocaleString()}) kredit limitdan (${Math.round(activeContract.creditLimit).toLocaleString()}) oshib ketdi`);
+      }
+    }
 
     // Process items and check inventory availability
     const processedItems = [];
-    const warnings = [];
     
     for (const item of req.body.items) {
       const product = await Product.findById(item.product).session(session);
@@ -208,13 +268,24 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     await session.commitTransaction();
-    
+
+    // Audit log
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'create',
+      entity: 'CustomerInvoice',
+      entityId: invoice._id.toString(),
+      entityName: `${invoiceNumber} - ${req.body.customerName || 'Mijoz'}`,
+      ipAddress: req.ip,
+    });
+
     // Return invoice with warnings if any
     const response: any = { invoice };
     if (warnings.length > 0) {
       response.warnings = warnings;
     }
-    
+
     res.status(201).json(response);
   } catch (error: any) {
     await session.abortTransaction();
@@ -235,6 +306,17 @@ router.put('/:id', async (req: Request, res: Response) => {
     if (!invoice) {
       return res.status(404).json({ message: 'Customer invoice not found' });
     }
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'update',
+      entity: 'CustomerInvoice',
+      entityId: invoice._id.toString(),
+      entityName: `${invoice.invoiceNumber} - ${invoice.customerName}`,
+      ipAddress: req.ip,
+    });
+
     res.json(invoice);
   } catch (error) {
     res.status(400).json({ message: 'Invalid data', error });
@@ -257,8 +339,7 @@ router.patch('/:id/payment', async (req: Request, res: Response) => {
     if (paymentAmount > 0) {
       // Create payment record
       const Payment = (await import('../models/Payment')).default;
-      const paymentCount = await Payment.countDocuments();
-      const paymentNumber = `IN-${new Date().getFullYear()}-${String(paymentCount + 1).padStart(4, '0')}`;
+      const paymentNumber = await generateDocNumber('IN', { padWidth: 4 });
 
       await Payment.create({
         paymentNumber,
@@ -291,6 +372,17 @@ router.patch('/:id/payment', async (req: Request, res: Response) => {
     }
 
     await invoice.save();
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'update',
+      entity: 'Payment',
+      entityId: invoice._id.toString(),
+      entityName: `To'lov: ${invoice.invoiceNumber} - ${paidAmount.toLocaleString()} so'm`,
+      ipAddress: req.ip,
+    });
+
     res.json(invoice);
   } catch (error) {
     res.status(400).json({ message: 'Invalid data', error });
@@ -304,6 +396,17 @@ router.delete('/:id', async (req: Request, res: Response) => {
     if (!invoice) {
       return res.status(404).json({ message: 'Customer invoice not found' });
     }
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'delete',
+      entity: 'CustomerInvoice',
+      entityId: req.params.id,
+      entityName: `${invoice.invoiceNumber} - ${invoice.customerName}`,
+      ipAddress: req.ip,
+    });
+
     res.json({ message: 'Customer invoice deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });

@@ -12,9 +12,12 @@ export interface PurchaseOrder {
   _id: string;
   orderNumber: string;
   supplier: any;
+  supplierName: string;
+  orderDate: string;
   items: PurchaseOrderItem[];
   status: 'pending' | 'received' | 'cancelled' | 'draft' | 'confirmed' | 'Bajarildi' | 'Qabul qilindi' | 'Kutilmoqda' | 'Bekor qilindi';
   totalAmount: number;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
 }

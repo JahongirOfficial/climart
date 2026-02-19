@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import WarehouseTransfer from '../models/WarehouseTransfer';
 import Product from '../models/Product';
 import mongoose from 'mongoose';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
@@ -23,8 +24,7 @@ router.post('/', async (req: Request, res: Response) => {
   session.startTransaction();
 
   try {
-    const count = await WarehouseTransfer.countDocuments();
-    const transferNumber = `WT-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const transferNumber = await generateDocNumber('WT');
 
     for (const item of req.body.items) {
       const product = await Product.findById(item.product).session(session);

@@ -3,6 +3,7 @@ import Shipment from '../models/Shipment';
 import CustomerOrder from '../models/CustomerOrder';
 import Product from '../models/Product';
 import mongoose from 'mongoose';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
@@ -45,8 +46,7 @@ router.post('/', async (req: Request, res: Response) => {
 
   try {
     // Generate shipment number
-    const count = await Shipment.countDocuments();
-    const shipmentNumber = `SH-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const shipmentNumber = await generateDocNumber('SH');
 
     // Validate inventory availability
     for (const item of req.body.items) {

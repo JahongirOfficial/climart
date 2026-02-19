@@ -2,13 +2,13 @@ import { Router, Request, Response } from 'express';
 import Writeoff from '../models/Writeoff';
 import Product from '../models/Product';
 import Warehouse from '../models/Warehouse';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
 // Helper function to generate unique writeoff number
 async function generateWriteoffNumber(): Promise<string> {
-  const count = await Writeoff.countDocuments();
-  return `WO-${String(count + 1).padStart(6, '0')}`;
+  return generateDocNumber('WO', { withYear: false, padWidth: 6 });
 }
 
 // Get all writeoffs

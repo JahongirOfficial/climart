@@ -3,6 +3,7 @@ import SupplierReturn from '../models/SupplierReturn';
 import Product from '../models/Product';
 import Receipt from '../models/Receipt';
 import mongoose from 'mongoose';
+import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
@@ -42,15 +43,7 @@ router.post('/', async (req: Request, res: Response) => {
   
   try {
     // Generate return number
-    const lastReturn = await SupplierReturn.findOne().sort({ createdAt: -1 });
-    let returnNumber;
-    
-    if (lastReturn && lastReturn.returnNumber) {
-      const lastNum = parseInt(lastReturn.returnNumber.split('-')[2]);
-      returnNumber = `VQ-${new Date().getFullYear()}-${String(lastNum + 1).padStart(3, '0')}`;
-    } else {
-      returnNumber = `VQ-${new Date().getFullYear()}-001`;
-    }
+    const returnNumber = await generateDocNumber('VQ');
     
     const supplierReturn = new SupplierReturn({
       ...req.body,
@@ -121,8 +114,7 @@ router.post('/from-receipt/:receiptId', async (req: Request, res: Response) => {
     }
     
     // Generate return number
-    const count = await SupplierReturn.countDocuments();
-    const returnNumber = `VQ-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+    const returnNumber = await generateDocNumber('VQ');
     
     // Create return from receipt
     const supplierReturn = new SupplierReturn({

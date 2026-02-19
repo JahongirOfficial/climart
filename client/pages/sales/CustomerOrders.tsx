@@ -22,6 +22,7 @@ import { CustomerOrderModal } from "@/components/CustomerOrderModal";
 import { ShipmentModal } from "@/components/ShipmentModal";
 import { useShipments } from "@/hooks/useShipments";
 import { CustomerOrder } from "@shared/api";
+import { ExportButton } from "@/components/ExportButton";
 
 const CustomerOrders = () => {
   const { orders, loading, error, refetch, createOrder, updateOrder, updateStatus, deleteOrder } = useCustomerOrders();
@@ -229,10 +230,17 @@ const CustomerOrders = () => {
             <h1 className="text-3xl font-bold text-gray-900">Mijozlar buyurtmalari</h1>
             <p className="text-gray-600 mt-1">Mijozlardan kelgan buyurtmalarni boshqaring</p>
           </div>
-          <Button onClick={handleCreate} className="w-full md:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Yangi buyurtma
-          </Button>
+          <div className="flex gap-2">
+            <ExportButton
+              data={filteredOrders}
+              filename="buyurtmalar"
+              fieldsToInclude={["orderNumber", "customerName", "orderDate", "deliveryDate", "totalAmount", "status"]}
+            />
+            <Button onClick={handleCreate} className="w-full md:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Yangi buyurtma
+            </Button>
+          </div>
         </div>
 
         {/* KPI Cards */}

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Loader2, Package, AlertTriangle, TrendingUp, TrendingDown, FilterX } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useBalance } from "@/hooks/useBalance";
+import { ExportButton } from "@/components/ExportButton";
 
 interface BalanceItem {
   _id: string;
@@ -86,9 +87,16 @@ const Balance = () => {
   return (
     <Layout>
       <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Ombor qoldig'i</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Real vaqtda mahsulotlar qoldig'ini kuzating</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Ombor qoldig'i</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Real vaqtda mahsulotlar qoldig'ini kuzating</p>
+          </div>
+          <ExportButton
+            data={filteredItems}
+            filename="ombor-qoldigi"
+            fieldsToInclude={["name", "sku", "category", "unit", "quantity", "reserved", "available", "minStock", "costPrice", "sellingPrice", "costValue", "sellingValue"]}
+          />
         </div>
 
         {totals && (
