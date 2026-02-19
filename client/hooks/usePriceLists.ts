@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { buildQueryString } from '@/lib/format';
 
 export interface PriceListItem {
   product: string;
@@ -31,42 +33,16 @@ interface UsePriceListsOptions {
 }
 
 export const usePriceLists = (options?: UsePriceListsOptions) => {
-  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchPriceLists = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (options?.status) params.append('status', options.status);
-      if (options?.organization) params.append('organization', options.organization);
-
-      const response = await fetch(`/api/price-lists?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch price lists');
-      
-      const data = await response.json();
-      setPriceLists(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPriceLists();
-  }, [options?.status, options?.organization]);
-
-  const refetch = () => {
-    fetchPriceLists();
-  };
+  const { data: priceLists = [], isLoading: loading, error, refetch } = useQuery<PriceList[]>({
+    queryKey: ['price-lists', options],
+    queryFn: () => api.get<PriceList[]>(`/api/price-lists${buildQueryString({ status: options?.status, organization: options?.organization })}`),
+    placeholderData: keepPreviousData,
+  });
 
   return {
     priceLists,
     loading,
-    error,
-    refetch
+    error: error instanceof Error ? error.message : null,
+    refetch,
   };
 };

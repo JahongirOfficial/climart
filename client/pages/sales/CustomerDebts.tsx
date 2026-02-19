@@ -11,6 +11,7 @@ import { useCustomerDebts, useReconciliationReport } from "@/hooks/useCustomerDe
 import { CustomerPaymentModal } from "@/components/CustomerPaymentModal";
 import { useToast } from "@/hooks/use-toast";
 import { ExportButton } from "@/components/ExportButton";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 const CustomerDebts = () => {
   const [startDate, setStartDate] = useState(
@@ -21,18 +22,9 @@ const CustomerDebts = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | undefined>();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedDebt, setSelectedDebt] = useState<any>(null);
-  
+
   const { data, loading, error, refetch } = useCustomerDebts(startDate, endDate);
   const { toast } = useToast();
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('uz-UZ');
-  };
 
   const filteredDebts = data?.debts.filter(debt => 
     debt.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -359,7 +351,7 @@ const CustomerDebts = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {formatDate(debt.lastOperationDate)}
+                          {debt.lastOperationDate ? formatDate(debt.lastOperationDate) : '-'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

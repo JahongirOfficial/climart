@@ -34,6 +34,7 @@ import { ViewOrderModal } from "@/components/ViewOrderModal";
 import { CreatePaymentModal } from "@/components/CreatePaymentModal";
 import { ReceiveOrderModal } from "@/components/ReceiveOrderModal";
 import { PurchaseOrder } from "@shared/api";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 const Orders = () => {
   const { orders, loading, error, refetch, receiveOrder, deleteOrder, createOrder, updateOrder } = usePurchaseOrders();
@@ -51,15 +52,6 @@ const Orders = () => {
   const [paymentOrder, setPaymentOrder] = useState<PurchaseOrder | null>(null);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [orderToReceive, setOrderToReceive] = useState<PurchaseOrder | null>(null);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('uz-UZ');
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -214,7 +206,7 @@ const Orders = () => {
     return matchesSearch && matchesStatus;
   });
 
-  if (loading) {
+  if (loading && orders.length === 0) {
     return (
       <Layout>
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
@@ -238,7 +230,7 @@ const Orders = () => {
                 <h3 className="font-semibold text-red-900">Xatolik yuz berdi</h3>
                 <p className="text-red-700">{error}</p>
                 <Button
-                  onClick={refetch}
+                  onClick={() => refetch()}
                   className="mt-3 bg-red-600 hover:bg-red-700"
                   size="sm"
                 >

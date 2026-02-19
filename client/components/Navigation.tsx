@@ -93,7 +93,6 @@ const financeSubMenu = [
 ];
 
 const tasksSubMenu = [
-  { id: "add-task", name: "Vazifa qo'shish", path: "/tasks/add" },
   { id: "my-tasks", name: "Mening vazifalarim", path: "/tasks/my-tasks" },
 ];
 
@@ -104,7 +103,6 @@ const retailSubMenu = [
 
 const employeesSubMenu = [
   { id: "list", name: "Xodimlar ro'yxati", path: "/employees" },
-  { id: "add-employee", name: "Xodim qo'shish", path: "/solutions/add-employee" },
   { id: "performance", name: "Samaradorlik", path: "/solutions/employee-performance" },
   { id: "kpi", name: "KPI", path: "/solutions/kpi" },
 ];

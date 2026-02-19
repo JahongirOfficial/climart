@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { buildQueryString } from '@/lib/format';
 
 interface ProfitabilityData {
   summary: {
@@ -44,37 +46,16 @@ interface ProfitabilityData {
 }
 
 export const useProfitability = (startDate?: string, endDate?: string, groupBy: string = 'products') => {
-  const [data, setData] = useState<ProfitabilityData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchReport = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
-      if (groupBy) params.append('groupBy', groupBy);
-      
-      const response = await fetch(`/api/profitability?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch profitability report');
-      const reportData = await response.json();
-      setData(reportData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchReport();
-  }, [startDate, endDate, groupBy]);
+  const { data, isLoading: loading, error, refetch } = useQuery<ProfitabilityData>({
+    queryKey: ['profitability', startDate, endDate, groupBy],
+    queryFn: () => api.get<ProfitabilityData>(`/api/profitability${buildQueryString({ startDate, endDate, groupBy })}`),
+    placeholderData: keepPreviousData,
+  });
 
   return {
     data,
     loading,
-    error,
-    refetch: fetchReport,
+    error: error instanceof Error ? error.message : null,
+    refetch,
   };
 };

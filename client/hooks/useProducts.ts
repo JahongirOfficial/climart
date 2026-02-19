@@ -1,55 +1,33 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Product } from '@shared/api';
+import { api } from '@/lib/api';
 
 export const useProducts = () => {
   const queryClient = useQueryClient();
 
   const { data: products = [], isLoading: loading, error, refetch } = useQuery<Product[]>({
     queryKey: ['products'],
-    queryFn: async () => {
-      const response = await fetch('/api/products');
-      if (!response.ok) throw new Error('Failed to fetch products');
-      return response.json();
-    },
-    staleTime: 1000 * 60 * 30, // 30 minutes cache for products (increased from 10)
-    gcTime: 1000 * 60 * 60, // 1 hour garbage collection time
+    queryFn: () => api.get<Product[]>('/api/products'),
+    placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({
-    mutationFn: async (productData: Partial<Product>) => {
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productData),
-      });
-      if (!response.ok) throw new Error('Failed to create product');
-      return response.json();
-    },
+    mutationFn: (productData: Partial<Product>) => api.post<Product>('/api/products', productData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Product> }) => {
-      const response = await fetch(`/api/products/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to update product');
-      return response.json();
-    },
+    mutationFn: ({ id, data }: { id: string; data: Partial<Product> }) =>
+      api.put<Product>(`/api/products/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete product');
-    },
+    mutationFn: (id: string) => api.delete(`/api/products/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },

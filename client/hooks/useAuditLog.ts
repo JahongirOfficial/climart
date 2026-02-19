@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
 export interface AuditLogEntry {
   _id: string;
@@ -49,6 +49,7 @@ export function useAuditLog(filters: AuditFilters = {}) {
       if (!res.ok) throw new Error('Failed to fetch audit logs');
       return res.json();
     },
+    placeholderData: keepPreviousData,
   });
 
   return {

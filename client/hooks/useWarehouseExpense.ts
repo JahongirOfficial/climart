@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 
 interface WarehouseExpense {
   _id: string;
@@ -30,8 +30,7 @@ export const useWarehouseExpense = () => {
       if (!response.ok) throw new Error('Failed to fetch expenses');
       return response.json();
     },
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
+    placeholderData: keepPreviousData,
   });
 
   const { data: summary } = useQuery<ExpenseSummary>({

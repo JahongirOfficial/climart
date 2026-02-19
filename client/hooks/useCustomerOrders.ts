@@ -1,126 +1,54 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { CustomerOrder } from '@shared/api';
+import { api } from '@/lib/api';
 
 export const useCustomerOrders = () => {
-  const [orders, setOrders] = useState<CustomerOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/customer-orders');
-      if (!response.ok) throw new Error('Failed to fetch customer orders');
-      const data = await response.json();
-      setOrders(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: orders = [], isLoading: loading, error, refetch } = useQuery<CustomerOrder[]>({
+    queryKey: ['customer-orders'],
+    queryFn: () => api.get<CustomerOrder[]>('/api/customer-orders'),
+    placeholderData: keepPreviousData,
+  });
 
-  const createOrder = async (orderData: Partial<CustomerOrder>) => {
-    try {
-      const response = await fetch('/api/customer-orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      });
+  const createMutation = useMutation({
+    mutationFn: (orderData: Partial<CustomerOrder>) => api.post<CustomerOrder>('/api/customer-orders', orderData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer-orders'] });
+    },
+  });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create order');
-      }
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CustomerOrder> }) =>
+      api.put<CustomerOrder>(`/api/customer-orders/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer-orders'] });
+    },
+  });
 
-      const newOrder = await response.json();
-      await fetchOrders();
-      return newOrder;
-    } catch (err) {
-      throw err;
-    }
-  };
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.put(`/api/customer-orders/${id}/status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer-orders'] });
+    },
+  });
 
-  const updateOrder = async (id: string, orderData: Partial<CustomerOrder>) => {
-    try {
-      const response = await fetch(`/api/customer-orders/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update order');
-      }
-
-      const updatedOrder = await response.json();
-      await fetchOrders();
-      return updatedOrder;
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const updateStatus = async (id: string, status: string) => {
-    try {
-      const response = await fetch(`/api/customer-orders/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update status');
-      }
-
-      await fetchOrders();
-      return await response.json();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const deleteOrder = async (id: string) => {
-    try {
-      const response = await fetch(`/api/customer-orders/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete order');
-      }
-
-      await fetchOrders();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const refetch = () => {
-    fetchOrders();
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/customer-orders/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer-orders'] });
+    },
+  });
 
   return {
     orders,
     loading,
-    error,
+    error: error instanceof Error ? error.message : null,
     refetch,
-    createOrder,
-    updateOrder,
-    updateStatus,
-    deleteOrder,
+    createOrder: createMutation.mutateAsync,
+    updateOrder: (id: string, data: Partial<CustomerOrder>) => updateMutation.mutateAsync({ id, data }),
+    updateStatus: (id: string, status: string) => statusMutation.mutateAsync({ id, status }),
+    deleteOrder: deleteMutation.mutateAsync,
   };
 };

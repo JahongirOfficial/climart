@@ -20,6 +20,7 @@ import { useCustomerReturns } from "@/hooks/useCustomerReturns";
 import { CustomerReturnModal } from "@/components/CustomerReturnModal";
 import { useToast } from "@/hooks/use-toast";
 import { ExportButton } from "@/components/ExportButton";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 const Returns = () => {
   const { returns, loading, error, refetch, createReturn, updateStatus, deleteReturn } = useCustomerReturns();
@@ -28,14 +29,6 @@ const Returns = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [returnToDelete, setReturnToDelete] = useState<string | null>(null);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('uz-UZ');
-  };
 
   const getReasonLabel = (reason: string) => {
     const labels: Record<string, string> = {

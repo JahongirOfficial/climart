@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 
 interface WriteoffItem {
   product: string;
@@ -34,8 +34,7 @@ export const useWriteoffs = () => {
       if (!response.ok) throw new Error('Failed to fetch writeoffs');
       return response.json();
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes cache
-    gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
+    placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({

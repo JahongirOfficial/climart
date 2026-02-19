@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 export type DashboardPeriod = 'today' | 'this_week' | 'this_month' | 'this_year';
 
@@ -54,19 +55,8 @@ interface DashboardStats {
 export const useDashboard = (period: DashboardPeriod = 'this_month') => {
   const { data: stats, isLoading, error, refetch } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats', period],
-    queryFn: async () => {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/dashboard/stats?period=${period}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch dashboard stats');
-      }
-      return response.json();
-    },
-    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    queryFn: () => api.get<DashboardStats>(`/api/dashboard/stats?period=${period}`),
+    placeholderData: keepPreviousData,
   });
 
   return {

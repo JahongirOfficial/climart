@@ -32,19 +32,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "Bajarildi":
-      return "bg-green-50 text-green-700 border border-green-200";
-    case "Kutilmoqda":
-      return "bg-yellow-50 text-yellow-700 border border-yellow-200";
-    case "Bekor qilindi":
-      return "bg-red-50 text-red-700 border border-red-200";
-    default:
-      return "bg-gray-50 text-gray-700 border border-gray-200";
-  }
-};
+import { getGeneralStatusColor } from "@/lib/format";
+import { api } from "@/lib/api";
 
 const Dashboard = () => {
   const [period, setPeriod] = useState<DashboardPeriod>("this_month");
@@ -54,20 +43,12 @@ const Dashboard = () => {
   useEffect(() => {
     // Prefetch other periods for instant switching
     const periods: DashboardPeriod[] = ['today', 'this_week', 'this_month', 'this_year'];
-    const token = localStorage.getItem('auth_token');
-    
+
     periods.forEach(p => {
       if (p !== period) {
         queryClient.prefetchQuery({
           queryKey: ['dashboard-stats', p],
-          queryFn: async () => {
-            const response = await fetch(`/api/dashboard/stats?period=${p}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-              },
-            });
-            return response.json();
-          },
+          queryFn: () => api.get(`/api/dashboard/stats?period=${p}`),
           staleTime: 1000 * 60 * 5,
         });
       }
@@ -347,7 +328,7 @@ const Dashboard = () => {
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <span
-                        className={`inline-block px-3 py-1 text-xs font-medium ${getStatusColor(
+                        className={`inline-block px-3 py-1 text-xs font-medium ${getGeneralStatusColor(
                           transaction.status
                         )}`}
                         style={{ borderRadius: '3px' }}

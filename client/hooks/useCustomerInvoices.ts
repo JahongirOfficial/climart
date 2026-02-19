@@ -1,24 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { CustomerInvoice } from '@shared/api';
+import { api, apiFetch } from '@/lib/api';
+import { buildQueryString } from '@/lib/format';
 
 export const useCustomerInvoices = (filters?: { startDate?: string; endDate?: string }) => {
   const queryClient = useQueryClient();
 
   const { data: invoices = [], isLoading: loading, error, refetch } = useQuery<CustomerInvoice[]>({
     queryKey: ['customer-invoices', filters],
-    queryFn: async () => {
-      let url = '/api/customer-invoices';
-      if (filters) {
-        const params = new URLSearchParams();
-        if (filters.startDate) params.append('startDate', filters.startDate);
-        if (filters.endDate) params.append('endDate', filters.endDate);
-        url += `?${params.toString()}`;
-      }
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch customer invoices');
-      return response.json();
-    },
-    staleTime: 1000 * 60 * 5,
+    queryFn: () => api.get<CustomerInvoice[]>(`/api/customer-invoices${buildQueryString({ startDate: filters?.startDate, endDate: filters?.endDate })}`),
+    placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({

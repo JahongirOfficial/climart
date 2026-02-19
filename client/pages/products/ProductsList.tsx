@@ -24,6 +24,7 @@ import { Product } from "@shared/api";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExportButton } from "@/components/ExportButton";
+import { formatCurrency, getStockStatus } from "@/lib/format";
 
 const ProductsList = () => {
   const { products, loading, error, refetch, createProduct, updateProduct, deleteProduct } = useProducts();
@@ -44,20 +45,6 @@ const ProductsList = () => {
     });
     return map;
   }, [warehouses]);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
-
-  const getStockStatus = (quantity: number, minQuantity: number = 0) => {
-    if (quantity === 0) {
-      return { label: "Tugagan", className: "bg-red-50 text-red-700 border-red-200" };
-    } else if (quantity <= minQuantity) {
-      return { label: "Kam qolgan", className: "bg-yellow-50 text-yellow-700 border-yellow-200" };
-    } else {
-      return { label: "Yetarli", className: "bg-green-50 text-green-700 border-green-200" };
-    }
-  };
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

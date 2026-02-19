@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 
 interface Warehouse {
   _id: string;
@@ -23,8 +23,7 @@ export const useWarehouses = () => {
       if (!response.ok) throw new Error('Failed to fetch warehouses');
       return response.json();
     },
-    staleTime: 1000 * 60 * 30, // 30 minutes cache for warehouses
-    gcTime: 1000 * 60 * 60, // 1 hour garbage collection
+    placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({

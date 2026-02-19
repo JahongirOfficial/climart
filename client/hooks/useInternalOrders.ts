@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 
 interface InternalOrderItem {
   product: string;
@@ -41,8 +41,7 @@ export const useInternalOrders = () => {
       if (!response.ok) throw new Error('Failed to fetch internal orders');
       return response.json();
     },
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
+    placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({

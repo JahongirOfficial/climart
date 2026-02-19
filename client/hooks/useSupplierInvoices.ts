@@ -1,73 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { SupplierInvoice } from '@shared/api';
+import { api } from '@/lib/api';
 
 export const useSupplierInvoices = () => {
-  const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchInvoices = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/supplier-invoices');
-      if (!response.ok) throw new Error('Failed to fetch supplier invoices');
-      const data = await response.json();
-      setInvoices(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: invoices = [], isLoading: loading, error, refetch } = useQuery<SupplierInvoice[]>({
+    queryKey: ['supplier-invoices'],
+    queryFn: () => api.get<SupplierInvoice[]>('/api/supplier-invoices'),
+    placeholderData: keepPreviousData,
+  });
 
-  const createPayment = async (invoiceId: string, amount: number, notes?: string, paymentMethod: string = 'bank_transfer') => {
-    try {
+  const paymentMutation = useMutation({
+    mutationFn: async ({ invoiceId, amount, notes, paymentMethod = 'bank_transfer' }: {
+      invoiceId: string; amount: number; notes?: string; paymentMethod?: string;
+    }) => {
       const invoice = invoices.find(inv => inv._id === invoiceId);
       if (!invoice) throw new Error('Invoice not found');
-
-      const response = await fetch('/api/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          supplier: invoice.supplier,
-          supplierName: invoice.supplierName,
-          supplierInvoice: invoiceId,
-          invoiceNumber: invoice.invoiceNumber,
-          amount,
-          paymentMethod,
-          notes,
-          paymentDate: new Date().toISOString(),
-        }),
+      return api.post('/api/payments', {
+        supplier: invoice.supplier,
+        supplierName: invoice.supplierName,
+        supplierInvoice: invoiceId,
+        invoiceNumber: invoice.invoiceNumber,
+        amount,
+        paymentMethod,
+        notes,
+        paymentDate: new Date().toISOString(),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create payment');
-      }
-      
-      // Refresh invoices after payment
-      await fetchInvoices();
-      return await response.json();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  useEffect(() => {
-    fetchInvoices();
-  }, []);
-
-  const refetch = () => {
-    fetchInvoices();
-  };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supplier-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+    },
+  });
 
   return {
     invoices,
     loading,
-    error,
+    error: error instanceof Error ? error.message : null,
     refetch,
-    createPayment
+    createPayment: (invoiceId: string, amount: number, notes?: string, paymentMethod?: string) =>
+      paymentMutation.mutateAsync({ invoiceId, amount, notes, paymentMethod }),
   };
 };

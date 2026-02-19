@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { buildQueryString } from '@/lib/format';
 
 interface ReturnsReportData {
   summary: {
@@ -26,36 +28,16 @@ interface ReturnsReportData {
 }
 
 export const useReturnsReport = (startDate?: string, endDate?: string) => {
-  const [data, setData] = useState<ReturnsReportData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchReport = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
-      
-      const response = await fetch(`/api/returns-report?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch returns report');
-      const reportData = await response.json();
-      setData(reportData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchReport();
-  }, [startDate, endDate]);
+  const { data, isLoading: loading, error, refetch } = useQuery<ReturnsReportData>({
+    queryKey: ['returns-report', startDate, endDate],
+    queryFn: () => api.get<ReturnsReportData>(`/api/returns-report${buildQueryString({ startDate, endDate })}`),
+    placeholderData: keepPreviousData,
+  });
 
   return {
     data,
     loading,
-    error,
-    refetch: fetchReport,
+    error: error instanceof Error ? error.message : null,
+    refetch,
   };
 };

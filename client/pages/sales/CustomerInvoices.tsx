@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ExportButton } from "@/components/ExportButton";
+import { formatCurrency, formatDate, getInvoiceStatusColor, getInvoiceStatusLabel, getShippedStatusColor, getShippedStatusLabel } from "@/lib/format";
 
 const CustomerInvoices = () => {
   const [dateFilter, setDateFilter] = useState<{ startDate: string; endDate: string }>({
@@ -48,52 +49,6 @@ const CustomerInvoices = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoice | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
-
-  const formatCurrency = useCallback((amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  }, []);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('uz-UZ');
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      'unpaid': 'bg-red-100 text-red-800',
-      'partial': 'bg-yellow-100 text-yellow-800',
-      'paid': 'bg-green-100 text-green-800'
-    };
-    return colors[status] || colors['unpaid'];
-  };
-
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      'unpaid': "To'lanmagan",
-      'partial': "Qisman to'langan",
-      'paid': "To'langan",
-      'cancelled': "Bekor qilingan"
-    };
-    return labels[status] || status;
-  };
-
-  const getShippedStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      'not_shipped': "Jo'natilmagan",
-      'partial': "Qisman jo'natilgan",
-      'shipped': "Jo'natilgan"
-    };
-    return labels[status] || status;
-  };
-
-  const getShippedStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      'not_shipped': 'bg-gray-100 text-gray-800',
-      'partial': 'bg-blue-100 text-blue-800',
-      'shipped': 'bg-green-100 text-green-800'
-    };
-    return colors[status] || colors['not_shipped'];
-  };
 
   const getStatusIcon = (status: string) => {
     if (status === 'paid') return <CheckCircle className="h-4 w-4" />;
@@ -555,9 +510,9 @@ const CustomerInvoices = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getInvoiceStatusColor(invoice.status)}`}>
                           {getStatusIcon(invoice.status)}
-                          {getStatusLabel(invoice.status)}
+                          {getInvoiceStatusLabel(invoice.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

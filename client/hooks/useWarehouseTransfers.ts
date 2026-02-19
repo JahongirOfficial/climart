@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 
 interface TransferItem {
   product: string;
@@ -31,8 +31,7 @@ export const useWarehouseTransfers = () => {
       if (!response.ok) throw new Error('Failed to fetch transfers');
       return response.json();
     },
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
+    placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({

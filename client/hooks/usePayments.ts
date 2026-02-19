@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
 export interface Payment {
   _id: string;
@@ -72,7 +72,7 @@ export const usePayments = (params?: UsePaymentsParams) => {
       if (!response.ok) throw new Error('Failed to fetch payments');
       return response.json();
     },
-    staleTime: 1000 * 60 * 5,
+    placeholderData: keepPreviousData,
   });
 
   return {

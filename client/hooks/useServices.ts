@@ -1,97 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Service } from '@shared/api';
+import { api } from '@/lib/api';
 
 export const useServices = () => {
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchServices = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/services');
-      if (!response.ok) throw new Error('Failed to fetch services');
-      const data = await response.json();
-      setServices(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: services = [], isLoading: loading, error, refetch } = useQuery<Service[]>({
+    queryKey: ['services'],
+    queryFn: () => api.get<Service[]>('/api/services'),
+    placeholderData: keepPreviousData,
+  });
 
-  const createService = async (serviceData: Partial<Service>) => {
-    try {
-      const response = await fetch('/api/services', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(serviceData),
-      });
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<Service>) => api.post<Service>('/api/services', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create service');
-      }
-      
-      const newService = await response.json();
-      setServices(prev => [newService, ...prev]);
-      return newService;
-    } catch (err) {
-      throw err;
-    }
-  };
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Service> }) =>
+      api.put<Service>(`/api/services/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
 
-  const updateService = async (id: string, serviceData: Partial<Service>) => {
-    try {
-      const response = await fetch(`/api/services/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(serviceData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update service');
-      }
-      
-      const updatedService = await response.json();
-      setServices(prev => prev.map(s => s._id === id ? updatedService : s));
-      return updatedService;
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const deleteService = async (id: string) => {
-    try {
-      const response = await fetch(`/api/services/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete service');
-      
-      setServices(prev => prev.filter(s => s._id !== id));
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  useEffect(() => {
-    fetchServices();
-  }, []);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/services/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
 
   return {
     services,
     loading,
-    error,
-    refetch: fetchServices,
-    createService,
-    updateService,
-    deleteService,
+    error: error instanceof Error ? error.message : null,
+    refetch,
+    createService: createMutation.mutateAsync,
+    updateService: (id: string, data: Partial<Service>) => updateMutation.mutateAsync({ id, data }),
+    deleteService: deleteMutation.mutateAsync,
   };
 };

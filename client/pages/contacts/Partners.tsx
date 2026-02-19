@@ -106,7 +106,7 @@ const Partners = () => {
     return new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS' }).format(amount);
   };
 
-  if (loading) {
+  if (loading && partners.length === 0) {
     return (
       <Layout>
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">

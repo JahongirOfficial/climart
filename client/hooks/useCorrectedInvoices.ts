@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { CorrectedInvoiceResponse } from '@shared/api';
 
 interface UseCorrectedInvoicesParams {
@@ -27,7 +27,7 @@ export const useCorrectedInvoices = (params?: UseCorrectedInvoicesParams) => {
       if (!response.ok) throw new Error('Failed to fetch corrected invoices');
       return response.json();
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    placeholderData: keepPreviousData,
   });
 
   return {

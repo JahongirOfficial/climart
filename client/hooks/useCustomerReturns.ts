@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 interface CustomerReturn {
   _id: string;
@@ -26,101 +27,43 @@ interface CustomerReturn {
 }
 
 export const useCustomerReturns = () => {
-  const [returns, setReturns] = useState<CustomerReturn[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchReturns = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/customer-returns');
-      if (!response.ok) throw new Error('Failed to fetch customer returns');
-      const data = await response.json();
-      setReturns(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: returns = [], isLoading: loading, error, refetch } = useQuery<CustomerReturn[]>({
+    queryKey: ['customer-returns'],
+    queryFn: () => api.get<CustomerReturn[]>('/api/customer-returns'),
+    placeholderData: keepPreviousData,
+  });
 
-  const createReturn = async (returnData: Partial<CustomerReturn>) => {
-    try {
-      const response = await fetch('/api/customer-returns', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(returnData),
-      });
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<CustomerReturn>) => api.post<CustomerReturn>('/api/customer-returns', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer-returns'] });
+    },
+  });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create return');
-      }
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.put(`/api/customer-returns/${id}/status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer-returns'] });
+    },
+  });
 
-      const newReturn = await response.json();
-      await fetchReturns();
-      return newReturn;
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const deleteReturn = async (id: string) => {
-    try {
-      const response = await fetch(`/api/customer-returns/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete return');
-      }
-
-      await fetchReturns();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const updateStatus = async (id: string, status: string) => {
-    try {
-      const response = await fetch(`/api/customer-returns/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update status');
-      }
-
-      await fetchReturns();
-      return await response.json();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  useEffect(() => {
-    fetchReturns();
-  }, []);
-
-  const refetch = () => {
-    fetchReturns();
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/customer-returns/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer-returns'] });
+    },
+  });
 
   return {
     returns,
     loading,
-    error,
+    error: error instanceof Error ? error.message : null,
     refetch,
-    createReturn,
-    updateStatus,
-    deleteReturn,
+    createReturn: createMutation.mutateAsync,
+    updateStatus: (id: string, status: string) => statusMutation.mutateAsync({ id, status }),
+    deleteReturn: deleteMutation.mutateAsync,
   };
 };

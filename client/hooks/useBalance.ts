@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
 export interface BalanceItem {
     _id: string;
@@ -46,7 +46,7 @@ export const useBalance = (filters: { category?: string; hideZero?: boolean }) =
             if (!response.ok) throw new Error('Failed to fetch balance');
             return response.json();
         },
-        staleTime: 1000 * 60 * 5, // 5 minutes cache
+        placeholderData: keepPreviousData,
     });
 
     return {

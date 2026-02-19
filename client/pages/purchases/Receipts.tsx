@@ -26,6 +26,7 @@ import { Receipt } from "@shared/api";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { ExportButton } from "@/components/ExportButton";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 const Receipts = () => {
   const [dateFilter, setDateFilter] = useState<{ startDate: string; endDate: string }>({
@@ -43,15 +44,6 @@ const Receipts = () => {
   const [viewingReceipt, setViewingReceipt] = useState<Receipt | null>(null);
   const [returningReceipt, setReturningReceipt] = useState<Receipt | null>(null);
   const [deletingReceipt, setDeletingReceipt] = useState<string | null>(null);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('uz-UZ');
-  };
 
   const filteredReceipts = receipts.filter(receipt => {
     const supplierName = typeof receipt.supplier === 'string' ? receipt.supplier : receipt.supplier.name;

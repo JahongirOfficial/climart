@@ -59,81 +59,62 @@ const PaymentRow = memo(({
 }: any) => {
   return (
     <tr className="border-b hover:bg-muted/50 transition-colors">
-      <td className="p-4">
-        <div className="flex items-center gap-2">
+      <td className="px-3 py-2">
+        <div className="flex items-center gap-1.5">
           {getTypeIcon(payment.type)}
-          <span className="font-medium">{payment.paymentNumber}</span>
+          <span className="font-medium text-sm whitespace-nowrap">{payment.paymentNumber}</span>
         </div>
       </td>
-      <td className="p-4">
-        <div className="text-sm">
-          {format(new Date(payment.paymentDate), 'dd.MM.yyyy')}
-        </div>
+      <td className="px-3 py-2 whitespace-nowrap text-sm">
+        {format(new Date(payment.paymentDate), 'dd.MM.yyyy')}
       </td>
-      <td className="p-4">{getTypeBadge(payment.type)}</td>
-      <td className="p-4">
-        <div className="font-medium">{payment.partnerName || '-'}</div>
+      <td className="px-3 py-2">{getTypeBadge(payment.type)}</td>
+      <td className="px-3 py-2">
+        <div className="font-medium text-sm max-w-[120px] truncate">{payment.partnerName || '-'}</div>
       </td>
-      <td className="p-4">
-        <div className="text-sm max-w-xs truncate">{payment.purpose}</div>
+      <td className="px-3 py-2">
+        <div className="text-sm max-w-[130px] truncate">{payment.purpose}</div>
       </td>
-      <td className="p-4">
-        <div className="text-sm">
+      <td className="px-3 py-2">
+        <div className="text-sm max-w-[100px] truncate">
           {payment.type === 'transfer' ? (
-            <span>
-              {payment.fromAccount === 'cash' ? 'Kassa' : 'Bank'} → {payment.toAccount === 'cash' ? 'Kassa' : 'Bank'}
-            </span>
+            <span>{payment.fromAccount === 'cash' ? 'Kassa' : 'Bank'} → {payment.toAccount === 'cash' ? 'Kassa' : 'Bank'}</span>
           ) : (
             <span>{payment.category || '-'}</span>
           )}
         </div>
       </td>
-      <td className="p-4 text-center">
-        <Badge variant="outline">
+      <td className="px-3 py-2 text-center">
+        <Badge variant="outline" className="text-xs">
           {payment.account === 'cash' ? 'Kassa' : 'Bank'}
         </Badge>
       </td>
-      <td className="p-4 text-right">
-        <div className={`font-medium ${
-          payment.type === 'incoming' ? 'text-green-600' : 
-          payment.type === 'outgoing' ? 'text-red-600' : 
+      <td className="px-3 py-2 text-right whitespace-nowrap">
+        <span className={`font-medium text-sm ${
+          payment.type === 'incoming' ? 'text-green-600' :
+          payment.type === 'outgoing' ? 'text-red-600' :
           'text-blue-600'
         }`}>
           {payment.type === 'incoming' && '+'}
           {payment.type === 'outgoing' && '-'}
           {payment.amount.toLocaleString()} so'm
-        </div>
+        </span>
       </td>
-      <td className="p-4 text-center">{getStatusBadge(payment.status)}</td>
-      <td className="p-4">
-        <div className="flex items-center justify-center gap-2">
+      <td className="px-3 py-2 text-center">{getStatusBadge(payment.status)}</td>
+      <td className="px-3 py-2">
+        <div className="flex items-center justify-center gap-1">
           {payment.status === 'draft' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onConfirm(payment._id)}
-              title="Tasdiqlash"
-            >
-              <Check className="h-4 w-4 text-green-600" />
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onConfirm(payment._id)} title="Tasdiqlash">
+              <Check className="h-3.5 w-3.5 text-green-600" />
             </Button>
           )}
           {payment.status === 'confirmed' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onCancel(payment._id)}
-              title="Bekor qilish"
-            >
-              <X className="h-4 w-4 text-red-600" />
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onCancel(payment._id)} title="Bekor qilish">
+              <X className="h-3.5 w-3.5 text-red-600" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(payment._id)}
-            title="O'chirish"
-          >
-            <Trash2 className="h-4 w-4 text-red-600" />
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(payment._id)} title="O'chirish">
+            <Trash2 className="h-3.5 w-3.5 text-red-600" />
           </Button>
         </div>
       </td>
@@ -333,7 +314,7 @@ const Payments = () => {
   if (loading) {
     return (
       <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
+        <div className="p-4 md:p-6 max-w-[1920px] mx-auto">
           <Skeleton className="h-8 w-64 mb-6" />
           <div className="grid gap-4 md:grid-cols-4 mb-6">
             {[1, 2, 3, 4].map(i => (
@@ -348,7 +329,7 @@ const Payments = () => {
 
   return (
     <Layout>
-      <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
+      <div className="p-4 md:p-6 max-w-[1920px] mx-auto space-y-4">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -393,58 +374,58 @@ const Payments = () => {
 
         {/* KPI Cards */}
         <div className="grid gap-4 md:grid-cols-4">
-          <Card className="p-6">
+          <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Kassa</p>
-                <p className="text-2xl font-bold mt-2">
+                <p className="text-xs font-medium text-muted-foreground">Kassa</p>
+                <p className="text-xl font-bold mt-1">
                   {totals.cashBalance.toLocaleString()} so'm
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
-                <Wallet className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Bank</p>
-                <p className="text-2xl font-bold mt-2">
+                <p className="text-xs font-medium text-muted-foreground">Bank</p>
+                <p className="text-xl font-bold mt-1">
                   {totals.bankBalance.toLocaleString()} so'm
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Jami Kirim</p>
-                <p className="text-2xl font-bold mt-2 text-green-600">
+                <p className="text-xs font-medium text-muted-foreground">Jami Kirim</p>
+                <p className="text-xl font-bold mt-1 text-green-600">
                   {totals.incoming.toLocaleString()} so'm
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
-                <ArrowDownCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
+                <ArrowDownCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Jami Chiqim</p>
-                <p className="text-2xl font-bold mt-2 text-red-600">
+                <p className="text-xs font-medium text-muted-foreground">Jami Chiqim</p>
+                <p className="text-xl font-bold mt-1 text-red-600">
                   {totals.outgoing.toLocaleString()} so'm
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                <ArrowUpCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                <ArrowUpCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
             </div>
           </Card>
@@ -518,16 +499,16 @@ const Payments = () => {
             <table className="w-full">
               <thead className="border-b bg-muted/50">
                 <tr>
-                  <th className="text-left p-4 font-medium">№</th>
-                  <th className="text-left p-4 font-medium">Sana</th>
-                  <th className="text-left p-4 font-medium">Turi</th>
-                  <th className="text-left p-4 font-medium">Kontragent</th>
-                  <th className="text-left p-4 font-medium">Maqsad</th>
-                  <th className="text-left p-4 font-medium">To'lov manbasi</th>
-                  <th className="text-center p-4 font-medium">Hisob</th>
-                  <th className="text-right p-4 font-medium">Summa</th>
-                  <th className="text-center p-4 font-medium">Holat</th>
-                  <th className="text-center p-4 font-medium">Amallar</th>
+                  <th className="text-left px-3 py-2 font-medium text-sm whitespace-nowrap">№</th>
+                  <th className="text-left px-3 py-2 font-medium text-sm whitespace-nowrap">Sana</th>
+                  <th className="text-left px-3 py-2 font-medium text-sm">Turi</th>
+                  <th className="text-left px-3 py-2 font-medium text-sm">Kontragent</th>
+                  <th className="text-left px-3 py-2 font-medium text-sm">Maqsad</th>
+                  <th className="text-left px-3 py-2 font-medium text-sm">Manba</th>
+                  <th className="text-center px-3 py-2 font-medium text-sm">Hisob</th>
+                  <th className="text-right px-3 py-2 font-medium text-sm whitespace-nowrap">Summa</th>
+                  <th className="text-center px-3 py-2 font-medium text-sm">Holat</th>
+                  <th className="text-center px-3 py-2 font-medium text-sm">Amallar</th>
                 </tr>
               </thead>
               <tbody>

@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { buildQueryString } from '@/lib/format';
 
 interface CustomerDebt {
   customerId: string;
@@ -39,74 +41,32 @@ interface DebtsData {
 }
 
 export const useCustomerDebts = (startDate?: string, endDate?: string, customerId?: string) => {
-  const [data, setData] = useState<DebtsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchDebts = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
-      if (customerId) params.append('customerId', customerId);
-      
-      const response = await fetch(`/api/customer-debts?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch customer debts');
-      const debtsData = await response.json();
-      setData(debtsData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDebts();
-  }, [startDate, endDate, customerId]);
+  const { data, isLoading: loading, error, refetch } = useQuery<DebtsData>({
+    queryKey: ['customer-debts', startDate, endDate, customerId],
+    queryFn: () => api.get<DebtsData>(`/api/customer-debts${buildQueryString({ startDate, endDate, customerId })}`),
+    placeholderData: keepPreviousData,
+  });
 
   return {
     data,
     loading,
-    error,
-    refetch: fetchDebts,
+    error: error instanceof Error ? error.message : null,
+    refetch,
   };
 };
 
 export const useReconciliationReport = (customerId: string, startDate?: string, endDate?: string) => {
-  const [data, setData] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchReport = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
-      
-      const response = await fetch(`/api/customer-debts/${customerId}/reconciliation?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch reconciliation report');
-      const reportData = await response.json();
-      setData(reportData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (customerId) {
-      fetchReport();
-    }
-  }, [customerId, startDate, endDate]);
+  const { data, isLoading: loading, error, refetch } = useQuery({
+    queryKey: ['reconciliation', customerId, startDate, endDate],
+    queryFn: () => api.get(`/api/customer-debts/${customerId}/reconciliation${buildQueryString({ startDate, endDate })}`),
+    enabled: !!customerId,
+    placeholderData: keepPreviousData,
+  });
 
   return {
     data,
     loading,
-    error,
-    refetch: fetchReport,
+    error: error instanceof Error ? error.message : null,
+    refetch,
   };
 };

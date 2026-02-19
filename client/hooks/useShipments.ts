@@ -1,126 +1,55 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Shipment } from '@shared/api';
+import { api } from '@/lib/api';
 
 export const useShipments = () => {
-  const [shipments, setShipments] = useState<Shipment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchShipments = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/shipments');
-      if (!response.ok) throw new Error('Failed to fetch shipments');
-      const data = await response.json();
-      setShipments(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: shipments = [], isLoading: loading, error, refetch } = useQuery<Shipment[]>({
+    queryKey: ['shipments'],
+    queryFn: () => api.get<Shipment[]>('/api/shipments'),
+    placeholderData: keepPreviousData,
+  });
 
-  const createShipment = async (shipmentData: Partial<Shipment>) => {
-    try {
-      const response = await fetch('/api/shipments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(shipmentData),
-      });
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<Shipment>) => api.post<Shipment>('/api/shipments', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-invoices'] });
+    },
+  });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create shipment');
-      }
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Shipment> }) =>
+      api.put<Shipment>(`/api/shipments/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+    },
+  });
 
-      const newShipment = await response.json();
-      await fetchShipments();
-      return newShipment;
-    } catch (err) {
-      throw err;
-    }
-  };
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.put(`/api/shipments/${id}/status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+    },
+  });
 
-  const updateShipment = async (id: string, shipmentData: Partial<Shipment>) => {
-    try {
-      const response = await fetch(`/api/shipments/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(shipmentData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update shipment');
-      }
-
-      const updatedShipment = await response.json();
-      await fetchShipments();
-      return updatedShipment;
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const updateStatus = async (id: string, status: string) => {
-    try {
-      const response = await fetch(`/api/shipments/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update status');
-      }
-
-      await fetchShipments();
-      return await response.json();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const deleteShipment = async (id: string) => {
-    try {
-      const response = await fetch(`/api/shipments/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete shipment');
-      }
-
-      await fetchShipments();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  useEffect(() => {
-    fetchShipments();
-  }, []);
-
-  const refetch = () => {
-    fetchShipments();
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/shipments/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+    },
+  });
 
   return {
     shipments,
     loading,
-    error,
+    error: error instanceof Error ? error.message : null,
     refetch,
-    createShipment,
-    updateShipment,
-    updateStatus,
-    deleteShipment,
+    createShipment: createMutation.mutateAsync,
+    updateShipment: (id: string, data: Partial<Shipment>) => updateMutation.mutateAsync({ id, data }),
+    updateStatus: (id: string, status: string) => statusMutation.mutateAsync({ id, status }),
+    deleteShipment: deleteMutation.mutateAsync,
   };
 };

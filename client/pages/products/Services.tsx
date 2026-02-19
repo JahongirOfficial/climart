@@ -19,6 +19,7 @@ import { useModal } from "@/contexts/ModalContext";
 import { useServices } from "@/hooks/useServices";
 import { ServiceModal } from "@/components/ServiceModal";
 import { Service } from "@shared/api";
+import { formatCurrency } from "@/lib/format";
 
 const Services = () => {
   const { services, loading, error, refetch, createService, updateService, deleteService } = useServices();
@@ -28,9 +29,7 @@ const Services = () => {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [deletingService, setDeletingService] = useState<string | null>(null);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
+
 
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes} daqiqa`;
@@ -82,7 +81,7 @@ const Services = () => {
   const activeServices = services.filter(s => s.isActive);
   const totalRevenue = services.reduce((sum, s) => sum + s.price, 0);
 
-  if (loading) {
+  if (loading && services.length === 0) {
     return (
       <Layout>
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
@@ -106,7 +105,7 @@ const Services = () => {
                 <h3 className="font-semibold text-red-900">Xatolik yuz berdi</h3>
                 <p className="text-red-700">{error}</p>
                 <Button
-                  onClick={refetch}
+                  onClick={() => refetch()}
                   className="mt-3 bg-red-600 hover:bg-red-700"
                   size="sm"
                 >

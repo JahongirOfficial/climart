@@ -1,24 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Receipt } from '@shared/api';
+import { api } from '@/lib/api';
+import { buildQueryString } from '@/lib/format';
 
 export const useReceipts = (filters?: { startDate?: string; endDate?: string }) => {
   const queryClient = useQueryClient();
 
   const { data: receipts = [], isLoading: loading, error, refetch } = useQuery<Receipt[]>({
     queryKey: ['receipts', filters],
-    queryFn: async () => {
-      let url = '/api/receipts';
-      if (filters) {
-        const params = new URLSearchParams();
-        if (filters.startDate) params.append('startDate', filters.startDate);
-        if (filters.endDate) params.append('endDate', filters.endDate);
-        url += `?${params.toString()}`;
-      }
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch receipts');
-      return response.json();
-    },
-    staleTime: 1000 * 60 * 5,
+    queryFn: () => api.get<Receipt[]>(`/api/receipts${buildQueryString({ startDate: filters?.startDate, endDate: filters?.endDate })}`),
+    placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({

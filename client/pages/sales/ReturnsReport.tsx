@@ -7,18 +7,15 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useReturnsReport } from "@/hooks/useReturnsReport";
+import { formatCurrency } from "@/lib/format";
 
 const ReturnsReport = () => {
   const [startDate, setStartDate] = useState(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
   );
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  
-  const { data, loading, error } = useReturnsReport(startDate, endDate);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
+  const { data, loading, error } = useReturnsReport(startDate, endDate);
 
   const getReasonLabel = (reason: string) => {
     const labels: Record<string, string> = {

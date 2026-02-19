@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useTaxInvoices } from "@/hooks/useTaxInvoices";
 import { TaxInvoiceModal } from "@/components/TaxInvoiceModal";
 import { useToast } from "@/hooks/use-toast";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 const TaxInvoices = () => {
   const { invoices, loading, error, refetch, createInvoice, updateStatus, deleteInvoice } = useTaxInvoices();
@@ -16,14 +17,6 @@ const TaxInvoices = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('uz-UZ');
-  };
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
@@ -265,7 +258,7 @@ const TaxInvoices = () => {
     }
   };
 
-  if (loading) {
+  if (loading && invoices.length === 0) {
     return (
       <Layout>
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto">

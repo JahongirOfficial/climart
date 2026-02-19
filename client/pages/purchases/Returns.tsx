@@ -21,6 +21,7 @@ import { SupplierReturnModal } from "@/components/SupplierReturnModal";
 import { ViewReturnModal } from "@/components/ViewReturnModal";
 import { SupplierReturn } from "@shared/api";
 import { ExportButton } from "@/components/ExportButton";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 const Returns = () => {
   const { returns, loading, error, refetch, createReturn, deleteReturn } = useSupplierReturns();
@@ -30,15 +31,6 @@ const Returns = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [deletingReturn, setDeletingReturn] = useState<string | null>(null);
   const [viewingReturn, setViewingReturn] = useState<SupplierReturn | null>(null);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('uz-UZ');
-  };
 
   const getReasonLabel = (reason: string) => {
     const labels: Record<string, string> = {

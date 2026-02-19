@@ -125,7 +125,7 @@ const Inventory = () => {
     return <Badge variant="outline">Qoralama</Badge>;
   };
 
-  if (loading) {
+  if (loading && inventories.length === 0) {
     return (
       <Layout>
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto">

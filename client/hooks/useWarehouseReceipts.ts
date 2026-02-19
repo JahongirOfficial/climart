@@ -1,64 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { WarehouseReceipt } from '@shared/api';
+import { api, apiFetch } from '@/lib/api';
 
 export const useWarehouseReceipts = (warehouseId?: string) => {
-  const [receipts, setReceipts] = useState<WarehouseReceipt[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchReceipts = async () => {
-    try {
-      setLoading(true);
-      const url = warehouseId ? `/api/warehouse-receipts?warehouse=${warehouseId}` : '/api/warehouse-receipts';
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch receipts');
-      const data = await response.json();
-      setReceipts(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: receipts = [], isLoading: loading, error, refetch } = useQuery<WarehouseReceipt[]>({
+    queryKey: ['warehouse-receipts', warehouseId],
+    queryFn: () => api.get<WarehouseReceipt[]>(warehouseId ? `/api/warehouse-receipts?warehouse=${warehouseId}` : '/api/warehouse-receipts'),
+    placeholderData: keepPreviousData,
+  });
 
-  useEffect(() => {
-    fetchReceipts();
-  }, [warehouseId]);
+  const confirmMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/warehouse-receipts/${id}/confirm`, { method: 'PATCH' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['warehouse-receipts'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
+    },
+  });
 
-  const confirmReceipt = async (id: string) => {
-    try {
-      const response = await fetch(`/api/warehouse-receipts/${id}/confirm`, {
-        method: 'PATCH',
-      });
-      if (!response.ok) throw new Error('Failed to confirm receipt');
-      await fetchReceipts();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const deleteReceipt = async (id: string) => {
-    try {
-      const response = await fetch(`/api/warehouse-receipts/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete receipt');
-      await fetchReceipts();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const refetch = () => {
-    fetchReceipts();
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/warehouse-receipts/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['warehouse-receipts'] });
+    },
+  });
 
   return {
     receipts,
     loading,
-    error,
+    error: error instanceof Error ? error.message : null,
     refetch,
-    confirmReceipt,
-    deleteReceipt,
+    confirmReceipt: confirmMutation.mutateAsync,
+    deleteReceipt: deleteMutation.mutateAsync,
   };
 };

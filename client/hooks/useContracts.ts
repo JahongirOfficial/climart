@@ -1,77 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Contract } from '@shared/api';
+import { api, apiFetch } from '@/lib/api';
 
 export const useContracts = (partnerId?: string) => {
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchContracts = async () => {
-    try {
-      setLoading(true);
-      const url = partnerId ? `/api/contracts?partner=${partnerId}` : '/api/contracts';
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch contracts');
-      const data = await response.json();
-      setContracts(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: contracts = [], isLoading: loading, error, refetch } = useQuery<Contract[]>({
+    queryKey: ['contracts', partnerId],
+    queryFn: () => api.get<Contract[]>(partnerId ? `/api/contracts?partner=${partnerId}` : '/api/contracts'),
+    placeholderData: keepPreviousData,
+  });
 
-  useEffect(() => {
-    fetchContracts();
-  }, [partnerId]);
+  const setDefaultMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/contracts/${id}/set-default`, { method: 'PATCH' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
 
-  const setAsDefault = async (id: string) => {
-    try {
-      const response = await fetch(`/api/contracts/${id}/set-default`, {
-        method: 'PATCH',
-      });
-      if (!response.ok) throw new Error('Failed to set as default');
-      await fetchContracts();
-    } catch (err) {
-      throw err;
-    }
-  };
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/contracts/${id}/cancel`, { method: 'PATCH' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
 
-  const cancelContract = async (id: string) => {
-    try {
-      const response = await fetch(`/api/contracts/${id}/cancel`, {
-        method: 'PATCH',
-      });
-      if (!response.ok) throw new Error('Failed to cancel contract');
-      await fetchContracts();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const deleteContract = async (id: string) => {
-    try {
-      const response = await fetch(`/api/contracts/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete contract');
-      await fetchContracts();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const refetch = () => {
-    fetchContracts();
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/contracts/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
 
   return {
     contracts,
     loading,
-    error,
+    error: error instanceof Error ? error.message : null,
     refetch,
-    setAsDefault,
-    cancelContract,
-    deleteContract,
+    setAsDefault: setDefaultMutation.mutateAsync,
+    cancelContract: cancelMutation.mutateAsync,
+    deleteContract: deleteMutation.mutateAsync,
   };
 };

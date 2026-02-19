@@ -18,21 +18,13 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useDebts } from "@/hooks/useDebts";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 const MyDebts = () => {
   const { debts, paymentSchedule, overduePayments, loading, error, refetch } = useDebts();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<'all' | 'overdue' | 'with-debt'>('all');
   const [expandedDebt, setExpandedDebt] = useState<string | null>(null);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('uz-UZ');
-  };
 
   const getDaysUntilDue = (dueDate: string) => {
     const today = new Date();

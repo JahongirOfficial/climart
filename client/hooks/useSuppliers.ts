@@ -1,91 +1,48 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Supplier } from '@shared/api';
+import { api } from '@/lib/api';
 
 export const useSuppliers = () => {
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchSuppliers = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/partners?type=supplier');
-      if (!response.ok) throw new Error('Failed to fetch suppliers');
-      const data = await response.json();
-      setSuppliers(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: suppliers = [], isLoading: loading, error, refetch } = useQuery<Supplier[]>({
+    queryKey: ['suppliers'],
+    queryFn: () => api.get<Supplier[]>('/api/partners?type=supplier'),
+    placeholderData: keepPreviousData,
+  });
 
-  const createSupplier = async (supplierData: Partial<Supplier>) => {
-    try {
-      const response = await fetch('/api/partners', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...supplierData, type: 'supplier' }),
-      });
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<Supplier>) => api.post<Supplier>('/api/partners', { ...data, type: 'supplier' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['partners'] });
+    },
+  });
 
-      if (!response.ok) throw new Error('Failed to create supplier');
-      
-      const newSupplier = await response.json();
-      setSuppliers(prev => [newSupplier, ...prev]);
-      return newSupplier;
-    } catch (err) {
-      throw err;
-    }
-  };
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Supplier> }) =>
+      api.put<Supplier>(`/api/partners/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['partners'] });
+    },
+  });
 
-  const updateSupplier = async (id: string, supplierData: Partial<Supplier>) => {
-    try {
-      const response = await fetch(`/api/partners/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(supplierData),
-      });
-
-      if (!response.ok) throw new Error('Failed to update supplier');
-      
-      const updatedSupplier = await response.json();
-      setSuppliers(prev => prev.map(s => s._id === id ? updatedSupplier : s));
-      return updatedSupplier;
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const deleteSupplier = async (id: string) => {
-    try {
-      const response = await fetch(`/api/partners/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete supplier');
-      
-      setSuppliers(prev => prev.filter(s => s._id !== id));
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  useEffect(() => {
-    fetchSuppliers();
-  }, []);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/partners/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      queryClient.invalidateQueries({ queryKey: ['partners'] });
+    },
+  });
 
   return {
     suppliers,
     loading,
-    error,
-    refetch: fetchSuppliers,
-    createSupplier,
-    updateSupplier,
-    deleteSupplier
+    error: error instanceof Error ? error.message : null,
+    refetch,
+    createSupplier: createMutation.mutateAsync,
+    updateSupplier: (id: string, data: Partial<Supplier>) => updateMutation.mutateAsync({ id, data }),
+    deleteSupplier: deleteMutation.mutateAsync,
   };
 };

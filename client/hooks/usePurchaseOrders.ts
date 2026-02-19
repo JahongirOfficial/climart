@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 
 export interface PurchaseOrderItem {
   product: string;
@@ -37,7 +37,7 @@ export const usePurchaseOrders = (filters?: { startDate?: string; endDate?: stri
       if (!response.ok) throw new Error('Failed to fetch purchase orders');
       return response.json();
     },
-    staleTime: 1000 * 60 * 5,
+    placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({

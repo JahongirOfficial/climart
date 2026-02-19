@@ -13,6 +13,7 @@ import { useTaxInvoices } from "@/hooks/useTaxInvoices";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { ExportButton } from "@/components/ExportButton";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 const Shipments = () => {
   const { shipments, loading, error, refetch, updateStatus, deleteShipment } = useShipments();
@@ -23,14 +24,6 @@ const Shipments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isTaxInvoiceModalOpen, setIsTaxInvoiceModalOpen] = useState(false);
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | undefined>();
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('uz-UZ');
-  };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -281,7 +274,7 @@ const Shipments = () => {
     }
   };
 
-  if (loading) {
+  if (loading && shipments.length === 0) {
     return (
       <Layout>
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto">

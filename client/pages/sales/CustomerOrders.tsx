@@ -23,6 +23,7 @@ import { ShipmentModal } from "@/components/ShipmentModal";
 import { useShipments } from "@/hooks/useShipments";
 import { CustomerOrder } from "@shared/api";
 import { ExportButton } from "@/components/ExportButton";
+import { formatCurrency, formatDate, getOrderStatusColor, getOrderStatusLabel } from "@/lib/format";
 
 const CustomerOrders = () => {
   const { orders, loading, error, refetch, createOrder, updateOrder, updateStatus, deleteOrder } = useCustomerOrders();
@@ -38,36 +39,6 @@ const CustomerOrders = () => {
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [showUnreserveDialog, setShowUnreserveDialog] = useState(false);
   const [orderToUnreserve, setOrderToUnreserve] = useState<string | null>(null);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('uz-UZ');
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      'pending': 'bg-yellow-100 text-yellow-800',
-      'confirmed': 'bg-blue-100 text-blue-800',
-      'shipped': 'bg-purple-100 text-purple-800',
-      'fulfilled': 'bg-green-100 text-green-800',
-      'cancelled': 'bg-red-100 text-red-800'
-    };
-    return colors[status] || colors['pending'];
-  };
-
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      'pending': "Kutilmoqda",
-      'confirmed': "Tasdiqlandi",
-      'shipped': "Jo'natildi",
-      'fulfilled': "Bajarildi",
-      'cancelled': "Bekor qilindi"
-    };
-    return labels[status] || status;
-  };
 
   const getStatusIcon = (status: string) => {
     if (status === 'fulfilled') return <CheckCircle className="h-4 w-4" />;
@@ -361,9 +332,9 @@ const CustomerOrders = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(order.status)}`}>
                             {getStatusIcon(order.status)}
-                            {getStatusLabel(order.status)}
+                            {getOrderStatusLabel(order.status)}
                           </span>
                           {order.reserved && (
                             <Lock className="h-3 w-3 text-orange-600 inline ml-1" />

@@ -108,10 +108,12 @@ const KPI = lazy(() => import("./pages/solutions/KPI"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (renamed from cacheTime)
+      staleTime: 1000 * 60 * 30, // 30 minutes - data stays fresh, no refetch spinners
+      gcTime: 1000 * 60 * 60, // 1 hour garbage collection
       retry: 1,
       refetchOnWindowFocus: false,
+      refetchOnMount: false, // Don't refetch if data is fresh
+      refetchOnReconnect: false,
     },
   },
 });

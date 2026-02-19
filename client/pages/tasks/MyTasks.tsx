@@ -33,8 +33,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTasks, Task } from "@/hooks/useTasks";
-import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { AddTaskModal } from "@/components/AddTaskModal";
 
 const priorityLabels: Record<string, string> = {
   low: "Past",
@@ -58,7 +58,6 @@ const statusColors: Record<string, string> = {
 };
 
 const MyTasks = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -66,6 +65,7 @@ const MyTasks = () => {
   const [page, setPage] = useState(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
   const { tasks, total, pages, stats, loading, updateStatus, deleteTask } = useTasks({
     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -134,7 +134,7 @@ const MyTasks = () => {
             <h1 className="text-3xl font-bold text-gray-900">Mening vazifalarim</h1>
             <p className="text-gray-600 mt-1">Barcha vazifalar va topshiriqlar</p>
           </div>
-          <Button onClick={() => navigate("/tasks/add")}>
+          <Button onClick={() => setIsAddTaskOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Yangi vazifa
           </Button>
@@ -325,6 +325,9 @@ const MyTasks = () => {
           )}
         </Card>
       </div>
+
+      {/* Add Task Modal */}
+      <AddTaskModal isOpen={isAddTaskOpen} onClose={() => setIsAddTaskOpen(false)} />
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

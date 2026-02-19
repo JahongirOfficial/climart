@@ -164,7 +164,7 @@ export default function Employees() {
     });
   };
 
-  if (isLoading) return <Layout><LoadingSpinner /></Layout>;
+  if (isLoading && employees.length === 0) return <Layout><LoadingSpinner /></Layout>;
   if (error) return <Layout><ErrorCard message="Xodimlarni yuklashda xatolik" /></Layout>;
 
   return (

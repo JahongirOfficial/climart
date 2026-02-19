@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 
 interface InventoryItem {
   product: string;
@@ -43,8 +43,7 @@ export const useInventory = () => {
       if (!response.ok) throw new Error('Failed to fetch inventories');
       return response.json();
     },
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
+    placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({

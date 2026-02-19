@@ -14,19 +14,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useSupplierInvoices } from "@/hooks/useSupplierInvoices";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 const ReceivedInvoices = () => {
   const { invoices, loading, error, refetch } = useSupplierInvoices();
   const [searchTerm, setSearchTerm] = useState("");
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('uz-UZ');
-  };
 
   const getStatusColor = (status: string) => {
     if (status === 'paid') return 'bg-green-50 text-green-700 border-green-300';
@@ -79,7 +71,7 @@ const ReceivedInvoices = () => {
                 <h3 className="font-semibold text-red-900">Xatolik yuz berdi</h3>
                 <p className="text-red-700">{error}</p>
                 <Button 
-                  onClick={refetch} 
+                  onClick={() => refetch()}
                   className="mt-3 bg-red-600 hover:bg-red-700"
                   size="sm"
                 >

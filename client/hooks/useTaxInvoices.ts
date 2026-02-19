@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 interface TaxInvoiceItem {
   product: any;
@@ -31,101 +32,43 @@ interface TaxInvoice {
 }
 
 export const useTaxInvoices = () => {
-  const [invoices, setInvoices] = useState<TaxInvoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchInvoices = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/tax-invoices');
-      if (!response.ok) throw new Error('Failed to fetch tax invoices');
-      const data = await response.json();
-      setInvoices(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: invoices = [], isLoading: loading, error, refetch } = useQuery<TaxInvoice[]>({
+    queryKey: ['tax-invoices'],
+    queryFn: () => api.get<TaxInvoice[]>('/api/tax-invoices'),
+    placeholderData: keepPreviousData,
+  });
 
-  const createInvoice = async (invoiceData: Partial<TaxInvoice>) => {
-    try {
-      const response = await fetch('/api/tax-invoices', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(invoiceData),
-      });
+  const createMutation = useMutation({
+    mutationFn: (data: Partial<TaxInvoice>) => api.post<TaxInvoice>('/api/tax-invoices', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tax-invoices'] });
+    },
+  });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create tax invoice');
-      }
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.put(`/api/tax-invoices/${id}/status`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tax-invoices'] });
+    },
+  });
 
-      const newInvoice = await response.json();
-      await fetchInvoices();
-      return newInvoice;
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const updateStatus = async (id: string, status: string) => {
-    try {
-      const response = await fetch(`/api/tax-invoices/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update status');
-      }
-
-      await fetchInvoices();
-      return await response.json();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  const deleteInvoice = async (id: string) => {
-    try {
-      const response = await fetch(`/api/tax-invoices/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete tax invoice');
-      }
-
-      await fetchInvoices();
-    } catch (err) {
-      throw err;
-    }
-  };
-
-  useEffect(() => {
-    fetchInvoices();
-  }, []);
-
-  const refetch = () => {
-    fetchInvoices();
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/tax-invoices/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tax-invoices'] });
+    },
+  });
 
   return {
     invoices,
     loading,
-    error,
+    error: error instanceof Error ? error.message : null,
     refetch,
-    createInvoice,
-    updateStatus,
-    deleteInvoice,
+    createInvoice: createMutation.mutateAsync,
+    updateStatus: (id: string, status: string) => statusMutation.mutateAsync({ id, status }),
+    deleteInvoice: deleteMutation.mutateAsync,
   };
 };

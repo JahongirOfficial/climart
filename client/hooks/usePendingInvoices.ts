@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { PendingInvoiceResponse } from '@shared/api';
 
 interface UsePendingInvoicesParams {
@@ -27,7 +27,7 @@ export const usePendingInvoices = (params?: UsePendingInvoicesParams) => {
       if (!response.ok) throw new Error('Failed to fetch pending invoices');
       return response.json();
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    placeholderData: keepPreviousData,
   });
 
   return {
