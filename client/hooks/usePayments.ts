@@ -16,7 +16,6 @@ export interface Payment {
   accountNumber?: string;
   paymentMethod: 'cash' | 'bank_transfer' | 'card' | 'other';
   purpose: string;
-  category?: string;
   linkedDocument?: string;
   linkedDocumentType?: string;
   linkedDocumentNumber?: string;
@@ -44,7 +43,6 @@ interface UsePaymentsParams {
   startDate?: string;
   endDate?: string;
   partner?: string;
-  category?: string;
   status?: 'draft' | 'confirmed' | 'cancelled';
 }
 
@@ -61,7 +59,6 @@ export const usePayments = (params?: UsePaymentsParams) => {
         if (params.startDate) searchParams.append('startDate', params.startDate);
         if (params.endDate) searchParams.append('endDate', params.endDate);
         if (params.partner) searchParams.append('partner', params.partner);
-        if (params.category) searchParams.append('category', params.category);
         if (params.status) searchParams.append('status', params.status);
         
         const queryString = searchParams.toString();

@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useState, useMemo, memo, useCallback } from "react";
 import { usePayments } from "@/hooks/usePayments";
+import { api } from "@/lib/api";
 import { usePartners } from "@/hooks/usePartners";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -80,7 +81,7 @@ const PaymentRow = memo(({
           {payment.type === 'transfer' ? (
             <span>{payment.fromAccount === 'cash' ? 'Kassa' : 'Bank'} → {payment.toAccount === 'cash' ? 'Kassa' : 'Bank'}</span>
           ) : (
-            <span>{payment.category || '-'}</span>
+            <span>{payment.paymentMethod === 'cash' ? 'Naqd' : payment.paymentMethod === 'card' ? 'Karta' : payment.paymentMethod === 'click' ? 'Click' : 'Bank'}</span>
           )}
         </div>
       </td>
@@ -176,11 +177,7 @@ const Payments = () => {
     if (!selectedPayment) return;
 
     try {
-      const response = await fetch(`/api/payments/${selectedPayment}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete payment');
+      await api.delete(`/api/payments/${selectedPayment}`);
 
       toast({
         title: "To'lov o'chirildi",
@@ -202,11 +199,7 @@ const Payments = () => {
 
   const handleConfirm = useCallback(async (id: string) => {
     try {
-      const response = await fetch(`/api/payments/${id}/confirm`, {
-        method: 'PATCH',
-      });
-
-      if (!response.ok) throw new Error('Failed to confirm payment');
+      await api.patch(`/api/payments/${id}/confirm`);
 
       toast({
         title: "To'lov tasdiqlandi",
@@ -225,11 +218,7 @@ const Payments = () => {
 
   const handleCancel = useCallback(async (id: string) => {
     try {
-      const response = await fetch(`/api/payments/${id}/cancel`, {
-        method: 'PATCH',
-      });
-
-      if (!response.ok) throw new Error('Failed to cancel payment');
+      await api.patch(`/api/payments/${id}/cancel`);
 
       toast({
         title: "To'lov bekor qilindi",
@@ -248,13 +237,7 @@ const Payments = () => {
 
   const handleCreatePayment = useCallback(async (data: any) => {
     try {
-      const response = await fetch('/api/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) throw new Error('Failed to create payment');
+      await api.post('/api/payments', data);
 
       toast({
         title: "To'lov yaratildi",
@@ -367,7 +350,7 @@ const Payments = () => {
             <ExportButton
               data={filteredPayments}
               filename="tolovlar"
-              fieldsToInclude={["paymentNumber", "paymentDate", "type", "partnerName", "purpose", "category", "account", "amount", "status"]}
+              fieldsToInclude={["paymentNumber", "paymentDate", "type", "partnerName", "purpose", "account", "amount", "status"]}
             />
           </div>
         </div>

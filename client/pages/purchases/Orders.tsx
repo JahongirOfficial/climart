@@ -537,7 +537,6 @@ const Orders = () => {
               partnerName: paymentOrder.supplierName,
               amount: paymentOrder.totalAmount,
               purpose: `To'lov: ${paymentOrder.orderNumber}`,
-              category: 'purchase'
             }}
           />
         )}

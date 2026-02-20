@@ -19,6 +19,7 @@ interface PurchaseOrderModalProps {
 }
 
 interface OrderItem {
+  product?: string;
   productName: string;
   quantity: number;
   price: number;
@@ -38,7 +39,7 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
   });
 
   const [items, setItems] = useState<OrderItem[]>([
-    { productName: "", quantity: 1, price: 0, total: 0 }
+    { product: undefined, productName: "", quantity: 1, price: 0, total: 0 }
   ]);
 
   const [saving, setSaving] = useState(false);
@@ -52,6 +53,7 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
         notes: order.notes || ""
       });
       setItems(order.items.map(item => ({
+        product: item.product as string | undefined,
         productName: item.productName,
         quantity: item.quantity,
         price: item.price,
@@ -64,7 +66,7 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
         orderDate: new Date().toISOString().split('T')[0],
         notes: ""
       });
-      setItems([{ productName: "", quantity: 1, price: 0, total: 0 }]);
+      setItems([{ product: undefined, productName: "", quantity: 1, price: 0, total: 0 }]);
     }
   }, [order, open]);
 
@@ -93,6 +95,7 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
     const newItems = [...items];
     newItems[index] = {
       ...newItems[index],
+      product: product?._id,
       productName: productName,
       price: product ? product.costPrice : 0
     };
@@ -101,7 +104,7 @@ export const PurchaseOrderModal = ({ open, onClose, onSave, order }: PurchaseOrd
   };
 
   const addItem = () => {
-    setItems([...items, { productName: "", quantity: 1, price: 0, total: 0 }]);
+    setItems([...items, { product: undefined, productName: "", quantity: 1, price: 0, total: 0 }]);
   };
 
   const removeItem = (index: number) => {

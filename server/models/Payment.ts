@@ -18,12 +18,11 @@ export interface IPayment extends Document {
   accountNumber?: string; // Bank hisob raqami
   
   // Payment method
-  paymentMethod: 'cash' | 'bank_transfer' | 'card' | 'other';
+  paymentMethod: 'cash' | 'bank_transfer' | 'card' | 'click' | 'other';
   
-  // Purpose and category
+  // Purpose
   purpose: string; // To'lov maqsadi
-  category?: string; // Xarajat moddasi (ijara, maosh, marketing, etc.)
-  
+
   // Linked documents
   linkedDocument?: mongoose.Types.ObjectId; // Bog'langan hujjat (invoice, order, etc.)
   linkedDocumentType?: string; // Hujjat turi
@@ -87,16 +86,12 @@ const PaymentSchema: Schema = new Schema(
     paymentMethod: {
       type: String,
       required: true,
-      enum: ['cash', 'bank_transfer', 'card', 'other'],
+      enum: ['cash', 'bank_transfer', 'card', 'click', 'other'],
       default: 'bank_transfer',
     },
     purpose: {
       type: String,
       required: true,
-      trim: true,
-    },
-    category: {
-      type: String,
       trim: true,
     },
     linkedDocument: {
@@ -141,6 +136,5 @@ PaymentSchema.index({ paymentDate: 1 });
 PaymentSchema.index({ partner: 1 });
 PaymentSchema.index({ status: 1 });
 PaymentSchema.index({ account: 1 });
-PaymentSchema.index({ category: 1 });
 
 export default mongoose.models.Payment || mongoose.model<IPayment>('Payment', PaymentSchema);

@@ -27,6 +27,7 @@ import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { ExportButton } from "@/components/ExportButton";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { api } from "@/lib/api";
 
 const Receipts = () => {
   const [dateFilter, setDateFilter] = useState<{ startDate: string; endDate: string }>({
@@ -99,16 +100,7 @@ const Receipts = () => {
 
   const handleSaveReturn = async (returnData: any) => {
     try {
-      const response = await fetch('/api/supplier-returns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(returnData)
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Qaytarishni saqlashda xatolik');
-      }
+      await api.post('/api/supplier-returns', returnData);
 
       showSuccess('Tovar qaytarish muvaffaqiyatli yaratildi!');
       refetch();

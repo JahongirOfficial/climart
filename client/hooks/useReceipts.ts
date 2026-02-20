@@ -13,43 +13,22 @@ export const useReceipts = (filters?: { startDate?: string; endDate?: string }) 
   });
 
   const createMutation = useMutation({
-    mutationFn: async (receiptData: Partial<Receipt>) => {
-      const response = await fetch('/api/receipts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(receiptData),
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || 'Failed to create receipt');
-      }
-      return response.json();
-    },
+    mutationFn: (receiptData: Partial<Receipt>) => api.post<Receipt>('/api/receipts', receiptData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receipts'] });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/receipts/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete receipt');
-    },
+    mutationFn: (id: string) => api.delete(`/api/receipts/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receipts'] });
     },
   });
 
   const createReturnMutation = useMutation({
-    mutationFn: async ({ receiptId, returnData }: { receiptId: string; returnData: any }) => {
-      const response = await fetch(`/api/supplier-returns/from-receipt/${receiptId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(returnData),
-      });
-      if (!response.ok) throw new Error('Failed to create return');
-      return response.json();
-    },
+    mutationFn: ({ receiptId, returnData }: { receiptId: string; returnData: any }) =>
+      api.post(`/api/supplier-returns/from-receipt/${receiptId}`, returnData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receipts'] });
     },

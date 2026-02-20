@@ -101,13 +101,18 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
       // Supplier invoice yaratish
       const invoice = new SupplierInvoice({
         invoiceNumber,
-        supplier: order.supplier,
+        supplier: order.supplier._id || order.supplier,
         supplierName: order.supplierName,
-        order: order._id,
+        purchaseOrder: order._id,
         orderNumber: order.orderNumber,
         invoiceDate: new Date(),
         dueDate,
-        items: order.items,
+        items: order.items.map((item: any) => ({
+          productName: item.productName,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.total,
+        })),
         totalAmount: order.totalAmount,
         paidAmount: 0,
         status: 'unpaid',
@@ -159,35 +164,49 @@ router.post('/:id/receive', async (req: Request, res: Response) => {
     const Product = require('../models/Product').default;
     const SupplierInvoice = require('../models/SupplierInvoice').default;
 
+    // Import Warehouse model for name lookup
+    const Warehouse = require('../models/Warehouse').default;
+
     // Update product quantities in each warehouse
     for (const dist of distributions) {
+      // Get warehouse name if not provided
+      let warehouseName = dist.warehouseName;
+      if (!warehouseName) {
+        const wh = await Warehouse.findById(dist.warehouse);
+        warehouseName = wh?.name || '';
+      }
+
       for (const item of dist.items) {
-        const product = await Product.findById(item.product);
-        if (product) {
-          // Add quantity to product's total
-          product.quantity += item.quantity;
-          
-          // Update warehouse-specific quantity
-          const warehouseIndex = product.stockByWarehouse?.findIndex(
-            (wq: any) => wq.warehouse.toString() === dist.warehouse
-          );
-          
-          if (warehouseIndex !== undefined && warehouseIndex >= 0) {
-            product.stockByWarehouse[warehouseIndex].quantity += item.quantity;
-          } else {
-            if (!product.stockByWarehouse) {
-              product.stockByWarehouse = [];
-            }
-            product.stockByWarehouse.push({
-              warehouse: dist.warehouse,
-              warehouseName: dist.warehouseName,
-              quantity: item.quantity,
-              reserved: 0
-            });
-          }
-          
-          await product.save();
+        // Find product by ID or by name
+        let product = item.product ? await Product.findById(item.product) : null;
+        if (!product && item.productName) {
+          product = await Product.findOne({ name: item.productName });
         }
+        if (!product) continue;
+
+        // Add quantity to product's total
+        product.quantity += item.quantity;
+
+        // Update warehouse-specific quantity
+        const warehouseIndex = product.stockByWarehouse?.findIndex(
+          (wq: any) => wq.warehouse.toString() === dist.warehouse
+        );
+
+        if (warehouseIndex !== undefined && warehouseIndex >= 0) {
+          product.stockByWarehouse[warehouseIndex].quantity += item.quantity;
+        } else {
+          if (!product.stockByWarehouse) {
+            product.stockByWarehouse = [];
+          }
+          product.stockByWarehouse.push({
+            warehouse: dist.warehouse,
+            warehouseName,
+            quantity: item.quantity,
+            reserved: 0
+          });
+        }
+
+        await product.save();
       }
     }
 
@@ -195,30 +214,41 @@ router.post('/:id/receive', async (req: Request, res: Response) => {
     order.status = 'received';
     await order.save();
 
-    // Create supplier invoice
-    const invoiceNumber = await generateDocNumber('INV-S', { padWidth: 4 });
-    
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 30);
-    
-    const invoice = new SupplierInvoice({
-      invoiceNumber,
-      supplier: order.supplier,
-      supplierName: order.supplierName,
-      order: order._id,
-      orderNumber: order.orderNumber,
-      invoiceDate: new Date(),
-      dueDate,
-      items: order.items,
-      totalAmount: order.totalAmount,
-      paidAmount: 0,
-      status: 'unpaid',
-      notes: `Avtomatik yaratilgan: ${order.orderNumber} buyurtmasi qabul qilindi`
-    });
-    
-    await invoice.save();
+    // Create supplier invoice (auxiliary - should not block success)
+    let invoice = null;
+    try {
+      const invoiceNumber = await generateDocNumber('INV-S', { padWidth: 4 });
 
-    res.json({ 
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 30);
+
+      const supplierId = order.supplier?._id || order.supplier;
+
+      invoice = new SupplierInvoice({
+        invoiceNumber,
+        supplier: supplierId,
+        supplierName: order.supplierName,
+        purchaseOrder: order._id,
+        orderNumber: order.orderNumber,
+        invoiceDate: new Date(),
+        dueDate,
+        items: order.items.map((item: any) => ({
+          productName: item.productName,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.total,
+        })),
+        totalAmount: order.totalAmount,
+        paidAmount: 0,
+        notes: `Avtomatik yaratilgan: ${order.orderNumber} buyurtmasi qabul qilindi`
+      });
+
+      await invoice.save();
+    } catch (invoiceError) {
+      console.error('SupplierInvoice yaratishda xatolik (buyurtma qabul qilindi):', invoiceError);
+    }
+
+    res.json({
       message: 'Order received successfully',
       order,
       invoice

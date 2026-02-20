@@ -13,14 +13,13 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Get all payments with filters
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { type, account, startDate, endDate, partner, category, status } = req.query;
-    
+    const { type, account, startDate, endDate, partner, status } = req.query;
+
     const filter: any = {};
-    
+
     if (type) filter.type = type;
     if (account) filter.account = account;
     if (partner) filter.partner = partner;
-    if (category) filter.category = category;
     if (status) filter.status = status;
     
     if (startDate && endDate) {
@@ -102,8 +101,8 @@ router.post('/', async (req: Request, res: Response) => {
       const SupplierInvoice = require('../models/SupplierInvoice').default;
       
       // Purchase order ga tegishli invoice ni topish
-      const invoice = await SupplierInvoice.findOne({ 
-        order: req.body.linkedDocument 
+      const invoice = await SupplierInvoice.findOne({
+        purchaseOrder: req.body.linkedDocument
       });
       
       if (invoice) {

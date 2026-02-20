@@ -32,22 +32,8 @@ interface CreatePaymentModalProps {
     partnerName?: string;
     amount?: number;
     purpose?: string;
-    category?: string;
   };
 }
-
-const EXPENSE_CATEGORIES = [
-  { value: 'rent', label: 'Ijara' },
-  { value: 'salary', label: 'Ish haqi' },
-  { value: 'utilities', label: 'Kommunal xizmatlar' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'office_supplies', label: 'Ofis jihozlari' },
-  { value: 'transport', label: 'Transport' },
-  { value: 'maintenance', label: 'Ta\'mirlash' },
-  { value: 'taxes', label: 'Soliqlar' },
-  { value: 'insurance', label: 'Sug\'urta' },
-  { value: 'other', label: 'Boshqa' },
-];
 
 export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData }: CreatePaymentModalProps) {
   const { showWarning, showError } = useModal();
@@ -60,7 +46,6 @@ export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData 
     partner: '',
     paymentMethod: 'cash' as 'cash' | 'click' | 'bank_transfer' | 'card',
     purpose: '',
-    category: '',
     fromAccount: 'cash' as 'cash' | 'bank',
     toAccount: 'bank' as 'cash' | 'bank',
     notes: '',
@@ -74,7 +59,6 @@ export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData 
         partner: prefilledData?.partner || '',
         paymentMethod: 'cash',
         purpose: prefilledData?.purpose || '',
-        category: prefilledData?.category || '',
         fromAccount: 'cash',
         toAccount: 'bank',
         notes: '',
@@ -113,9 +97,12 @@ export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData 
       if (type === 'transfer') {
         paymentData.fromAccount = formData.fromAccount;
         paymentData.toAccount = formData.toAccount;
+        paymentData.account = formData.fromAccount;
       } else {
         paymentData.paymentMethod = formData.paymentMethod;
-        
+        // account maydonini paymentMethod ga qarab belgilash
+        paymentData.account = formData.paymentMethod === 'cash' ? 'cash' : 'bank';
+
         if (formData.partner && formData.partner !== "none") {
           paymentData.partner = formData.partner;
           const partner = partners.find(p => p._id === formData.partner);
@@ -124,9 +111,6 @@ export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData 
           }
         }
 
-        if (type === 'outgoing' && formData.category && formData.category !== "none") {
-          paymentData.category = formData.category;
-        }
       }
 
       await onSave(paymentData);
@@ -285,28 +269,6 @@ export function CreatePaymentModal({ open, onClose, onSave, type, prefilledData 
                 </div>
               </div>
 
-              {/* Category for outgoing payments */}
-              {type === 'outgoing' && (
-                <div className="space-y-2">
-                  <Label htmlFor="category">Xarajat moddasi</Label>
-                  <Select
-                    value={formData.category || "none"}
-                    onValueChange={(value) => setFormData({ ...formData, category: value === "none" ? "" : value })}
-                  >
-                    <SelectTrigger id="category">
-                      <SelectValue placeholder="Kategoriyani tanlang" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Tanlanmagan</SelectItem>
-                      {EXPENSE_CATEGORIES.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>
-                          {cat.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </>
           )}
 
