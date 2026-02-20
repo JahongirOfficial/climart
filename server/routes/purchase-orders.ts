@@ -1,5 +1,8 @@
 import { Router, Request, Response } from 'express';
 import PurchaseOrder from '../models/PurchaseOrder';
+import Product from '../models/Product';
+import Warehouse from '../models/Warehouse';
+import SupplierInvoice from '../models/SupplierInvoice';
 import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
@@ -89,8 +92,6 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
 
     // Agar status "received" ga o'zgartirilsa, avtomatik supplier invoice yaratish
     if (status === 'received' && order.status !== 'received') {
-      const SupplierInvoice = require('../models/SupplierInvoice').default;
-      
       // Invoice raqamini generatsiya qilish
       const invoiceNumber = await generateDocNumber('INV-S', { padWidth: 4 });
       
@@ -159,13 +160,6 @@ router.post('/:id/receive', async (req: Request, res: Response) => {
     if (order.status === 'received') {
       return res.status(400).json({ message: 'Order already received' });
     }
-
-    // Import models
-    const Product = require('../models/Product').default;
-    const SupplierInvoice = require('../models/SupplierInvoice').default;
-
-    // Import Warehouse model for name lookup
-    const Warehouse = require('../models/Warehouse').default;
 
     // Update product quantities in each warehouse
     for (const dist of distributions) {

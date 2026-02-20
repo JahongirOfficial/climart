@@ -3,6 +3,7 @@ import Receipt from '../models/Receipt';
 import Product from '../models/Product';
 import PurchaseOrder from '../models/PurchaseOrder';
 import mongoose from 'mongoose';
+import { correctPendingInvoices } from '../utils/inventory';
 import { logAudit } from '../utils/auditLogger';
 import { generateDocNumber } from '../utils/documentNumber';
 
@@ -102,7 +103,6 @@ router.post('/', async (req: Request, res: Response) => {
       await product.save({ session });
 
       // Auto-correct negative sales
-      const { correctPendingInvoices } = require('../utils/inventory');
       await correctPendingInvoices(item.product.toString(), item.costPrice, session);
     }
 
@@ -210,7 +210,6 @@ router.post('/from-order/:orderId', async (req: Request, res: Response) => {
         await product.save({ session });
 
         // Auto-correct negative sales
-        const { correctPendingInvoices } = require('../utils/inventory');
         await correctPendingInvoices(item.product.toString(), item.costPrice, session);
       }
     }

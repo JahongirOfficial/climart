@@ -4,6 +4,7 @@ import Partner from '../models/Partner';
 import multer from 'multer';
 import csv from 'csv-parser';
 import { Readable } from 'stream';
+import SupplierInvoice from '../models/SupplierInvoice';
 import { logAudit } from '../utils/auditLogger';
 import { generateDocNumber } from '../utils/documentNumber';
 
@@ -98,8 +99,6 @@ router.post('/', async (req: Request, res: Response) => {
     
     // Agar to'lov purchase order bilan bog'langan bo'lsa, supplier invoice ni yangilash
     if (req.body.linkedDocumentType === 'PurchaseOrder' && req.body.linkedDocument) {
-      const SupplierInvoice = require('../models/SupplierInvoice').default;
-      
       // Purchase order ga tegishli invoice ni topish
       const invoice = await SupplierInvoice.findOne({
         purchaseOrder: req.body.linkedDocument
