@@ -19,6 +19,8 @@ export interface ICustomerOrder extends Document {
   totalAmount: number;
   paidAmount: number;
   shippedAmount: number;
+  warehouse?: mongoose.Types.ObjectId;
+  warehouseName?: string;
   reserved: boolean;
   notes?: string;
   createdAt: Date;
@@ -96,6 +98,14 @@ const CustomerOrderSchema: Schema = new Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+    warehouse: {
+      type: Schema.Types.ObjectId,
+      ref: 'Warehouse',
+    },
+    warehouseName: {
+      type: String,
+      trim: true,
     },
     reserved: {
       type: Boolean,

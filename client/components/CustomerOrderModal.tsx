@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Combobox } from "@/components/ui/combobox";
 import { usePartners } from "@/hooks/usePartners";
 import { useProducts } from "@/hooks/useProducts";
+import { useWarehouses } from "@/hooks/useWarehouses";
 import { CustomerOrder } from "@shared/api";
 import { Plus, Trash2, Loader2, UserPlus, Printer } from "lucide-react";
 import { PartnerModal } from "@/components/PartnerModal";
@@ -30,6 +31,7 @@ interface OrderItem {
 export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrderModalProps) => {
   const { partners, loading: partnersLoading, refetch: refetchPartners } = usePartners('customer');
   const { products } = useProducts();
+  const { warehouses } = useWarehouses();
   const { showWarning, showError } = useModal();
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
 
@@ -38,6 +40,8 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
     customerName: "",
     orderDate: new Date().toISOString().split('T')[0],
     deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    warehouse: "",
+    warehouseName: "",
     notes: ""
   });
 
@@ -53,10 +57,12 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
   useEffect(() => {
     if (order) {
       setFormData({
-        customer: typeof order.customer === 'string' ? order.customer : order.customer._id,
+        customer: typeof order.customer === 'string' ? order.customer : order.customer?._id || '',
         customerName: order.customerName,
         orderDate: new Date(order.orderDate).toISOString().split('T')[0],
         deliveryDate: new Date(order.deliveryDate).toISOString().split('T')[0],
+        warehouse: typeof order.warehouse === 'string' ? order.warehouse : order.warehouse?._id || '',
+        warehouseName: order.warehouseName || '',
         notes: order.notes || ""
       });
       setItems(order.items.map(item => ({
@@ -72,6 +78,8 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
         customerName: "",
         orderDate: new Date().toISOString().split('T')[0],
         deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        warehouse: "",
+        warehouseName: "",
         notes: ""
       });
       setItems([{ product: "", productName: "", quantity: 1, price: 0, total: 0 }]);
@@ -177,6 +185,12 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
       // Remove customer field for regular customers
       if (formData.customer === 'regular') {
         delete orderData.customer;
+      }
+
+      // Remove empty warehouse fields
+      if (!formData.warehouse) {
+        delete orderData.warehouse;
+        delete orderData.warehouseName;
       }
 
       await onSave(orderData);
@@ -681,15 +695,44 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="deliveryDate">Yetkazib berish sanasi *</Label>
-              <Input
-                id="deliveryDate"
-                type="date"
-                value={formData.deliveryDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: e.target.value }))}
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="deliveryDate">Yetkazib berish sanasi *</Label>
+                <Input
+                  id="deliveryDate"
+                  type="date"
+                  value={formData.deliveryDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="warehouse">Ombor</Label>
+                <select
+                  id="warehouse"
+                  value={formData.warehouse}
+                  onChange={(e) => {
+                    const wh = warehouses.find(w => w._id === e.target.value);
+                    setFormData(prev => ({
+                      ...prev,
+                      warehouse: e.target.value,
+                      warehouseName: wh?.name || ''
+                    }));
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="">Tanlanmagan</option>
+                  {warehouses.map(wh => (
+                    <option key={wh._id} value={wh._id}>
+                      {wh.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ombor tanlansa, avtomatik hisob-faktura va yuborish yaratiladi
+                </p>
+              </div>
             </div>
 
             <div>

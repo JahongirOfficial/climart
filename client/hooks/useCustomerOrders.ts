@@ -12,9 +12,12 @@ export const useCustomerOrders = () => {
   });
 
   const createMutation = useMutation({
-    mutationFn: (orderData: Partial<CustomerOrder>) => api.post<CustomerOrder>('/api/customer-orders', orderData),
+    mutationFn: (orderData: Partial<CustomerOrder>) => api.post<any>('/api/customer-orders', orderData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     },
   });
 

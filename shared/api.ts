@@ -154,6 +154,8 @@ export interface CustomerOrder {
   totalAmount: number;
   paidAmount: number;
   shippedAmount: number;
+  warehouse?: string | PopulatedRef;
+  warehouseName?: string;
   reserved: boolean;
   notes?: string;
   createdAt: string;
@@ -417,6 +419,8 @@ export interface CustomerInvoice {
   shippedAmount: number;
   notes?: string;
   isMinusCorrection?: boolean;
+  customerOrder?: string;
+  orderNumber?: string;
   createdAt: string;
   updatedAt: string;
 }

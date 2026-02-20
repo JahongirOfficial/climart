@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import CustomerOrder from '../models/CustomerOrder';
+import CustomerInvoice from '../models/CustomerInvoice';
+import Shipment from '../models/Shipment';
 import Product from '../models/Product';
+import Partner from '../models/Partner';
 import mongoose from 'mongoose';
 import { generateDocNumber } from '../utils/documentNumber';
 
@@ -34,7 +37,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Create new customer order (no inventory validation - just creates order)
+// Create new customer order (+ auto-create invoice & shipment if registered customer + warehouse)
 router.post('/', async (req: Request, res: Response) => {
   try {
     // Generate unique order number
@@ -47,7 +50,150 @@ router.post('/', async (req: Request, res: Response) => {
     });
 
     await order.save();
-    res.status(201).json(order);
+
+    const response: any = { order };
+
+    // Auto-create CustomerInvoice + Shipment if registered customer AND warehouse selected
+    const isRegisteredCustomer = req.body.customer && req.body.customer !== 'regular';
+    const hasWarehouse = req.body.warehouse;
+
+    if (isRegisteredCustomer && hasWarehouse) {
+      try {
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+          // Fetch partner for address
+          const partner = await Partner.findById(req.body.customer).session(session);
+
+          // --- Auto-create CustomerInvoice ---
+          const invoiceNumber = await generateDocNumber('CF');
+
+          // Prepare invoice items with costPrice and warehouse info
+          const invoiceItems = [];
+          for (const item of req.body.items) {
+            const product = await Product.findById(item.product).session(session);
+            const costPrice = product?.costPrice || 0;
+
+            // Check warehouse stock for costPricePending flag
+            const warehouseStock = product?.stockByWarehouse?.find(
+              (sw: any) => sw.warehouse.toString() === req.body.warehouse.toString()
+            );
+            const availableQty = warehouseStock ? warehouseStock.quantity : 0;
+            const isMinus = availableQty < item.quantity;
+
+            invoiceItems.push({
+              product: item.product,
+              productName: item.productName,
+              quantity: item.quantity,
+              sellingPrice: item.price,
+              costPrice,
+              discount: 0,
+              discountAmount: 0,
+              total: item.total,
+              warehouse: req.body.warehouse,
+              warehouseName: req.body.warehouseName || '',
+              costPricePending: isMinus,
+            });
+          }
+
+          const totalAmount = invoiceItems.reduce((sum, it) => sum + it.total, 0);
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + 30);
+
+          const invoice = new CustomerInvoice({
+            invoiceNumber,
+            customer: req.body.customer,
+            customerName: req.body.customerName,
+            warehouse: req.body.warehouse,
+            warehouseName: req.body.warehouseName || '',
+            invoiceDate: new Date(),
+            dueDate,
+            status: 'unpaid',
+            shippedStatus: 'not_shipped',
+            items: invoiceItems,
+            totalAmount,
+            discountTotal: 0,
+            finalAmount: totalAmount,
+            paidAmount: 0,
+            shippedAmount: 0,
+            customerOrder: order._id,
+            orderNumber: order.orderNumber,
+            createdBy: req.user?.userId,
+          });
+
+          await invoice.save({ session });
+
+          // Deduct inventory (global + warehouse-specific)
+          for (const item of invoiceItems) {
+            await Product.findByIdAndUpdate(
+              item.product,
+              { $inc: { quantity: -item.quantity } },
+              { session }
+            );
+
+            await Product.findOneAndUpdate(
+              {
+                _id: item.product,
+                'stockByWarehouse.warehouse': item.warehouse,
+              },
+              { $inc: { 'stockByWarehouse.$.quantity': -item.quantity } },
+              { session }
+            );
+          }
+
+          response.autoInvoice = invoice;
+
+          // --- Auto-create Shipment (tracking only, NO inventory deduction) ---
+          const shipmentNumber = await generateDocNumber('SH');
+
+          const shipmentItems = req.body.items.map((item: any) => ({
+            product: item.product,
+            productName: item.productName,
+            quantity: item.quantity,
+            price: item.price,
+            total: item.total,
+          }));
+
+          const deliveryAddress =
+            partner?.physicalAddress || partner?.legalAddress || 'Manzil ko\'rsatilmagan';
+
+          const shipment = new Shipment({
+            shipmentNumber,
+            customer: req.body.customer,
+            customerName: req.body.customerName,
+            order: order._id,
+            orderNumber: order.orderNumber,
+            shipmentDate: new Date(),
+            warehouse: req.body.warehouse,
+            warehouseName: req.body.warehouseName || '',
+            status: 'pending',
+            items: shipmentItems,
+            totalAmount,
+            paidAmount: 0,
+            deliveryAddress,
+          });
+
+          await shipment.save({ session });
+
+          response.autoShipment = shipment;
+
+          await session.commitTransaction();
+          session.endSession();
+        } catch (autoErr) {
+          await session.abortTransaction();
+          session.endSession();
+          // Non-blocking: order is already saved, log error but don't fail
+          console.error('Auto-creation failed (invoice/shipment):', autoErr);
+          response.autoCreationError = 'Avtomatik hisob-faktura/yuborish yaratishda xatolik';
+        }
+      } catch (sessionErr) {
+        console.error('Session creation failed:', sessionErr);
+        response.autoCreationError = 'Avtomatik yaratish sessiyasida xatolik';
+      }
+    }
+
+    res.status(201).json(response);
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Invalid data', error });
   }

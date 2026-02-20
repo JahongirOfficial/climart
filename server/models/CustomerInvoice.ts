@@ -33,6 +33,8 @@ export interface ICustomerInvoice extends Document {
   shippedAmount: number;
   notes?: string;
   isMinusCorrection?: boolean;
+  customerOrder?: mongoose.Types.ObjectId;
+  orderNumber?: string;
   createdBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -176,6 +178,14 @@ const CustomerInvoiceSchema: Schema = new Schema(
       type: Boolean,
       default: false,
     },
+    customerOrder: {
+      type: Schema.Types.ObjectId,
+      ref: 'CustomerOrder',
+    },
+    orderNumber: {
+      type: String,
+      trim: true,
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -194,5 +204,6 @@ CustomerInvoiceSchema.index({ invoiceDate: -1 }); // For descending sort
 CustomerInvoiceSchema.index({ dueDate: 1 });
 CustomerInvoiceSchema.index({ status: 1 });
 CustomerInvoiceSchema.index({ 'items.product': 1 }); // For product sales aggregation
+CustomerInvoiceSchema.index({ customerOrder: 1 });
 
 export default mongoose.models.CustomerInvoice || mongoose.model<ICustomerInvoice>('CustomerInvoice', CustomerInvoiceSchema);
