@@ -31,7 +31,7 @@ export const useCustomerOrders = () => {
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      api.put(`/api/customer-orders/${id}/status`, { status }),
+      api.patch(`/api/customer-orders/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer-orders'] });
     },
