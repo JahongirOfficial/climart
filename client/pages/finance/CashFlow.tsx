@@ -1,4 +1,5 @@
 import { Layout } from "@/components/Layout";
+import { api } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -64,15 +65,13 @@ const CashFlow = () => {
 
   const { data, isLoading } = useQuery<CashFlowData>({
     queryKey: ['cash-flow', dateFilter, groupBy],
-    queryFn: async () => {
+    queryFn: () => {
       const params = new URLSearchParams({
         startDate: dateFilter.startDate,
         endDate: dateFilter.endDate,
         groupBy,
       });
-      const response = await fetch(`/api/cash-flow?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch cash flow');
-      return response.json();
+      return api.get<CashFlowData>(`/api/cash-flow?${params}`);
     },
   });
 

@@ -1,4 +1,5 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 export interface AuditLogEntry {
   _id: string;
@@ -44,11 +45,7 @@ export function useAuditLog(filters: AuditFilters = {}) {
 
   const { data, isLoading, error, refetch } = useQuery<AuditResponse>({
     queryKey: ['audit-logs', queryString],
-    queryFn: async () => {
-      const res = await fetch(`/api/audit?${queryString}`);
-      if (!res.ok) throw new Error('Failed to fetch audit logs');
-      return res.json();
-    },
+    queryFn: () => api.get<AuditResponse>(`/api/audit?${queryString}`),
     placeholderData: keepPreviousData,
   });
 

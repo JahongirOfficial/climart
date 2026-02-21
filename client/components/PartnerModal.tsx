@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,16 +80,11 @@ export const PartnerModal = ({ open, onClose, onSuccess, partner, initialType = 
     setLoading(true);
 
     try {
-      const url = partner ? `/api/partners/${partner._id}` : "/api/partners";
-      const method = partner ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) throw new Error("Failed to save partner");
+      if (partner) {
+        await api.put(`/api/partners/${partner._id}`, formData);
+      } else {
+        await api.post("/api/partners", formData);
+      }
 
       toast({
         title: partner ? "Kontragent yangilandi" : "Kontragent yaratildi",

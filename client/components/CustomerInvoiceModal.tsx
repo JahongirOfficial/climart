@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import { useModal } from "@/contexts/ModalContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -110,10 +111,7 @@ export const CustomerInvoiceModal = ({ open, onClose, onSave, invoice }: Custome
     // Fetch credit limit info
     if (customerId) {
       try {
-        const res = await fetch(`/api/customer-invoices/credit-check/${customerId}`);
-        if (res.ok) {
-          setCreditInfo(await res.json());
-        }
+        setCreditInfo(await api.get(`/api/customer-invoices/credit-check/${customerId}`));
       } catch { setCreditInfo(null); }
     } else {
       setCreditInfo(null);

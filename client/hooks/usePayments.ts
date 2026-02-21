@@ -1,4 +1,5 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 export interface Payment {
   _id: string;
@@ -49,9 +50,9 @@ interface UsePaymentsParams {
 export const usePayments = (params?: UsePaymentsParams) => {
   const { data, isLoading, error, refetch } = useQuery<PaymentsResponse>({
     queryKey: ['payments', params],
-    queryFn: async () => {
+    queryFn: () => {
       let url = '/api/payments';
-      
+
       if (params) {
         const searchParams = new URLSearchParams();
         if (params.type) searchParams.append('type', params.type);
@@ -60,14 +61,12 @@ export const usePayments = (params?: UsePaymentsParams) => {
         if (params.endDate) searchParams.append('endDate', params.endDate);
         if (params.partner) searchParams.append('partner', params.partner);
         if (params.status) searchParams.append('status', params.status);
-        
+
         const queryString = searchParams.toString();
         if (queryString) url += `?${queryString}`;
       }
-      
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch payments');
-      return response.json();
+
+      return api.get<PaymentsResponse>(url);
     },
     placeholderData: keepPreviousData,
   });

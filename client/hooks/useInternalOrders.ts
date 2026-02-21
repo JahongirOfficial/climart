@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 interface InternalOrderItem {
   product: string;
@@ -36,52 +37,27 @@ export const useInternalOrders = () => {
 
   const { data: orders = [], isLoading: loading, error, refetch } = useQuery<InternalOrder[]>({
     queryKey: ['internal-orders'],
-    queryFn: async () => {
-      const response = await fetch('/api/internal-orders');
-      if (!response.ok) throw new Error('Failed to fetch internal orders');
-      return response.json();
-    },
+    queryFn: () => api.get<InternalOrder[]>('/api/internal-orders'),
     placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: Partial<InternalOrder>) => {
-      const response = await fetch('/api/internal-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to create internal order');
-      return response.json();
-    },
+    mutationFn: (data: Partial<InternalOrder>) => api.post<InternalOrder>('/api/internal-orders', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['internal-orders'] });
     },
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const response = await fetch(`/api/internal-orders/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (!response.ok) throw new Error('Failed to update status');
-      return response.json();
-    },
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.patch(`/api/internal-orders/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['internal-orders'] });
     },
   });
 
   const createTransferMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/internal-orders/${id}/create-transfer`, {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to create transfer');
-      return response.json();
-    },
+    mutationFn: (id: string) => api.post(`/api/internal-orders/${id}/create-transfer`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['internal-orders'] });
       queryClient.invalidateQueries({ queryKey: ['warehouse-transfers'] });
@@ -89,10 +65,7 @@ export const useInternalOrders = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/internal-orders/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete internal order');
-    },
+    mutationFn: (id: string) => api.delete(`/api/internal-orders/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['internal-orders'] });
     },

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCustomerOrders } from "@/hooks/useCustomerOrders";
 import { useWarehouses } from "@/hooks/useWarehouses";
+import { useProducts } from "@/hooks/useProducts";
 import { Loader2, Plus, Trash2, AlertCircle, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -37,6 +38,7 @@ interface ShipmentItem {
 export const ShipmentModal = ({ open, onClose, onSave, orderId }: ShipmentModalProps) => {
   const { orders, loading: ordersLoading } = useCustomerOrders();
   const { warehouses, loading: warehousesLoading } = useWarehouses();
+  const { products } = useProducts();
   const { showWarning, showError } = useModal();
 
   const [formData, setFormData] = useState({
@@ -142,9 +144,12 @@ export const ShipmentModal = ({ open, onClose, onSave, orderId }: ShipmentModalP
         const warehouse = warehouses.find(w => w._id === value);
         if (warehouse) {
           newItems[itemIndex].warehouses[warehouseIndex].warehouseName = warehouse.name;
-          // TODO: Fetch available stock for this product in this warehouse
-          // For now, set a placeholder
-          newItems[itemIndex].warehouses[warehouseIndex].availableStock = 0;
+          // Look up available stock from product's stockByWarehouse
+          const product = products.find(p => p._id === newItems[itemIndex].product);
+          const warehouseStock = product?.stockByWarehouse?.find(sw => sw.warehouse === value);
+          newItems[itemIndex].warehouses[warehouseIndex].availableStock = warehouseStock
+            ? warehouseStock.quantity - (warehouseStock.reserved || 0)
+            : 0;
         }
       }
       

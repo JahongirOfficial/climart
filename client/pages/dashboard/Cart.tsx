@@ -1,4 +1,5 @@
 import { Layout } from "@/components/Layout";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -152,23 +153,13 @@ const Cart = () => {
     } else {
       // Try API search
       try {
-        const res = await fetch(`/api/products/search/barcode/${encodeURIComponent(code)}`);
-        if (res.ok) {
-          const product = await res.json();
-          addToCart(product);
-          setBarcodeInput("");
-        } else {
-          toast({
-            title: "Topilmadi",
-            description: `"${code}" bilan mahsulot topilmadi`,
-            variant: "destructive",
-          });
-          setBarcodeInput("");
-        }
+        const product = await api.get(`/api/products/search/barcode/${encodeURIComponent(code)}`);
+        addToCart(product as any);
+        setBarcodeInput("");
       } catch {
         toast({
-          title: "Xatolik",
-          description: "Mahsulot qidirishda xatolik yuz berdi",
+          title: "Topilmadi",
+          description: `"${code}" bilan mahsulot topilmadi`,
           variant: "destructive",
         });
         setBarcodeInput("");

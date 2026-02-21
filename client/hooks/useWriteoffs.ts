@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 interface WriteoffItem {
   product: string;
@@ -29,24 +30,12 @@ export const useWriteoffs = () => {
 
   const { data: writeoffs = [], isLoading: loading, error, refetch } = useQuery<Writeoff[]>({
     queryKey: ['writeoffs'],
-    queryFn: async () => {
-      const response = await fetch('/api/writeoffs');
-      if (!response.ok) throw new Error('Failed to fetch writeoffs');
-      return response.json();
-    },
+    queryFn: () => api.get<Writeoff[]>('/api/writeoffs'),
     placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: Partial<Writeoff>) => {
-      const response = await fetch('/api/writeoffs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to create writeoff');
-      return response.json();
-    },
+    mutationFn: (data: Partial<Writeoff>) => api.post<Writeoff>('/api/writeoffs', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['writeoffs'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -54,13 +43,7 @@ export const useWriteoffs = () => {
   });
 
   const confirmMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/writeoffs/${id}/confirm`, {
-        method: 'PATCH',
-      });
-      if (!response.ok) throw new Error('Failed to confirm writeoff');
-      return response.json();
-    },
+    mutationFn: (id: string) => api.patch(`/api/writeoffs/${id}/confirm`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['writeoffs'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -68,10 +51,7 @@ export const useWriteoffs = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/writeoffs/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete writeoff');
-    },
+    mutationFn: (id: string) => api.delete(`/api/writeoffs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['writeoffs'] });
     },

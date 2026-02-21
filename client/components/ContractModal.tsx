@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,16 +73,11 @@ export const ContractModal = ({ open, onClose, onSuccess, contract, preselectedP
         creditLimit: formData.creditLimit ? parseFloat(formData.creditLimit) : undefined,
       };
 
-      const url = contract ? `/api/contracts/${contract._id}` : "/api/contracts";
-      const method = contract ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Failed to save contract");
+      if (contract) {
+        await api.put(`/api/contracts/${contract._id}`, payload);
+      } else {
+        await api.post("/api/contracts", payload);
+      }
 
       toast({
         title: contract ? "Shartnoma yangilandi" : "Shartnoma yaratildi",

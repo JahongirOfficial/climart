@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 export interface Task {
   _id: string;
@@ -53,36 +54,17 @@ export function useTasks(filters: TaskFilters = {}) {
 
   const { data, isLoading, error, refetch } = useQuery<TasksResponse>({
     queryKey: ['tasks', queryString],
-    queryFn: async () => {
-      const res = await fetch(`/api/tasks?${queryString}`);
-      if (!res.ok) throw new Error('Failed to fetch tasks');
-      return res.json();
-    },
+    queryFn: () => api.get<TasksResponse>(`/api/tasks?${queryString}`),
     placeholderData: keepPreviousData,
   });
 
   const { data: stats } = useQuery<TaskStats>({
     queryKey: ['tasks-stats'],
-    queryFn: async () => {
-      const res = await fetch('/api/tasks/stats');
-      if (!res.ok) throw new Error('Failed to fetch task stats');
-      return res.json();
-    },
+    queryFn: () => api.get<TaskStats>('/api/tasks/stats'),
   });
 
   const createMutation = useMutation({
-    mutationFn: async (taskData: Partial<Task>) => {
-      const res = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(taskData),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Failed to create task');
-      }
-      return res.json();
-    },
+    mutationFn: (taskData: Partial<Task>) => api.post<Task>('/api/tasks', taskData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['tasks-stats'] });
@@ -90,18 +72,8 @@ export function useTasks(filters: TaskFilters = {}) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Task> }) => {
-      const res = await fetch(`/api/tasks/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Failed to update task');
-      }
-      return res.json();
-    },
+    mutationFn: ({ id, data }: { id: string; data: Partial<Task> }) =>
+      api.put<Task>(`/api/tasks/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['tasks-stats'] });
@@ -109,15 +81,8 @@ export function useTasks(filters: TaskFilters = {}) {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await fetch(`/api/tasks/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) throw new Error('Failed to update task status');
-      return res.json();
-    },
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.patch(`/api/tasks/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['tasks-stats'] });
@@ -125,11 +90,7 @@ export function useTasks(filters: TaskFilters = {}) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete task');
-      return res.json();
-    },
+    mutationFn: (id: string) => api.delete(`/api/tasks/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['tasks-stats'] });

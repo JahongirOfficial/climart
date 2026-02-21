@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useTasks } from "@/hooks/useTasks";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+
 import { useQuery } from "@tanstack/react-query";
 
 interface AddTaskModalProps {
@@ -40,19 +41,12 @@ const defaultForm = {
 export function AddTaskModal({ isOpen, onClose }: AddTaskModalProps) {
   const { toast } = useToast();
   const { createTask } = useTasks();
-  const { token } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(defaultForm);
 
   const { data: employeesData } = useQuery<{ employees: any[] }>({
     queryKey: ["employees"],
-    queryFn: async () => {
-      const res = await fetch("/api/employees", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed to fetch employees");
-      return res.json();
-    },
+    queryFn: () => api.get<{ employees: any[] }>("/api/employees"),
   });
 
   const employees = employeesData?.employees || [];

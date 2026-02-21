@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 interface InventoryItem {
   product: string;
@@ -38,37 +39,19 @@ export const useInventory = () => {
 
   const { data: inventories = [], isLoading: loading, error, refetch } = useQuery<Inventory[]>({
     queryKey: ['inventory'],
-    queryFn: async () => {
-      const response = await fetch('/api/inventory');
-      if (!response.ok) throw new Error('Failed to fetch inventories');
-      return response.json();
-    },
+    queryFn: () => api.get<Inventory[]>('/api/inventory'),
     placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: Partial<Inventory>) => {
-      const response = await fetch('/api/inventory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to create inventory');
-      return response.json();
-    },
+    mutationFn: (data: Partial<Inventory>) => api.post<Inventory>('/api/inventory', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
     },
   });
 
   const confirmMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/inventory/${id}/confirm`, {
-        method: 'PATCH',
-      });
-      if (!response.ok) throw new Error('Failed to confirm inventory');
-      return response.json();
-    },
+    mutationFn: (id: string) => api.patch(`/api/inventory/${id}/confirm`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -77,13 +60,7 @@ export const useInventory = () => {
   });
 
   const createWriteoffMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/inventory/${id}/create-writeoff`, {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to create writeoff');
-      return response.json();
-    },
+    mutationFn: (id: string) => api.post(`/api/inventory/${id}/create-writeoff`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['writeoffs'] });
@@ -91,13 +68,7 @@ export const useInventory = () => {
   });
 
   const createReceiptMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/inventory/${id}/create-receipt`, {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to create receipt');
-      return response.json();
-    },
+    mutationFn: (id: string) => api.post(`/api/inventory/${id}/create-receipt`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['warehouse-receipts'] });
@@ -105,10 +76,7 @@ export const useInventory = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete inventory');
-    },
+    mutationFn: (id: string) => api.delete(`/api/inventory/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
     },

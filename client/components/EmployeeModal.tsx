@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
@@ -140,7 +141,7 @@ const availablePermissions = [
 ];
 
 export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps) {
-  const { token, user, refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -171,27 +172,12 @@ export function EmployeeModal({ isOpen, onClose, employee }: EmployeeModalProps)
   }, [employee, isOpen]);
 
   const mutation = useMutation({
-    mutationFn: async (data: any) => {
-      const url = employee 
-        ? `/api/employees/${employee._id}` 
-        : '/api/employees';
-      const method = employee ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save employee');
+    mutationFn: async (data: any): Promise<any> => {
+      if (employee) {
+        return api.put(`/api/employees/${employee._id}`, data);
+      } else {
+        return api.post('/api/employees', data);
       }
-
-      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
