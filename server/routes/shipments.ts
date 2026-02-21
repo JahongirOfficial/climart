@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import Shipment from '../models/Shipment';
 import CustomerOrder from '../models/CustomerOrder';
+import CustomerInvoice from '../models/CustomerInvoice';
 import Product from '../models/Product';
 import mongoose from 'mongoose';
 import { generateDocNumber } from '../utils/documentNumber';
@@ -116,11 +117,28 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
     shipment.status = status;
     await shipment.save();
 
-    // If delivered, update order status to fulfilled
-    if (status === 'delivered' && shipment.order) {
+    // If delivered, update order status and invoice shippedStatus
+    if (status === 'delivered') {
+      if (shipment.order) {
+        await CustomerOrder.findByIdAndUpdate(
+          shipment.order,
+          { status: 'fulfilled', shippedAmount: shipment.totalAmount }
+        );
+      }
+
+      if (shipment.invoice) {
+        await CustomerInvoice.findByIdAndUpdate(
+          shipment.invoice,
+          { shippedStatus: 'shipped', shippedAmount: shipment.totalAmount }
+        );
+      }
+    }
+
+    // If in_transit, update order status to shipped
+    if (status === 'in_transit' && shipment.order) {
       await CustomerOrder.findByIdAndUpdate(
         shipment.order,
-        { status: 'fulfilled' }
+        { status: 'shipped' }
       );
     }
 

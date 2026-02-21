@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import CustomerReturn from '../models/CustomerReturn';
 import CustomerInvoice from '../models/CustomerInvoice';
+import CustomerOrder from '../models/CustomerOrder';
+import Shipment from '../models/Shipment';
 import Product from '../models/Product';
 import Partner from '../models/Partner';
 import mongoose from 'mongoose';
@@ -14,6 +16,8 @@ router.get('/', async (req: Request, res: Response) => {
     const returns = await CustomerReturn.find()
       .populate('customer')
       .populate('invoice')
+      .populate('shipment')
+      .populate('customerOrder')
       .populate('items.product')
       .sort({ createdAt: -1 });
     res.json(returns);
@@ -28,6 +32,8 @@ router.get('/:id', async (req: Request, res: Response) => {
     const customerReturn = await CustomerReturn.findById(req.params.id)
       .populate('customer')
       .populate('invoice')
+      .populate('shipment')
+      .populate('customerOrder')
       .populate('items.product');
     if (!customerReturn) {
       return res.status(404).json({ message: 'Return not found' });
@@ -58,11 +64,11 @@ router.post('/', async (req: Request, res: Response) => {
       const invoiceItem = invoice.items.find(
         (invItem: any) => invItem.product.toString() === item.product
       );
-      
+
       if (!invoiceItem) {
         throw new Error(`Product not found in invoice`);
       }
-      
+
       if (item.quantity > invoiceItem.quantity) {
         throw new Error(
           `Return quantity (${item.quantity}) exceeds invoice quantity (${invoiceItem.quantity})`
@@ -70,21 +76,44 @@ router.post('/', async (req: Request, res: Response) => {
       }
     }
 
-    // Create return
+    // Find linked shipment via invoice
+    const shipment = await Shipment.findOne({ invoice: invoice._id }).session(session);
+
+    // Create return with full document chain references
     const customerReturn = new CustomerReturn({
       ...req.body,
       returnNumber,
+      customerOrder: invoice.customerOrder || undefined,
+      orderNumber: invoice.orderNumber || undefined,
+      shipment: shipment?._id || undefined,
+      shipmentNumber: shipment?.shipmentNumber || undefined,
     });
 
     await customerReturn.save({ session });
 
-    // Update inventory (increase quantities)
+    // Determine warehouse for stock restoration
+    const returnWarehouse = req.body.warehouse || invoice.warehouse;
+
+    // Update inventory (increase quantities - global + warehouse-specific)
     for (const item of req.body.items) {
+      // Increase global quantity
       await Product.findByIdAndUpdate(
         item.product,
         { $inc: { quantity: item.quantity } },
         { session }
       );
+
+      // Increase warehouse-specific quantity
+      if (returnWarehouse) {
+        await Product.findOneAndUpdate(
+          {
+            _id: item.product,
+            'stockByWarehouse.warehouse': returnWarehouse,
+          },
+          { $inc: { 'stockByWarehouse.$.quantity': item.quantity } },
+          { session }
+        );
+      }
     }
 
     // Update customer account balance (reduce debt)
@@ -100,6 +129,18 @@ router.post('/', async (req: Request, res: Response) => {
       { $inc: { paidAmount: -req.body.totalAmount } },
       { session }
     );
+
+    // Sync paidAmount to parent CustomerOrder if linked
+    if (invoice.customerOrder) {
+      const updatedInvoice = await CustomerInvoice.findById(req.body.invoice).session(session);
+      if (updatedInvoice) {
+        await CustomerOrder.findByIdAndUpdate(
+          invoice.customerOrder,
+          { paidAmount: updatedInvoice.paidAmount },
+          { session }
+        );
+      }
+    }
 
     await session.commitTransaction();
     res.status(201).json(customerReturn);

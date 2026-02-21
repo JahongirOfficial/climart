@@ -211,6 +211,8 @@ export interface Shipment {
   organization?: string;
   order: string | PopulatedRef;
   orderNumber: string;
+  invoice?: string | PopulatedRef;
+  invoiceNumber?: string;
   shipmentDate: string;
   warehouse: string | PopulatedRef;
   warehouseName: string;
@@ -467,4 +469,36 @@ export interface OverduePayment {
   remainingAmount: number;
   daysOverdue: number;
   status: string;
+}
+
+// Customer Return types
+export interface CustomerReturn {
+  _id: string;
+  returnNumber: string;
+  customer: string | PopulatedRef;
+  customerName: string;
+  organization?: string;
+  warehouse?: string | PopulatedRef;
+  warehouseName?: string;
+  invoice: string | PopulatedRef;
+  invoiceNumber: string;
+  shipment?: string | PopulatedRef;
+  shipmentNumber?: string;
+  customerOrder?: string | PopulatedRef;
+  orderNumber?: string;
+  returnDate: string;
+  status: 'pending' | 'accepted' | 'cancelled';
+  items: Array<{
+    product: string | PopulatedRef;
+    productName: string;
+    quantity: number;
+    price: number;
+    total: number;
+    reason: 'defective' | 'wrong_item' | 'customer_request' | 'other';
+  }>;
+  totalAmount: number;
+  reason: 'defective' | 'wrong_item' | 'customer_request' | 'other';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }

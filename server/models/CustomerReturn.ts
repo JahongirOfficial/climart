@@ -18,6 +18,10 @@ export interface ICustomerReturn extends Document {
   warehouseName?: string;
   invoice: mongoose.Types.ObjectId;
   invoiceNumber: string;
+  shipment?: mongoose.Types.ObjectId;
+  shipmentNumber?: string;
+  customerOrder?: mongoose.Types.ObjectId;
+  orderNumber?: string;
   returnDate: Date;
   status: 'pending' | 'accepted' | 'cancelled';
   items: ICustomerReturnItem[];
@@ -96,6 +100,22 @@ const CustomerReturnSchema: Schema = new Schema(
       type: String,
       required: true,
     },
+    shipment: {
+      type: Schema.Types.ObjectId,
+      ref: 'Shipment',
+    },
+    shipmentNumber: {
+      type: String,
+      trim: true,
+    },
+    customerOrder: {
+      type: Schema.Types.ObjectId,
+      ref: 'CustomerOrder',
+    },
+    orderNumber: {
+      type: String,
+      trim: true,
+    },
     returnDate: {
       type: Date,
       required: true,
@@ -131,6 +151,8 @@ const CustomerReturnSchema: Schema = new Schema(
 CustomerReturnSchema.index({ returnNumber: 1 }, { unique: true });
 CustomerReturnSchema.index({ customer: 1 });
 CustomerReturnSchema.index({ invoice: 1 });
+CustomerReturnSchema.index({ shipment: 1 });
+CustomerReturnSchema.index({ customerOrder: 1 });
 CustomerReturnSchema.index({ returnDate: 1 });
 
 export default mongoose.models.CustomerReturn || mongoose.model<ICustomerReturn>('CustomerReturn', CustomerReturnSchema);

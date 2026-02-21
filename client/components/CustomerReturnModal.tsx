@@ -67,12 +67,19 @@ export const CustomerReturnModal = ({ open, onClose, onSave }: CustomerReturnMod
   const handleInvoiceChange = (invoiceId: string) => {
     const invoice = invoices.find(inv => inv._id === invoiceId);
     if (invoice) {
+      const warehouseId = typeof invoice.warehouse === 'string' ? invoice.warehouse : invoice.warehouse?._id;
+      const warehouseNameVal = typeof invoice.warehouse === 'string'
+        ? (invoice.warehouseName || '')
+        : (invoice.warehouse?.name || invoice.warehouseName || '');
+
       setFormData(prev => ({
         ...prev,
         invoice: invoice._id,
         invoiceNumber: invoice.invoiceNumber,
         customer: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer._id,
         customerName: invoice.customerName,
+        warehouse: warehouseId || '',
+        warehouseName: warehouseNameVal,
       }));
 
       // Initialize items from invoice
@@ -166,7 +173,7 @@ export const CustomerReturnModal = ({ open, onClose, onSave }: CustomerReturnMod
                 <option value="">Tanlang...</option>
                 {paidInvoices.map(invoice => (
                   <option key={invoice._id} value={invoice._id}>
-                    {invoice.invoiceNumber} - {invoice.customerName} ({new Intl.NumberFormat('uz-UZ').format(invoice.totalAmount)} so'm)
+                    {invoice.invoiceNumber}{invoice.orderNumber ? ` (${invoice.orderNumber})` : ''} - {invoice.customerName} ({new Intl.NumberFormat('uz-UZ').format(invoice.totalAmount)} so'm)
                   </option>
                 ))}
               </select>
@@ -228,6 +235,21 @@ export const CustomerReturnModal = ({ open, onClose, onSave }: CustomerReturnMod
               <option value="other">Boshqa</option>
             </select>
           </div>
+
+          {formData.invoice && (() => {
+            const selectedInvoice = invoices.find(inv => inv._id === formData.invoice);
+            if (!selectedInvoice) return null;
+            return (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm space-y-1">
+                <p><span className="font-medium">Faktura:</span> {selectedInvoice.invoiceNumber}</p>
+                {selectedInvoice.orderNumber && (
+                  <p><span className="font-medium">Buyurtma:</span> {selectedInvoice.orderNumber}</p>
+                )}
+                <p><span className="font-medium">Mijoz:</span> {selectedInvoice.customerName}</p>
+                <p><span className="font-medium">Ombor:</span> {formData.warehouseName || 'Belgilanmagan'}</p>
+              </div>
+            );
+          })()}
 
           {items.length > 0 && (
             <div>

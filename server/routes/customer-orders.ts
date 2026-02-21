@@ -164,6 +164,8 @@ router.post('/', async (req: Request, res: Response) => {
             customerName: req.body.customerName,
             order: order._id,
             orderNumber: order.orderNumber,
+            invoice: invoice._id,
+            invoiceNumber: invoice.invoiceNumber,
             shipmentDate: new Date(),
             warehouse: req.body.warehouse,
             warehouseName: req.body.warehouseName || '',

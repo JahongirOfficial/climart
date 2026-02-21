@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import CustomerInvoice from '../models/CustomerInvoice';
+import CustomerOrder from '../models/CustomerOrder';
 import Product from '../models/Product';
 import Contract from '../models/Contract';
 import mongoose from 'mongoose';
@@ -372,6 +373,14 @@ router.patch('/:id/payment', async (req: Request, res: Response) => {
     }
 
     await invoice.save();
+
+    // Sync payment to parent CustomerOrder if linked
+    if (invoice.customerOrder) {
+      await CustomerOrder.findByIdAndUpdate(
+        invoice.customerOrder,
+        { paidAmount: invoice.paidAmount }
+      );
+    }
 
     logAudit({
       userId: req.user?.userId,

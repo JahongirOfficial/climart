@@ -16,6 +16,8 @@ export interface IShipment extends Document {
   organization?: string;
   order: mongoose.Types.ObjectId;
   orderNumber: string;
+  invoice?: mongoose.Types.ObjectId;
+  invoiceNumber?: string;
   shipmentDate: Date;
   warehouse: mongoose.Types.ObjectId;
   warehouseName: string;
@@ -89,6 +91,14 @@ const ShipmentSchema: Schema = new Schema(
       type: String,
       required: true,
     },
+    invoice: {
+      type: Schema.Types.ObjectId,
+      ref: 'CustomerInvoice',
+    },
+    invoiceNumber: {
+      type: String,
+      trim: true,
+    },
     shipmentDate: {
       type: Date,
       required: true,
@@ -143,6 +153,7 @@ const ShipmentSchema: Schema = new Schema(
 ShipmentSchema.index({ shipmentNumber: 1 }, { unique: true });
 ShipmentSchema.index({ customer: 1 });
 ShipmentSchema.index({ order: 1 });
+ShipmentSchema.index({ invoice: 1 });
 ShipmentSchema.index({ shipmentDate: 1 });
 ShipmentSchema.index({ status: 1 });
 
