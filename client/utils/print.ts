@@ -418,51 +418,55 @@ const generateWarehouseReceiptHTML = (invoice: CustomerInvoice): string => {
 };
 
 /**
+ * Print HTML content via hidden iframe (no new tab/window opens)
+ */
+export const printViaIframe = (html: string): void => {
+  // Remove "Chop etish" / "Yopish" buttons from printed HTML since we print directly
+  const cleanHtml = html.replace(/<div class="no-print">[\s\S]*?<\/div>/, '');
+
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.top = '-10000px';
+  iframe.style.left = '-10000px';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
+
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc || !iframe.contentWindow) {
+    document.body.removeChild(iframe);
+    return;
+  }
+
+  iframeDoc.open();
+  iframeDoc.write(cleanHtml);
+  iframeDoc.close();
+
+  iframe.onload = () => {
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      // Remove iframe after print dialog closes
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+    }, 200);
+  };
+};
+
+/**
  * Print customer receipt
  */
 export const printCustomerReceipt = (invoice: CustomerInvoice): void => {
-  const printWindow = window.open('', '_blank');
-  
-  if (!printWindow) {
-    alert('Iltimos, popup blokirovkasini o\'chiring');
-    return;
-  }
-  
-  const html = generateCustomerReceiptHTML(invoice);
-  printWindow.document.write(html);
-  printWindow.document.close();
-  
-  // Auto-trigger print dialog after content loads
-  printWindow.onload = () => {
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
-  };
+  printViaIframe(generateCustomerReceiptHTML(invoice));
 };
 
 /**
  * Print warehouse receipt
  */
 export const printWarehouseReceipt = (invoice: CustomerInvoice): void => {
-  const printWindow = window.open('', '_blank');
-  
-  if (!printWindow) {
-    alert('Iltimos, popup blokirovkasini o\'chiring');
-    return;
-  }
-  
-  const html = generateWarehouseReceiptHTML(invoice);
-  printWindow.document.write(html);
-  printWindow.document.close();
-  
-  // Auto-trigger print dialog after content loads
-  printWindow.onload = () => {
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
-  };
+  printViaIframe(generateWarehouseReceiptHTML(invoice));
 };
 
 /**
@@ -472,26 +476,16 @@ export const printBothReceipts = (invoice: CustomerInvoice): void => {
   printCustomerReceipt(invoice);
   setTimeout(() => {
     printWarehouseReceipt(invoice);
-  }, 500);
+  }, 1500);
 };
 
 // ============================================
 // ADDITIONAL PRINT TEMPLATES
 // ============================================
 
-/** Helper to open print window */
+/** Helper to print via iframe (replaces openPrintWindow) */
 const openPrintWindow = (html: string): void => {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert("Iltimos, popup blokirovkasini o'chiring");
-    return;
-  }
-  printWindow.document.write(html);
-  printWindow.document.close();
-  printWindow.onload = () => {
-    printWindow.focus();
-    setTimeout(() => printWindow.print(), 250);
-  };
+  printViaIframe(html);
 };
 
 const paymentTypeLabel = (type: string): string => {

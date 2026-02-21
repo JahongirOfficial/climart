@@ -24,6 +24,7 @@ import { useWarehouseReceipts } from "@/hooks/useWarehouseReceipts";
 import { WarehouseReceiptModal } from "@/components/WarehouseReceiptModal";
 import { WarehouseReceipt } from "@shared/api";
 import { useToast } from "@/hooks/use-toast";
+import { printViaIframe } from "@/utils/print";
 
 const Receipt = () => {
   const { receipts, loading, refetch, confirmReceipt, deleteReceipt } = useWarehouseReceipts();
@@ -122,9 +123,6 @@ const Receipt = () => {
   };
 
   const printSimpleReceipt = (receipt: WarehouseReceipt) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
     const currentDate = new Date().toLocaleDateString('uz-UZ', {
       year: 'numeric',
       month: 'long',
@@ -133,7 +131,7 @@ const Receipt = () => {
       minute: '2-digit'
     });
 
-    printWindow.document.write(`
+    const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -261,28 +259,15 @@ const Receipt = () => {
         <div class="footer">
           <div>Ombor kirim cheki</div>
         </div>
-
-        <script>
-          window.onload = function() {
-            window.print();
-            // Auto-close window after printing
-            setTimeout(function() {
-              window.close();
-            }, 100);
-          };
-        </script>
       </body>
       </html>
-    `);
+    `;
 
-    printWindow.document.close();
+    printViaIframe(htmlContent);
     setShowPrintDialog(false);
   };
 
   const printDetailedReceipt = (receipt: WarehouseReceipt) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
     const currentDate = new Date().toLocaleDateString('uz-UZ', {
       year: 'numeric',
       month: 'long',
@@ -291,7 +276,7 @@ const Receipt = () => {
       minute: '2-digit'
     });
 
-    printWindow.document.write(`
+    const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -510,28 +495,15 @@ const Receipt = () => {
           <div>Bu hujjat CLIMART ERP tizimi tomonidan avtomatik yaratilgan</div>
           <div style="margin-top: 5px;">Chop etilgan sana: ${currentDate}</div>
         </div>
-
-        <script>
-          window.onload = function() {
-            window.print();
-            // Auto-close window after printing
-            setTimeout(function() {
-              window.close();
-            }, 100);
-          };
-        </script>
       </body>
       </html>
-    `);
+    `;
 
-    printWindow.document.close();
+    printViaIframe(htmlContent);
     setShowPrintDialog(false);
   };
 
   const handlePrint = (receipt: WarehouseReceipt) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
     const html = `
       <!DOCTYPE html>
       <html>
@@ -580,7 +552,7 @@ const Receipt = () => {
               <span>${getReasonLabel(receipt.reason)}</span>
             </div>
           </div>
-          
+
           <table>
             <thead>
               <tr>
@@ -607,33 +579,23 @@ const Receipt = () => {
               </tr>
             </tbody>
           </table>
-          
+
           ${receipt.notes ? `
           <div style="margin-top: 20px;">
             <strong>Izohlar:</strong>
             <p>${receipt.notes}</p>
           </div>
           ` : ''}
-          
+
           <div style="margin-top: 40px;">
             <p>Qabul qildi: ___________________ / ___________________</p>
             <p style="margin-top: 20px;">Topshirdi: ___________________ / ___________________</p>
-          </div>
-          
-          <div style="margin-top: 20px; text-align: center;">
-            <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
-              Chop etish
-            </button>
-            <button onclick="window.close()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; margin-left: 10px;">
-              Yopish
-            </button>
           </div>
         </body>
       </html>
     `;
 
-    printWindow.document.write(html);
-    printWindow.document.close();
+    printViaIframe(html);
   };
 
   const getReasonLabel = (reason: string) => {

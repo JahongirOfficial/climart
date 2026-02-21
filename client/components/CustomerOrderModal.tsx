@@ -12,6 +12,7 @@ import { useWarehouses } from "@/hooks/useWarehouses";
 import { CustomerOrder } from "@shared/api";
 import { Plus, Trash2, Loader2, UserPlus, Printer } from "lucide-react";
 import { PartnerModal } from "@/components/PartnerModal";
+import { printViaIframe } from "@/utils/print";
 
 interface CustomerOrderModalProps {
   open: boolean;
@@ -214,9 +215,6 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
   const printCustomerReceipt = () => {
     if (!savedOrderData) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
     const currentDate = new Date().toLocaleDateString('uz-UZ', {
       year: 'numeric',
       month: 'long',
@@ -225,7 +223,7 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
       minute: '2-digit'
     });
 
-    printWindow.document.write(`
+    const htmlString = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -350,28 +348,15 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
           <div>Rahmat!</div>
           <div style="margin-top: 5px;">Yana buyurtma bering!</div>
         </div>
-
-        <script>
-          window.onload = function() {
-            window.print();
-            // Auto-close window after printing
-            setTimeout(function() {
-              window.close();
-            }, 100);
-          };
-        </script>
       </body>
       </html>
-    `);
+    `;
 
-    printWindow.document.close();
+    printViaIframe(htmlString);
   };
 
   const printWarehouseReceipt = () => {
     if (!savedOrderData) return;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
 
     const currentDate = new Date().toLocaleDateString('uz-UZ', {
       year: 'numeric',
@@ -381,7 +366,7 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
       minute: '2-digit'
     });
 
-    printWindow.document.write(`
+    const htmlString = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -620,21 +605,11 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
           <div>Bu hujjat CLIMART ERP tizimi tomonidan avtomatik yaratilgan</div>
           <div style="margin-top: 5px;">Chop etilgan sana: ${currentDate}</div>
         </div>
-
-        <script>
-          window.onload = function() {
-            window.print();
-            // Auto-close window after printing
-            setTimeout(function() {
-              window.close();
-            }, 100);
-          };
-        </script>
       </body>
       </html>
-    `);
+    `;
 
-    printWindow.document.close();
+    printViaIframe(htmlString);
   };
 
   return (
@@ -921,7 +896,7 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
             <Button
               onClick={() => {
                 printCustomerReceipt();
-                setTimeout(() => printWarehouseReceipt(), 500);
+                setTimeout(() => printWarehouseReceipt(), 1500);
                 handleClosePrintOptions();
               }}
               className="w-full justify-start h-auto py-4"

@@ -1,4 +1,5 @@
 import { Layout } from "@/components/Layout";
+import { printViaIframe } from "@/utils/print";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -152,9 +153,6 @@ const CustomerInvoices = () => {
 
   // Print customer receipt
   const handlePrintCustomer = useCallback((invoice: CustomerInvoice) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
     const itemsRows = invoice.items.map((item, i) => `
       <tr>
         <td style="padding:8px;border-bottom:1px solid #eee">${i + 1}</td>
@@ -193,20 +191,13 @@ const CustomerInvoices = () => {
     <div style="margin-top:10px"><strong>To'langan:</strong> ${new Intl.NumberFormat('uz-UZ').format(invoice.paidAmount)} so'm</div>
     <div><strong>Qoldiq:</strong> ${new Intl.NumberFormat('uz-UZ').format(invoice.totalAmount - invoice.paidAmount)} so'm</div>
     <div class="footer">Xaridingiz uchun rahmat!</div>
-    <div class="no-print" style="text-align:center;margin-top:20px">
-      <button onclick="window.print()" style="padding:10px 25px;background:#3b82f6;color:white;border:none;border-radius:5px;cursor:pointer;margin-right:10px">Chop etish</button>
-      <button onclick="window.close()" style="padding:10px 25px;background:#6b7280;color:white;border:none;border-radius:5px;cursor:pointer">Yopish</button>
-    </div></body></html>`;
+    </body></html>`;
 
-    printWindow.document.write(html);
-    printWindow.document.close();
+    printViaIframe(html);
   }, []);
 
   // Print warehouse receipt
   const handlePrintWarehouse = useCallback((invoice: CustomerInvoice) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
     const itemsRows = invoice.items.map((item, i) => `
       <tr>
         <td style="padding:8px;border-bottom:1px solid #eee">${i + 1}</td>
@@ -256,19 +247,15 @@ const CustomerInvoices = () => {
       <div>Topshirdi: _______________</div>
       <div>Qabul qildi: _______________</div>
     </div>
-    <div class="no-print" style="text-align:center;margin-top:20px">
-      <button onclick="window.print()" style="padding:10px 25px;background:#d97706;color:white;border:none;border-radius:5px;cursor:pointer;margin-right:10px">Chop etish</button>
-      <button onclick="window.close()" style="padding:10px 25px;background:#6b7280;color:white;border:none;border-radius:5px;cursor:pointer">Yopish</button>
-    </div></body></html>`;
+    </body></html>`;
 
-    printWindow.document.write(html);
-    printWindow.document.close();
+    printViaIframe(html);
   }, []);
 
   // Print both receipts
   const handlePrintBoth = useCallback((invoice: CustomerInvoice) => {
     handlePrintCustomer(invoice);
-    setTimeout(() => handlePrintWarehouse(invoice), 300);
+    setTimeout(() => handlePrintWarehouse(invoice), 1500);
   }, [handlePrintCustomer, handlePrintWarehouse]);
 
   if (loading && invoices.length === 0) {

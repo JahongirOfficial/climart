@@ -1,4 +1,5 @@
 import { Layout } from "@/components/Layout";
+import { printViaIframe } from "@/utils/print";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -266,12 +267,7 @@ const Shipments = () => {
       </html>
     `;
 
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
-    }
+    printViaIframe(printContent);
   };
 
   if (loading && shipments.length === 0) {
