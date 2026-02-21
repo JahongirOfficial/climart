@@ -44,10 +44,10 @@ const Returns = () => {
 
   const getReasonColor = (reason: string) => {
     const colors: Record<string, string> = {
-      'brak': 'bg-red-50 text-red-700 border-red-200',
-      'nuqson': 'bg-orange-50 text-orange-700 border-orange-200',
-      'noto\'g\'ri_model': 'bg-yellow-50 text-yellow-700 border-yellow-200',
-      'boshqa': 'bg-gray-50 text-gray-700 border-gray-200'
+      'brak': 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700',
+      'nuqson': 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700',
+      'noto\'g\'ri_model': 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700',
+      'boshqa': 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'
     };
     return colors[reason] || colors['boshqa'];
   };
@@ -104,7 +104,7 @@ const Returns = () => {
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2 text-gray-600">Ma'lumotlar yuklanmoqda...</span>
+            <span className="ml-2 text-gray-600 dark:text-gray-400">Ma'lumotlar yuklanmoqda...</span>
           </div>
         </div>
       </Layout>
@@ -115,12 +115,12 @@ const Returns = () => {
     return (
       <Layout>
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
-          <Card className="p-6 bg-red-50 border-red-200">
+          <Card className="p-6 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
             <div className="flex items-center gap-3">
-              <AlertCircle className="h-6 w-6 text-red-600" />
+              <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
               <div>
-                <h3 className="font-semibold text-red-900">Xatolik yuz berdi</h3>
-                <p className="text-red-700">{error}</p>
+                <h3 className="font-semibold text-red-900 dark:text-red-300">Xatolik yuz berdi</h3>
+                <p className="text-red-700 dark:text-red-400">{error}</p>
               </div>
             </div>
           </Card>
@@ -136,8 +136,8 @@ const Returns = () => {
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Tovar qaytarish</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tovar qaytarish</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Yetkazib beruvchiga tovarlarni qaytarish va ombor zaxirasini kamaytirish
               </p>
             </div>
@@ -161,44 +161,44 @@ const Returns = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600">Jami qaytarishlar</span>
-                <RotateCcw className="h-5 w-5 text-red-600" />
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Jami qaytarishlar</span>
+                <RotateCcw className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
-              <p className="text-2xl font-bold text-gray-900">{returns.length}</p>
-              <p className="text-xs text-gray-500 mt-1">Barcha qaytarishlar</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{returns.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Barcha qaytarishlar</p>
             </Card>
 
             <Card className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600">Qaytarilgan tovarlar</span>
-                <Package className="h-5 w-5 text-orange-600" />
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Qaytarilgan tovarlar</span>
+                <Package className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               </div>
-              <p className="text-2xl font-bold text-orange-600">
+              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                 {totalItems}
               </p>
-              <p className="text-xs text-gray-500 mt-1">Dona</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Dona</p>
             </Card>
 
             <Card className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600">Jami summa</span>
-                <TrendingDown className="h-5 w-5 text-red-600" />
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Jami summa</span>
+                <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
-              <p className="text-lg font-bold text-red-600">
+              <p className="text-lg font-bold text-red-600 dark:text-red-400">
                 {formatCurrency(totalReturned)}
               </p>
-              <p className="text-xs text-gray-500 mt-1">Qaytarilgan</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Qaytarilgan</p>
             </Card>
 
             <Card className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-600">Nuqsonli tovarlar</span>
-                <XCircle className="h-5 w-5 text-red-600" />
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Nuqsonli tovarlar</span>
+                <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
-              <p className="text-2xl font-bold text-red-600">
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                 {defectiveCount}
               </p>
-              <p className="text-xs text-gray-500 mt-1">Brak va nuqson</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Brak va nuqson</p>
             </Card>
           </div>
         </div>
@@ -206,7 +206,7 @@ const Returns = () => {
         {/* Main Content */}
         <Card>
           {/* Search */}
-          <div className="p-4 border-b border-gray-200">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-col md:flex-row gap-3">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -224,47 +224,47 @@ const Returns = () => {
           {/* Returns Table */}
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                     Qaytarish raqami
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                     Yetkazib beruvchi
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Qabul
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    Ombor
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                     Sana
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                     Sabab
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                     Tovarlar
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                     Summa
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                     Amallar
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-700">
                 {filteredReturns.map((ret) => (
-                  <tr key={ret._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-red-600">
+                  <tr key={ret._id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-red-600 dark:text-red-400">
                       {ret.returnNumber}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">
                       {typeof ret.supplier === 'string' ? ret.supplier : (ret.supplier?.name || '-')}
                     </td>
-                    <td className="px-6 py-4 text-sm text-blue-600 hover:underline cursor-pointer">
-                      {ret.receiptNumber || '-'}
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                      {ret.warehouseName || '-'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       {formatDate(ret.returnDate)}
                     </td>
                     <td className="px-6 py-4">
@@ -273,34 +273,34 @@ const Returns = () => {
                         {getReasonLabel(ret.reason)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       <div className="flex items-center gap-1">
                         <Package className="h-3.5 w-3.5 text-gray-400" />
                         {ret.items.reduce((sum, item) => sum + item.quantity, 0)} dona
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-red-600">
+                    <td className="px-6 py-4 text-sm font-semibold text-red-600 dark:text-red-400">
                       -{formatCurrency(ret.totalAmount)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleViewReturn(ret)}
-                          className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                           title="Ko'rish"
                         >
-                          <Eye className="h-4 w-4 text-gray-600" />
+                          <Eye className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                         </button>
                         <button
                           onClick={() => handleDeleteReturn(ret._id)}
                           disabled={deletingReturn === ret._id}
-                          className="p-1.5 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                          className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors disabled:opacity-50"
                           title="O'chirish"
                         >
                           {deletingReturn === ret._id ? (
-                            <Loader2 className="h-4 w-4 text-red-600 animate-spin" />
+                            <Loader2 className="h-4 w-4 text-red-600 dark:text-red-400 animate-spin" />
                           ) : (
-                            <Trash2 className="h-4 w-4 text-red-600" />
+                            <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
                           )}
                         </button>
                       </div>
@@ -314,26 +314,18 @@ const Returns = () => {
           {/* Empty State */}
           {filteredReturns.length === 0 && (
             <div className="text-center py-12">
-              <RotateCcw className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 font-medium">Qaytarishlar topilmadi</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <RotateCcw className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400 font-medium">Qaytarishlar topilmadi</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
                 {returns.length === 0 ? "Hali qaytarishlar yo'q" : "Qidiruv shartini o'zgartiring"}
               </p>
             </div>
           )}
 
-          {/* Pagination */}
-          <div className="p-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+          {/* Footer */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               Jami {filteredReturns.length} ta qaytarish
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled>
-                Oldingi
-              </Button>
-              <Button variant="outline" size="sm">
-                Keyingi
-              </Button>
             </div>
           </div>
         </Card>
@@ -341,8 +333,8 @@ const Returns = () => {
         {/* Statistics by Supplier */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <Card className="p-6">
-            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
               Yetkazib beruvchilar bo'yicha statistika
             </h3>
             <div className="space-y-3">
@@ -356,23 +348,26 @@ const Returns = () => {
                 );
 
                 return (
-                  <div key={supplierName} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={supplierName} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div>
-                      <p className="font-medium text-gray-900">{supplierName}</p>
-                      <p className="text-xs text-gray-500">{supplierReturns.length} ta qaytarish, {supplierItems} dona tovar</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{supplierName}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{supplierReturns.length} ta qaytarish, {supplierItems} dona tovar</p>
                     </div>
-                    <p className="text-sm font-semibold text-red-600">
+                    <p className="text-sm font-semibold text-red-600 dark:text-red-400">
                       {formatCurrency(supplierTotal)}
                     </p>
                   </div>
                 );
               })}
+              {returns.length === 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Ma'lumot yo'q</p>
+              )}
             </div>
           </Card>
 
           <Card className="p-6">
-            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-orange-600" />
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               Qaytarish sabablari
             </h3>
             <div className="space-y-3">
@@ -383,36 +378,39 @@ const Returns = () => {
                 if (reasonReturns.length === 0) return null;
 
                 return (
-                  <div key={reason} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={reason} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 text-xs font-medium border rounded ${getReasonColor(reason)}`}>
                         {getReasonLabel(reason)}
                       </span>
-                      <span className="text-sm text-gray-600">{reasonReturns.length} ta</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">{reasonReturns.length} ta</span>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
                       {formatCurrency(reasonTotal)}
                     </p>
                   </div>
                 );
               })}
+              {returns.length === 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Ma'lumot yo'q</p>
+              )}
             </div>
           </Card>
         </div>
 
         {/* Info Card */}
-        <Card className="mt-6 p-6 bg-red-50 border-red-200">
+        <Card className="mt-6 p-6 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
           <div className="flex gap-4">
             <div className="flex-shrink-0">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <AlertCircle className="h-6 w-6 text-red-600" />
+              <div className="p-3 bg-red-100 dark:bg-red-900/40 rounded-lg">
+                <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
                 Tovar qaytarish haqida muhim ma'lumot
               </h3>
-              <ul className="text-sm text-gray-700 space-y-1">
+              <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                 <li>• <strong>Ombor zaxirasi</strong> - Qaytarilgan tovarlar avtomatik ravishda ombor zaxirasidan kamayadi</li>
                 <li>• <strong>Kreditorlik qarzi</strong> - Yetkazib beruvchi oldidagi qarz kamayadi</li>
                 <li>• <strong>Qabuldan yaratish</strong> - "Qabul qilish" bo'limida "Qaytarish" tugmasini bosing</li>

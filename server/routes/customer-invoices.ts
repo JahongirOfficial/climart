@@ -54,7 +54,11 @@ router.get('/pending', async (req: Request, res: Response) => {
     if (startDate || endDate) {
       query.invoiceDate = {};
       if (startDate) query.invoiceDate.$gte = new Date(startDate as string);
-      if (endDate) query.invoiceDate.$lte = new Date(endDate as string);
+      if (endDate) {
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        query.invoiceDate.$lte = end;
+      }
     }
 
     // Apply customer filter
@@ -100,7 +104,11 @@ router.get('/corrected', async (req: Request, res: Response) => {
     if (startDate || endDate) {
       query.updatedAt = {};
       if (startDate) query.updatedAt.$gte = new Date(startDate as string);
-      if (endDate) query.updatedAt.$lte = new Date(endDate as string);
+      if (endDate) {
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        query.updatedAt.$lte = end;
+      }
     }
 
     // Apply product filter
@@ -144,7 +152,11 @@ router.get('/', async (req: Request, res: Response) => {
     if (startDate || endDate) {
       query.invoiceDate = {};
       if (startDate) query.invoiceDate.$gte = new Date(startDate as string);
-      if (endDate) query.invoiceDate.$lte = new Date(endDate as string);
+      if (endDate) {
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        query.invoiceDate.$lte = end;
+      }
     }
 
     const invoices = await CustomerInvoice.find(query)

@@ -4,6 +4,7 @@ import Product from '../models/Product';
 import Receipt from '../models/Receipt';
 import mongoose from 'mongoose';
 import { generateDocNumber } from '../utils/documentNumber';
+import { logAudit } from '../utils/auditLogger';
 
 const router = Router();
 
@@ -40,56 +41,76 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  
+
   try {
-    // Generate return number
     const returnNumber = await generateDocNumber('VQ');
-    
+    const warehouseId = req.body.warehouse;
+
     const supplierReturn = new SupplierReturn({
       ...req.body,
       returnNumber,
     });
-    
-    // Decrease warehouse quantities from stockByWarehouse
+
+    // Decrease warehouse quantities
     for (const item of supplierReturn.items) {
       const product = await Product.findById(item.product).session(session);
-      
+
       if (!product) {
         throw new Error(`Mahsulot ${item.productName} topilmadi`);
       }
-      
-      // Check if product has stockByWarehouse
-      if (!product.stockByWarehouse || Object.keys(product.stockByWarehouse).length === 0) {
-        throw new Error(`${item.productName} hali omborga qabul qilinmagan`);
+
+      if (warehouseId) {
+        // Decrease from specific warehouse
+        const warehouseStock = product.stockByWarehouse.find(
+          (sw: any) => sw.warehouse.toString() === warehouseId.toString()
+        );
+
+        if (!warehouseStock) {
+          throw new Error(`${item.productName} tanlangan omborga qabul qilinmagan`);
+        }
+
+        if (warehouseStock.quantity < item.quantity) {
+          throw new Error(`${item.productName} uchun omborda yetarli miqdor yo'q (mavjud: ${warehouseStock.quantity}, kerak: ${item.quantity})`);
+        }
+
+        warehouseStock.quantity -= item.quantity;
+      } else {
+        // No warehouse specified — decrease from total across all warehouses
+        const totalQuantity = product.stockByWarehouse.reduce((sum: number, sw: any) => sum + sw.quantity, 0);
+
+        if (totalQuantity < item.quantity) {
+          throw new Error(`${item.productName} uchun yetarli miqdor yo'q (mavjud: ${totalQuantity}, kerak: ${item.quantity})`);
+        }
+
+        let remaining = item.quantity;
+        for (const sw of product.stockByWarehouse) {
+          if (remaining <= 0) break;
+          const decrease = Math.min(sw.quantity, remaining);
+          sw.quantity -= decrease;
+          remaining -= decrease;
+        }
       }
-      
-      // Calculate total quantity across all warehouses
-      const totalQuantity = Object.values(product.stockByWarehouse || {}).reduce((sum: number, qty) => sum + (qty as number), 0);
-      
-      if (totalQuantity < item.quantity) {
-        throw new Error(`${item.productName} uchun yetarli miqdor yo'q (mavjud: ${totalQuantity}, kerak: ${item.quantity})`);
-      }
-      
-      // Decrease from warehouses proportionally or from first available
-      let remainingToDecrease = item.quantity;
-      const warehouses = Object.keys(product.stockByWarehouse || {});
-      
-      for (const warehouseId of warehouses) {
-        if (remainingToDecrease <= 0) break;
-        
-        const currentStock = product.stockByWarehouse.get(warehouseId) || 0;
-        const decreaseAmount = Math.min(currentStock, remainingToDecrease);
-        
-        product.stockByWarehouse.set(warehouseId, currentStock - decreaseAmount);
-        remainingToDecrease -= decreaseAmount;
-      }
-      
+
+      // Sync global quantity
+      product.quantity -= item.quantity;
+      if (product.quantity < 0) product.quantity = 0;
+
       await product.save({ session });
     }
-    
+
     await supplierReturn.save({ session });
     await session.commitTransaction();
-    
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'create',
+      entity: 'SupplierReturn',
+      entityId: supplierReturn._id.toString(),
+      entityName: `${supplierReturn.returnNumber} - ${supplierReturn.supplierName}`,
+      ipAddress: req.ip,
+    });
+
     res.status(201).json(supplierReturn);
   } catch (error: any) {
     await session.abortTransaction();
@@ -103,24 +124,25 @@ router.post('/', async (req: Request, res: Response) => {
 router.post('/from-receipt/:receiptId', async (req: Request, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  
+
   try {
     const receipt = await Receipt.findById(req.params.receiptId)
       .populate('supplier')
       .session(session);
-    
+
     if (!receipt) {
-      throw new Error('Receipt not found');
+      throw new Error('Qabul hujjati topilmadi');
     }
-    
-    // Generate return number
+
     const returnNumber = await generateDocNumber('VQ');
-    
-    // Create return from receipt
+    const warehouseId = req.body.warehouse || (receipt as any).warehouse;
+
     const supplierReturn = new SupplierReturn({
       returnNumber,
       supplier: receipt.supplier,
       supplierName: receipt.supplierName,
+      warehouse: warehouseId || undefined,
+      warehouseName: req.body.warehouseName || (receipt as any).warehouseName || '',
       receipt: receipt._id,
       receiptNumber: receipt.receiptNumber,
       returnDate: new Date(),
@@ -136,30 +158,53 @@ router.post('/from-receipt/:receiptId', async (req: Request, res: Response) => {
       reason: req.body.reason || 'boshqa',
       notes: req.body.notes,
     });
-    
-    // Calculate total
-    supplierReturn.totalAmount = supplierReturn.items.reduce((sum, item) => sum + item.total, 0);
-    
+
+    supplierReturn.totalAmount = supplierReturn.items.reduce((sum: number, item: any) => sum + item.total, 0);
+
     // Decrease warehouse quantities
     for (const item of supplierReturn.items) {
       const product = await Product.findById(item.product).session(session);
-      
-      if (product) {
-        product.quantity -= item.quantity;
-        if (product.quantity < 0) {
-          throw new Error(`Insufficient quantity for ${item.productName}`);
-        }
-        await product.save({ session });
+
+      if (!product) {
+        throw new Error(`Mahsulot ${item.productName} topilmadi`);
       }
+
+      if (warehouseId) {
+        const warehouseStock = product.stockByWarehouse.find(
+          (sw: any) => sw.warehouse.toString() === warehouseId.toString()
+        );
+
+        if (warehouseStock) {
+          if (warehouseStock.quantity < item.quantity) {
+            throw new Error(`${item.productName} uchun omborda yetarli miqdor yo'q`);
+          }
+          warehouseStock.quantity -= item.quantity;
+        }
+      }
+
+      product.quantity -= item.quantity;
+      if (product.quantity < 0) product.quantity = 0;
+
+      await product.save({ session });
     }
-    
+
     await supplierReturn.save({ session });
     await session.commitTransaction();
-    
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'create',
+      entity: 'SupplierReturn',
+      entityId: supplierReturn._id.toString(),
+      entityName: `${supplierReturn.returnNumber} - ${supplierReturn.supplierName}`,
+      ipAddress: req.ip,
+    });
+
     res.status(201).json(supplierReturn);
-  } catch (error) {
+  } catch (error: any) {
     await session.abortTransaction();
-    res.status(400).json({ message: 'Failed to create return from receipt', error });
+    res.status(400).json({ message: error.message || 'Qaytarish yaratishda xatolik' });
   } finally {
     session.endSession();
   }
@@ -169,36 +214,59 @@ router.post('/from-receipt/:receiptId', async (req: Request, res: Response) => {
 router.delete('/:id', async (req: Request, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  
+
   try {
     const supplierReturn = await SupplierReturn.findById(req.params.id).session(session);
-    
+
     if (!supplierReturn) {
       throw new Error('Qaytarish topilmadi');
     }
-    
-    // Reverse warehouse quantities (add back to stockByWarehouse)
+
+    const warehouseId = supplierReturn.warehouse?.toString();
+
+    // Reverse warehouse quantities
     for (const item of supplierReturn.items) {
       const product = await Product.findById(item.product).session(session);
-      
+
       if (product) {
-        // Add back to first warehouse or distribute
-        const warehouses = Object.keys(product.stockByWarehouse || {});
-        if (warehouses.length > 0) {
-          const firstWarehouse = warehouses[0];
-          const currentStock = product.stockByWarehouse.get(firstWarehouse) || 0;
-          product.stockByWarehouse.set(firstWarehouse, currentStock + item.quantity);
-        } else {
-          // If no warehouses, this shouldn't happen but handle gracefully
-          console.warn(`Product ${product.name} has no warehouses`);
+        // Restore global quantity
+        product.quantity += item.quantity;
+
+        if (warehouseId) {
+          // Restore to the specific warehouse the return was from
+          const warehouseStock = product.stockByWarehouse.find(
+            (sw: any) => sw.warehouse.toString() === warehouseId
+          );
+          if (warehouseStock) {
+            warehouseStock.quantity += item.quantity;
+          }
+        } else if (product.stockByWarehouse.length > 0) {
+          // Fallback: add to first warehouse
+          product.stockByWarehouse[0].quantity += item.quantity;
         }
+
         await product.save({ session });
       }
     }
-    
+
+    const returnInfo = {
+      returnNumber: supplierReturn.returnNumber,
+      supplierName: supplierReturn.supplierName,
+    };
+
     await SupplierReturn.findByIdAndDelete(req.params.id).session(session);
     await session.commitTransaction();
-    
+
+    logAudit({
+      userId: req.user?.userId,
+      userName: req.user?.name || 'Noma\'lum',
+      action: 'delete',
+      entity: 'SupplierReturn',
+      entityId: req.params.id,
+      entityName: `${returnInfo.returnNumber} - ${returnInfo.supplierName}`,
+      ipAddress: req.ip,
+    });
+
     res.json({ message: 'Qaytarish o\'chirildi va ombor yangilandi' });
   } catch (error: any) {
     await session.abortTransaction();

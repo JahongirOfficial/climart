@@ -263,6 +263,8 @@ export interface SupplierReturn {
   returnNumber: string;
   supplier: string | PopulatedRef;
   supplierName: string;
+  warehouse?: string;
+  warehouseName?: string;
   receipt?: string;
   receiptNumber?: string;
   returnDate: string;

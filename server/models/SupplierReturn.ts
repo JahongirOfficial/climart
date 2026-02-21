@@ -13,6 +13,8 @@ export interface ISupplierReturn extends Document {
   returnNumber: string;
   supplier: mongoose.Types.ObjectId;
   supplierName: string;
+  warehouse?: mongoose.Types.ObjectId;
+  warehouseName?: string;
   receipt?: mongoose.Types.ObjectId;
   receiptNumber?: string;
   returnDate: Date;
@@ -71,6 +73,13 @@ const SupplierReturnSchema: Schema = new Schema(
     supplierName: {
       type: String,
       required: true,
+    },
+    warehouse: {
+      type: Schema.Types.ObjectId,
+      ref: 'Warehouse',
+    },
+    warehouseName: {
+      type: String,
     },
     receipt: {
       type: Schema.Types.ObjectId,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import {
   Dialog,
@@ -11,10 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Package } from "lucide-react";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useProducts } from "@/hooks/useProducts";
+import { useWarehouses } from "@/hooks/useWarehouses";
 import { Combobox } from "@/components/ui/combobox";
+import { formatCurrency } from "@/lib/format";
 
 interface ReturnItem {
   product: string;
@@ -34,11 +36,14 @@ interface SupplierReturnModalProps {
 export function SupplierReturnModal({ open, onClose, onSave, receipt }: SupplierReturnModalProps) {
   const { suppliers } = useSuppliers();
   const { products } = useProducts();
+  const { warehouses } = useWarehouses();
   const { showWarning, showError } = useModal();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     supplier: "",
     supplierName: "",
+    warehouse: "",
+    warehouseName: "",
     returnDate: new Date().toISOString().split('T')[0],
     reason: "brak",
     notes: "",
@@ -49,19 +54,21 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
 
   useEffect(() => {
     if (open && receipt) {
-      // Pre-fill from receipt
       const supplierId = typeof receipt.supplier === 'string' ? receipt.supplier : receipt.supplier._id;
       const supplierName = typeof receipt.supplier === 'string' ? receipt.supplier : receipt.supplier.name;
-      
+      const warehouseId = typeof receipt.warehouse === 'string' ? receipt.warehouse : receipt.warehouse?._id || '';
+      const warehouseName = receipt.warehouseName || (typeof receipt.warehouse === 'object' ? receipt.warehouse?.name : '') || '';
+
       setFormData({
         supplier: supplierId,
         supplierName: supplierName,
+        warehouse: warehouseId,
+        warehouseName: warehouseName,
         returnDate: new Date().toISOString().split('T')[0],
         reason: "brak",
         notes: "",
       });
 
-      // Pre-fill items from receipt
       setItems(receipt.items.map((item: any) => ({
         product: typeof item.product === 'string' ? item.product : item.product._id,
         productName: item.productName,
@@ -73,6 +80,8 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
       setFormData({
         supplier: "",
         supplierName: "",
+        warehouse: "",
+        warehouseName: "",
         returnDate: new Date().toISOString().split('T')[0],
         reason: "brak",
         notes: "",
@@ -88,6 +97,26 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
       supplier: supplierId,
       supplierName: supplier?.name || "",
     });
+  };
+
+  const handleWarehouseChange = (warehouseId: string) => {
+    const warehouse = warehouses.find(w => w._id === warehouseId);
+    setFormData({
+      ...formData,
+      warehouse: warehouseId,
+      warehouseName: warehouse?.name || "",
+    });
+  };
+
+  // Get available stock for a product in the selected warehouse
+  const getAvailableStock = (productId: string): number | null => {
+    if (!productId || !formData.warehouse) return null;
+    const product = products.find(p => p._id === productId);
+    if (!product?.stockByWarehouse) return null;
+    const warehouseStock = product.stockByWarehouse.find(
+      (sw: any) => sw.warehouse === formData.warehouse || sw.warehouse?._id === formData.warehouse
+    );
+    return warehouseStock ? warehouseStock.quantity - (warehouseStock.reserved || 0) : 0;
   };
 
   const handleProductChange = (index: number, productId: string) => {
@@ -138,9 +167,24 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
       return;
     }
 
+    if (!formData.warehouse) {
+      showWarning("Omborni tanlang");
+      return;
+    }
+
     if (items.some(item => !item.product || item.quantity <= 0)) {
       showWarning("Barcha mahsulotlarni to'ldiring");
       return;
+    }
+
+    // Check stock availability
+    for (const item of items) {
+      const available = getAvailableStock(item.product);
+      if (available !== null && item.quantity > available) {
+        const product = products.find(p => p._id === item.product);
+        showWarning(`${product?.name || 'Mahsulot'} uchun omborda yetarli miqdor yo'q (mavjud: ${available}, kerak: ${item.quantity})`);
+        return;
+      }
     }
 
     setLoading(true);
@@ -175,20 +219,37 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto flex-1">
-          {/* Supplier */}
-          <div className="space-y-2">
-            <Label htmlFor="supplier">Yetkazib beruvchi *</Label>
-            <Combobox
-              options={suppliers.map(s => ({
-                label: s.name,
-                value: s._id
-              }))}
-              value={formData.supplier}
-              onValueChange={handleSupplierChange}
-              placeholder="Yetkazib beruvchini tanlang..."
-              searchPlaceholder="Qidirish..."
-              emptyText="Yetkazib beruvchi topilmadi"
-            />
+          {/* Supplier & Warehouse */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="supplier">Yetkazib beruvchi *</Label>
+              <Combobox
+                options={suppliers.map(s => ({
+                  label: s.name,
+                  value: s._id
+                }))}
+                value={formData.supplier}
+                onValueChange={handleSupplierChange}
+                placeholder="Yetkazib beruvchini tanlang..."
+                searchPlaceholder="Qidirish..."
+                emptyText="Yetkazib beruvchi topilmadi"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="warehouse">Ombor *</Label>
+              <Combobox
+                options={warehouses.filter(w => w.isActive).map(w => ({
+                  label: w.name,
+                  value: w._id
+                }))}
+                value={formData.warehouse}
+                onValueChange={handleWarehouseChange}
+                placeholder="Omborni tanlang..."
+                searchPlaceholder="Qidirish..."
+                emptyText="Ombor topilmadi"
+              />
+            </div>
           </div>
 
           {/* Date and Reason */}
@@ -234,79 +295,90 @@ export function SupplierReturnModal({ open, onClose, onSave, receipt }: Supplier
 
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Mahsulot</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Miqdor</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Tan narx</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">Jami</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Mahsulot</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Miqdor</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Tan narx</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-300">Jami</th>
                     <th className="px-3 py-2 w-10"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {items.map((item, index) => (
-                    <tr key={index}>
-                      <td className="px-3 py-2">
-                        <Combobox
-                          options={products.map(p => ({
-                            label: p.name,
-                            value: p._id
-                          }))}
-                          value={item.product}
-                          onValueChange={(value) => handleProductChange(index, value)}
-                          placeholder="Mahsulot tanlang..."
-                          searchPlaceholder="Qidirish..."
-                          emptyText="Mahsulot topilmadi"
-                          className="w-full"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={item.quantity || ''}
-                          onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
-                          className="w-24 text-sm"
-                          placeholder="0"
-                          required
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.costPrice || ''}
-                          onChange={(e) => handleItemChange(index, 'costPrice', parseFloat(e.target.value) || 0)}
-                          className="w-32 text-sm"
-                          placeholder="0"
-                          required
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-sm font-medium">
-                        {new Intl.NumberFormat('uz-UZ').format(item.total)} so'm
-                      </td>
-                      <td className="px-3 py-2">
-                        <button
-                          type="button"
-                          onClick={() => removeItem(index)}
-                          disabled={items.length === 1}
-                          className="p-1 rounded disabled:opacity-30 no-scale"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-600">
+                  {items.map((item, index) => {
+                    const availableStock = getAvailableStock(item.product);
+                    const isOverStock = availableStock !== null && item.quantity > availableStock;
+
+                    return (
+                      <tr key={index}>
+                        <td className="px-3 py-2">
+                          <Combobox
+                            options={products.map(p => ({
+                              label: p.name,
+                              value: p._id
+                            }))}
+                            value={item.product}
+                            onValueChange={(value) => handleProductChange(index, value)}
+                            placeholder="Mahsulot tanlang..."
+                            searchPlaceholder="Qidirish..."
+                            emptyText="Mahsulot topilmadi"
+                            className="w-full"
+                          />
+                          {availableStock !== null && (
+                            <div className={`flex items-center gap-1 mt-1 text-xs ${isOverStock ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                              <Package className="h-3 w-3" />
+                              Mavjud: {availableStock} dona
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={item.quantity || ''}
+                            onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
+                            className={`w-24 text-sm ${isOverStock ? 'border-red-400 focus:ring-red-400' : ''}`}
+                            placeholder="0"
+                            required
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.costPrice || ''}
+                            onChange={(e) => handleItemChange(index, 'costPrice', parseFloat(e.target.value) || 0)}
+                            className="w-32 text-sm"
+                            placeholder="0"
+                            required
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-sm font-medium">
+                          {formatCurrency(item.total)}
+                        </td>
+                        <td className="px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={() => removeItem(index)}
+                            disabled={items.length === 1}
+                            className="p-1 rounded disabled:opacity-30 no-scale"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Total */}
             <div className="flex justify-end items-center gap-3 pt-3 border-t">
-              <span className="text-sm font-medium text-gray-700">Jami summa:</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Jami summa:</span>
               <span className="text-lg font-bold text-red-600">
-                {new Intl.NumberFormat('uz-UZ').format(calculateTotal())} so'm
+                {formatCurrency(calculateTotal())}
               </span>
             </div>
           </div>

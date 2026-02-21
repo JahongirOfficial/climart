@@ -15,6 +15,7 @@ export const useSupplierReturns = () => {
     mutationFn: (data: Partial<SupplierReturn>) => api.post<SupplierReturn>('/api/supplier-returns', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supplier-returns'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     },
   });
 
@@ -22,6 +23,7 @@ export const useSupplierReturns = () => {
     mutationFn: (id: string) => api.delete(`/api/supplier-returns/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supplier-returns'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     },
   });
 
