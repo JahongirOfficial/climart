@@ -5,7 +5,8 @@ import { createRoot } from "react-dom/client";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { Layout } from "@/components/Layout";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -57,6 +58,11 @@ const ReturnsReport = lazy(() => import("./pages/sales/ReturnsReport"));
 const Profitability = lazy(() => import("./pages/sales/Profitability"));
 const SalesFunnel = lazy(() => import("./pages/sales/SalesFunnel"));
 const UnitEconomics = lazy(() => import("./pages/sales/UnitEconomics"));
+const CustomerOrderDetail = lazy(() => import("./pages/sales/CustomerOrderDetail"));
+const CustomerInvoiceDetail = lazy(() => import("./pages/sales/CustomerInvoiceDetail"));
+const ShipmentDetail = lazy(() => import("./pages/sales/ShipmentDetail"));
+const ReturnDetail = lazy(() => import("./pages/sales/ReturnDetail"));
+const TaxInvoiceDetail = lazy(() => import("./pages/sales/TaxInvoiceDetail"));
 
 // Product pages
 const ProductsList = lazy(() => import("./pages/products/ProductsList"));
@@ -166,19 +172,27 @@ const App = () => (
                 <Route path="/purchases/received-invoices" element={<ProtectedRoute><ReceivedInvoices /></ProtectedRoute>} />
                 <Route path="/purchases/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
                 <Route path="/purchases/my-debts" element={<ProtectedRoute><MyDebts /></ProtectedRoute>} />
-                <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
-                <Route path="/sales/customer-orders" element={<ProtectedRoute><CustomerOrders /></ProtectedRoute>} />
-                <Route path="/sales/customer-invoices" element={<ProtectedRoute><CustomerInvoices /></ProtectedRoute>} />
-                <Route path="/sales/pending-invoices" element={<ProtectedRoute><PendingInvoices /></ProtectedRoute>} />
-                <Route path="/sales/corrected-invoices" element={<ProtectedRoute><CorrectedInvoices /></ProtectedRoute>} />
-                <Route path="/sales/shipments" element={<ProtectedRoute><Shipments /></ProtectedRoute>} />
-                <Route path="/sales/tax-invoices" element={<ProtectedRoute><TaxInvoices /></ProtectedRoute>} />
-                <Route path="/sales/customer-debts" element={<ProtectedRoute><CustomerDebts /></ProtectedRoute>} />
-                <Route path="/sales/returns" element={<ProtectedRoute><SalesReturns /></ProtectedRoute>} />
-                <Route path="/sales/returns-report" element={<ProtectedRoute><ReturnsReport /></ProtectedRoute>} />
-                <Route path="/sales/profitability" element={<ProtectedRoute><Profitability /></ProtectedRoute>} />
-                <Route path="/sales/sales-funnel" element={<ProtectedRoute><SalesFunnel /></ProtectedRoute>} />
-                <Route path="/sales/unit-economics" element={<ProtectedRoute><UnitEconomics /></ProtectedRoute>} />
+                {/* Sales — nested routes: Layout bir marta renderlanadi, faqat ichki kontent o'zgaradi */}
+                <Route path="/sales" element={<ProtectedRoute><Layout><Suspense fallback={<LoadingSpinner />}><Outlet /></Suspense></Layout></ProtectedRoute>}>
+                  <Route index element={<Sales />} />
+                  <Route path="customer-orders" element={<CustomerOrders />} />
+                  <Route path="customer-orders/:id" element={<CustomerOrderDetail />} />
+                  <Route path="customer-invoices" element={<CustomerInvoices />} />
+                  <Route path="customer-invoices/:id" element={<CustomerInvoiceDetail />} />
+                  <Route path="pending-invoices" element={<PendingInvoices />} />
+                  <Route path="corrected-invoices" element={<CorrectedInvoices />} />
+                  <Route path="shipments" element={<Shipments />} />
+                  <Route path="shipments/:id" element={<ShipmentDetail />} />
+                  <Route path="tax-invoices" element={<TaxInvoices />} />
+                  <Route path="tax-invoices/:id" element={<TaxInvoiceDetail />} />
+                  <Route path="customer-debts" element={<CustomerDebts />} />
+                  <Route path="returns" element={<SalesReturns />} />
+                  <Route path="returns/:id" element={<ReturnDetail />} />
+                  <Route path="returns-report" element={<ReturnsReport />} />
+                  <Route path="profitability" element={<Profitability />} />
+                  <Route path="sales-funnel" element={<SalesFunnel />} />
+                  <Route path="unit-economics" element={<UnitEconomics />} />
+                </Route>
                 <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
                 <Route path="/products/list" element={<ProtectedRoute><ProductsList /></ProtectedRoute>} />
                 <Route path="/products/history/:id" element={<ProtectedRoute><ProductHistory /></ProtectedRoute>} />

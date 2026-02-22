@@ -1,35 +1,46 @@
-import { Layout } from "@/components/Layout";
 import { printViaIframe } from "@/utils/print";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import {
-  Plus,
-  Eye,
-  Edit,
-  Trash2,
-  DollarSign,
-  FileText,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  Printer
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
+import {
+  Plus, Trash2, Loader2, ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal,
+  Filter, Search, Columns3, RefreshCw, Printer, Edit, DollarSign, Eye, Truck
 } from "lucide-react";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useModal } from "@/contexts/ModalContext";
 import { useCustomerInvoices, CustomerInvoiceFilters } from "@/hooks/useCustomerInvoices";
 import { CustomerInvoiceModal } from "@/components/CustomerInvoiceModal";
 import { ViewInvoiceModal } from "@/components/ViewInvoiceModal";
 import { CustomerPaymentModal } from "@/components/CustomerPaymentModal";
 import { CustomerInvoice } from "@shared/api";
-import { useModal } from "@/contexts/ModalContext";
-import { format } from "date-fns";
 import { ExportButton } from "@/components/ExportButton";
-import { formatCurrency, formatDate, getInvoiceStatusColor, getInvoiceStatusLabel, getShippedStatusColor, getShippedStatusLabel } from "@/lib/format";
+import { formatAmount } from "@/lib/format";
 import { AdvancedFilter, FilterField } from "@/components/shared/AdvancedFilter";
-import { DataPagination } from "@/components/shared/DataPagination";
+import { StatusBadge, INVOICE_STATUS_CONFIG } from "@/components/shared/StatusBadge";
 import { usePartners } from "@/hooks/usePartners";
 import { useWarehouses } from "@/hooks/useWarehouses";
+import { format } from "date-fns";
 
 const STATUS_OPTIONS = [
   { value: 'unpaid', label: "To'lanmagan" },
@@ -45,22 +56,50 @@ const SHIPPED_STATUS_OPTIONS = [
   { value: 'shipped', label: "Jo'natilgan" },
 ];
 
-const CustomerInvoices = () => {
-  // Default date range: current month start to today
-  const defaultStartDate = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
-  const defaultEndDate = format(new Date(), 'yyyy-MM-dd');
+// Ustun ta'riflari — MoySklad uslubida
+type ColumnKey = 'invoiceNumber' | 'invoiceDate' | 'customerName' | 'organization' | 'warehouseName' | 'totalAmount' | 'dueDate' | 'paidAmount' | 'shippedAmount' | 'sent' | 'printed' | 'status' | 'notes';
 
-  // Server-side filter state (sent to API)
+interface ColumnDef {
+  key: ColumnKey;
+  label: string;
+  defaultVisible: boolean;
+  align?: 'left' | 'right' | 'center';
+}
+
+const ALL_COLUMNS: ColumnDef[] = [
+  { key: 'invoiceNumber', label: '№', defaultVisible: true, align: 'left' },
+  { key: 'invoiceDate', label: 'Vaqt', defaultVisible: true, align: 'left' },
+  { key: 'customerName', label: 'Kontragent', defaultVisible: true, align: 'left' },
+  { key: 'organization', label: 'Tashkilot', defaultVisible: true, align: 'left' },
+  { key: 'warehouseName', label: 'Ombordan', defaultVisible: true, align: 'left' },
+  { key: 'totalAmount', label: 'Summa', defaultVisible: true, align: 'right' },
+  { key: 'dueDate', label: "Reja to'lov sanasi", defaultVisible: true, align: 'left' },
+  { key: 'paidAmount', label: "To'langan", defaultVisible: true, align: 'right' },
+  { key: 'shippedAmount', label: "Jo'natilgan", defaultVisible: true, align: 'right' },
+  { key: 'sent', label: 'Yuborilgan', defaultVisible: true, align: 'center' },
+  { key: 'printed', label: 'Chop etilgan', defaultVisible: true, align: 'center' },
+  { key: 'status', label: 'Holat', defaultVisible: false, align: 'left' },
+  { key: 'notes', label: 'Izoh', defaultVisible: true, align: 'left' },
+];
+
+const CustomerInvoices = () => {
+  const navigate = useNavigate();
+  const [urlParams] = useSearchParams();
+
+  const defaultStartDate = urlParams.get('from') || format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
+  const defaultEndDate = urlParams.get('to') || format(new Date(), 'yyyy-MM-dd');
+  const initialSearch = urlParams.get('q') || '';
+
   const [filters, setFilters] = useState<CustomerInvoiceFilters>({
     page: 1,
     pageSize: 25,
     startDate: defaultStartDate,
     endDate: defaultEndDate,
+    search: initialSearch || undefined,
   });
 
-  // Local filter form values (for AdvancedFilter inputs)
   const [filterValues, setFilterValues] = useState<Record<string, string>>({
-    search: '',
+    search: initialSearch,
     startDate: defaultStartDate,
     endDate: defaultEndDate,
     status: '',
@@ -68,14 +107,6 @@ const CustomerInvoices = () => {
     warehouseId: '',
     shippedStatus: '',
   });
-
-  // Debounce search input for server-side filtering
-  const debouncedSearch = useDebounce(filterValues.search, 500);
-
-  // Auto-apply debounced search to server filters
-  useEffect(() => {
-    setFilters(prev => ({ ...prev, search: debouncedSearch, page: 1 }));
-  }, [debouncedSearch]);
 
   const { invoices, total, page, pageSize, loading, error, refetch, createInvoice, updateInvoice, deleteInvoice, recordPayment } = useCustomerInvoices(filters);
   const { partners } = usePartners('customer');
@@ -87,16 +118,55 @@ const CustomerInvoices = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoice | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => {
+    const defaults = new Set<ColumnKey>();
+    ALL_COLUMNS.forEach(c => { if (c.defaultVisible) defaults.add(c.key); });
+    return defaults;
+  });
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const debouncedSearch = useDebounce(searchInput, 500);
+  const [showSummary, setShowSummary] = useState(true);
 
-  // Filter fields definition for AdvancedFilter component
+  // Debounce search
+  useEffect(() => {
+    setFilterValues(prev => ({ ...prev, search: debouncedSearch }));
+    setFilters(prev => ({ ...prev, search: debouncedSearch, page: 1 }));
+  }, [debouncedSearch]);
+
+  // Navigation filtri sinxronlash
+  useEffect(() => {
+    const q = urlParams.get('q') || '';
+    const from = urlParams.get('from') || '';
+    const to = urlParams.get('to') || '';
+    setSearchInput(q);
+    setFilterValues(prev => ({
+      ...prev,
+      search: q,
+      ...(from && { startDate: from }),
+      ...(to && { endDate: to }),
+    }));
+    setFilters(prev => ({
+      ...prev,
+      search: q || undefined,
+      ...(from && { startDate: from }),
+      ...(to && { endDate: to }),
+      page: 1,
+    }));
+  }, [urlParams]);
+
+  // Filtr maydonlari
   const filterFields: FilterField[] = [
-    { key: 'search', label: 'Qidirish', type: 'text', placeholder: 'Invoys № yoki mijoz...' },
-    { key: 'startDate', label: 'Sana dan', type: 'date' },
-    { key: 'endDate', label: 'Sana gacha', type: 'date' },
-    { key: 'status', label: 'Holat', type: 'select', options: STATUS_OPTIONS },
-    { key: 'customerId', label: 'Mijoz', type: 'select', options: partners.map(p => ({ value: p._id, label: p.name })) },
-    { key: 'warehouseId', label: 'Ombor', type: 'select', options: warehouses.map(w => ({ value: w._id, label: w.name })) },
-    { key: 'shippedStatus', label: "Jo'natish holati", type: 'select', options: SHIPPED_STATUS_OPTIONS },
+    { key: 'search', label: 'Qidirish', type: 'text', placeholder: 'Raqam yoki izoh...' },
+    { key: 'startDate', label: 'Davr dan', type: 'date' },
+    { key: 'endDate', label: 'Davr gacha', type: 'date' },
+    { key: 'status', label: 'Holat', type: 'select', options: STATUS_OPTIONS, primary: true },
+    { key: 'customerId', label: 'Kontragent', type: 'select', options: partners.map(p => ({ value: p._id, label: p.name })), primary: true },
+    { key: 'warehouseId', label: 'Ombor', type: 'select', options: warehouses.map(w => ({ value: w._id, label: w.name })), primary: true },
+    { key: 'shippedStatus', label: "Jo'natish holati", type: 'select', options: SHIPPED_STATUS_OPTIONS, primary: true },
   ];
 
   const handleFilterChange = useCallback((key: string, value: string) => {
@@ -104,50 +174,69 @@ const CustomerInvoices = () => {
   }, []);
 
   const handleSearch = useCallback(() => {
-    setFilters(prev => ({
-      ...prev,
-      ...filterValues,
-      page: 1,
-    }));
+    setFilters(prev => ({ ...prev, ...filterValues, page: 1 }));
   }, [filterValues]);
 
   const handleClearFilters = useCallback(() => {
     const empty: Record<string, string> = {};
     filterFields.forEach(f => { empty[f.key] = ''; });
     setFilterValues(empty);
+    setSearchInput('');
     setFilters({ page: 1, pageSize: filters.pageSize });
   }, [filters.pageSize]);
 
-  const getStatusIcon = (status: string) => {
-    if (status === 'paid') return <CheckCircle className="h-4 w-4" />;
-    if (status === 'partial') return <Clock className="h-4 w-4" />;
-    return <AlertCircle className="h-4 w-4" />;
-  };
+  // Jami hisoblash
+  const summaryTotals = useMemo(() => ({
+    totalAmount: invoices.reduce((sum, inv) => sum + inv.totalAmount, 0),
+    paidAmount: invoices.reduce((sum, inv) => sum + inv.paidAmount, 0),
+    shippedAmount: invoices.reduce((sum, inv) => sum + (inv.shippedAmount || 0), 0),
+  }), [invoices]);
 
-  // Calculate KPIs from current page data
-  const { totalInvoices, totalAmount, paidAmount, outstandingAmount, overdueCount } = useMemo(() => {
-    const totalAmt = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
-    const paid = invoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
-    const now = new Date();
-    return {
-      totalInvoices: total,
-      totalAmount: totalAmt,
-      paidAmount: paid,
-      outstandingAmount: totalAmt - paid,
-      overdueCount: invoices.filter(inv => inv.status !== 'paid' && new Date(inv.dueDate) < now).length,
-    };
-  }, [invoices, total]);
+  // Qator tanlash
+  const selectedCount = selectedRows.size;
+  const allSelected = invoices.length > 0 && invoices.every(inv => selectedRows.has(inv._id));
+  const someSelected = invoices.some(inv => selectedRows.has(inv._id)) && !allSelected;
+
+  const toggleSelectAll = useCallback(() => {
+    if (allSelected) setSelectedRows(new Set());
+    else setSelectedRows(new Set(invoices.map(inv => inv._id)));
+  }, [invoices, allSelected]);
+
+  const toggleSelectRow = useCallback((id: string) => {
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Ustun sozlash
+  const toggleColumn = useCallback((key: ColumnKey) => {
+    setVisibleColumns(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const activeColumns = useMemo(() => ALL_COLUMNS.filter(c => visibleColumns.has(c.key)), [visibleColumns]);
+
+  // Ommaviy o'chirish
+  const handleBatchDelete = useCallback(async () => {
+    for (const id of selectedRows) {
+      try { await deleteInvoice(id); } catch { /* skip */ }
+    }
+    setSelectedRows(new Set());
+    refetch();
+  }, [selectedRows, deleteInvoice, refetch]);
 
   const handleCreate = () => {
-    setSelectedInvoice(null);
-    setIsEditMode(false);
-    setIsCreateModalOpen(true);
+    navigate('/sales/customer-invoices/new');
   };
 
   const handleEdit = (invoice: CustomerInvoice) => {
-    setSelectedInvoice(invoice);
-    setIsEditMode(true);
-    setIsCreateModalOpen(true);
+    storeDocumentIds('customer-invoices', invoices.map(i => i._id));
+    navigate(`/sales/customer-invoices/${invoice._id}`);
   };
 
   const handleView = (invoice: CustomerInvoice) => {
@@ -161,12 +250,10 @@ const CustomerInvoices = () => {
         await updateInvoice(selectedInvoice._id, data);
       } else {
         const result = await createInvoice(data);
-
-        // Check for warnings about insufficient inventory
         if (result.warnings && result.warnings.length > 0) {
-          const warningMessage = "⚠️ Ogohlantirish: Ba'zi mahsulotlar yetarli emas:\n\n" +
-            result.warnings.map((w: string) => `• ${w}`).join('\n') +
-            "\n\nHisob-faktura muvaffaqiyatli yaratildi, lekin inventar minusga tushdi.";
+          const warningMessage = "Ogohlantirish: Ba'zi mahsulotlar yetarli emas:\n\n" +
+            result.warnings.map((w: string) => `- ${w}`).join('\n') +
+            "\n\nHisob-faktura yaratildi, lekin inventar minusga tushdi.";
           setTimeout(() => alert(warningMessage), 100);
         }
       }
@@ -179,24 +266,30 @@ const CustomerInvoices = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Hisob-fakturani o'chirishni xohlaysizmi?")) {
+    setInvoiceToDelete(id);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (invoiceToDelete) {
       try {
-        await deleteInvoice(id);
+        await deleteInvoice(invoiceToDelete);
+        setShowDeleteDialog(false);
+        setInvoiceToDelete(null);
         refetch();
-      } catch (error) {
+      } catch {
         showError('Xatolik yuz berdi');
       }
     }
   };
 
-  const handlePayment = async (invoice: CustomerInvoice) => {
+  const handlePayment = (invoice: CustomerInvoice) => {
     setSelectedInvoice(invoice);
     setIsPaymentModalOpen(true);
   };
 
   const handleSavePayment = async (amount: number, paymentMethod: string, notes: string) => {
     if (!selectedInvoice) return;
-
     try {
       const newPaidAmount = selectedInvoice.paidAmount + amount;
       await recordPayment(selectedInvoice._id, newPaidAmount, paymentMethod, notes);
@@ -307,271 +400,425 @@ const CustomerInvoices = () => {
     printViaIframe(html);
   }, []);
 
-  // Print both receipts
   const handlePrintBoth = useCallback((invoice: CustomerInvoice) => {
     handlePrintCustomer(invoice);
     setTimeout(() => handlePrintWarehouse(invoice), 1500);
   }, [handlePrintCustomer, handlePrintWarehouse]);
 
+  // Pagination
+  const totalPages = Math.ceil(total / pageSize);
+  const startItem = (page - 1) * pageSize + 1;
+  const endItem = Math.min(page * pageSize, total);
+
   if (loading && invoices.length === 0) {
     return (
-      <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
-          <div className="flex justify-between items-center">
-            <div><Skeleton className="h-8 w-64 mb-2" /><Skeleton className="h-4 w-48" /></div>
-            <Skeleton className="h-10 w-44" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => (<Card key={i} className="p-6"><div className="flex items-center justify-between"><div><Skeleton className="h-4 w-28 mb-2" /><Skeleton className="h-7 w-20" /></div><Skeleton className="h-12 w-12 rounded-lg" /></div></Card>))}
-          </div>
-          <Card className="p-4"><div className="grid grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-10" />)}</div></Card>
-          <Card>
-            <div className="p-4">
-              {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="flex items-center gap-4 py-3 border-b last:border-0">
-                  <Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-28 ml-auto" /><Skeleton className="h-6 w-16 rounded-full" /><Skeleton className="h-8 w-20" />
-                </div>
-              ))}
-            </div>
-          </Card>
+      <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </div>
     );
   }
 
-  if (error) {
-    return (
-      <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
-          <div className="flex items-center justify-center h-64 text-red-600">
-            <AlertCircle className="h-8 w-8 mr-2" />
-            <span>Xatolik: {error}</span>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  // Yacheyka renderi — MoySklad uslubida
+  const renderCell = (invoice: CustomerInvoice, col: ColumnDef) => {
+    switch (col.key) {
+      case 'invoiceNumber':
+        return (
+          <button
+            onClick={() => handleEdit(invoice)}
+            className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+          >
+            {invoice.invoiceNumber}
+          </button>
+        );
+      case 'invoiceDate': {
+        const d = new Date(invoice.invoiceDate);
+        return (
+          <span className="text-gray-600">
+            {d.toLocaleDateString('ru-RU')} {d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        );
+      }
+      case 'customerName':
+        return <span className="font-medium">{invoice.customerName}</span>;
+      case 'organization':
+        return <span className="text-gray-600">{invoice.organization || 'Climart'}</span>;
+      case 'warehouseName':
+        return <span className="text-gray-600">{invoice.warehouseName || '-'}</span>;
+      case 'totalAmount':
+        return <span className="font-medium">{formatAmount(invoice.totalAmount)}</span>;
+      case 'dueDate':
+        return <span className="text-gray-600">{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('ru-RU') : ''}</span>;
+      case 'paidAmount': {
+        const val = invoice.paidAmount || 0;
+        return (
+          <span className={val > 0 ? 'bg-[#fff3cd] px-1.5 py-0.5 rounded' : ''}>
+            {formatAmount(val)}
+          </span>
+        );
+      }
+      case 'shippedAmount': {
+        const val = invoice.shippedAmount || 0;
+        return (
+          <span className={val > 0 ? 'bg-[#fff3cd] px-1.5 py-0.5 rounded' : ''}>
+            {formatAmount(val)}
+          </span>
+        );
+      }
+      case 'sent':
+        return <span className="text-gray-300">—</span>;
+      case 'printed':
+        return <span className="text-gray-300">—</span>;
+      case 'status':
+        return <StatusBadge status={invoice.status} config={INVOICE_STATUS_CONFIG} />;
+      case 'notes':
+        return <span className="text-gray-500 text-xs truncate max-w-[200px] block">{invoice.notes || ''}</span>;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <Layout>
-      <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Mijozlar hisob-fakturalari</h1>
-            <p className="text-gray-600 mt-1">Jami: {total} ta hisob-faktura</p>
-          </div>
-          <div className="flex gap-2">
+    <>
+      <div className="p-4 md:p-6 max-w-[1920px] mx-auto space-y-0">
+        {/* ===== TOOLBAR — MoySklad uslubida ===== */}
+        <div className="bg-white border rounded-t-lg px-3 py-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Sarlavha */}
+            <h1 className="text-sm font-semibold text-gray-700 hidden lg:block">Hisob-fakturalar</h1>
+
+            {/* Yangilash */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => refetch()}
+              title="Yangilash"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+
+            {/* + Hisob-faktura */}
+            <Button size="sm" onClick={handleCreate} className="h-8 gap-1.5">
+              <Plus className="h-3.5 w-3.5" />
+              Hisob-faktura
+            </Button>
+
+            <div className="h-6 w-px bg-gray-200" />
+
+            {/* Filtr toggle */}
+            <Button
+              variant={showFilters ? "secondary" : "outline"}
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="h-3.5 w-3.5" />
+              Filtr
+              <ChevronDown className={`h-3 w-3 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </Button>
+
+            {/* Tezkor qidiruv */}
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Raqam yoki izoh"
+                className="h-8 w-52 pl-7 text-sm"
+              />
+            </div>
+
+            {/* Tanlangan soni */}
+            <span className="text-xs text-gray-400 min-w-[16px] text-center font-medium bg-gray-100 rounded px-1.5 py-0.5">
+              {selectedCount}
+            </span>
+
+            {/* O'zgartirish dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" disabled={selectedCount === 0}>
+                  O'zgartirish
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={handleBatchDelete} className="text-red-600">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  O'chirish
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Holat dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" disabled={selectedCount === 0}>
+                  Holat
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {STATUS_OPTIONS.map(s => (
+                  <DropdownMenuItem key={s.value}>
+                    <StatusBadge status={s.value} config={INVOICE_STATUS_CONFIG} className="mr-2" />
+                    {s.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Yaratish dropdown — yashil */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="h-8 gap-1 text-xs bg-green-600 hover:bg-green-700 text-white" disabled={selectedCount === 0}>
+                  Yaratish
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem disabled>
+                  <Truck className="h-4 w-4 mr-2" />
+                  Jo'natish (Otgruzka)
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Kirim to'lov
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Chop etish dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" disabled={selectedCount === 0}>
+                  <Printer className="h-3.5 w-3.5" />
+                  Chop etish
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem
+                  onClick={() => {
+                    const first = invoices.find(inv => selectedRows.has(inv._id));
+                    if (first) handlePrintBoth(first);
+                  }}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Chek (Mijoz + Ombor)
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    const first = invoices.find(inv => selectedRows.has(inv._id));
+                    if (first) handlePrintCustomer(first);
+                  }}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Faqat mijoz cheki
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="flex-1" />
+
+            {/* Eksport */}
             <ExportButton
               data={invoices}
               filename="hisob-fakturalar"
               fieldsToInclude={["invoiceNumber", "customerName", "invoiceDate", "totalAmount", "paidAmount", "status"]}
             />
-            <Button onClick={handleCreate} className="w-full md:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Yangi hisob-faktura
-            </Button>
+
+            {/* Ustunlar */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1 text-xs">
+                  <Columns3 className="h-3.5 w-3.5" />
+                  Ustunlar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {ALL_COLUMNS.map(col => (
+                  <DropdownMenuCheckboxItem
+                    key={col.key}
+                    checked={visibleColumns.has(col.key)}
+                    onCheckedChange={() => toggleColumn(col.key)}
+                  >
+                    {col.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Jami hisob-fakturalar</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{totalInvoices}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <FileText className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </Card>
+        {/* ===== FILTR PANELI ===== */}
+        {showFilters && (
+          <div className="bg-white border-x border-b px-3 py-3">
+            <AdvancedFilter
+              fields={filterFields}
+              values={filterValues}
+              onChange={handleFilterChange}
+              onSearch={handleSearch}
+              onClear={handleClearFilters}
+              defaultExpanded
+            />
+          </div>
+        )}
 
-          <Card className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">To'langan summa</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">
-                  {formatCurrency(paidAmount)}
-                </p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Qoldiq summa</p>
-                <p className="text-2xl font-bold text-orange-600 mt-1">
-                  {formatCurrency(outstandingAmount)}
-                </p>
-              </div>
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <DollarSign className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Muddati o'tgan</p>
-                <p className="text-2xl font-bold text-red-600 mt-1">{overdueCount}</p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-lg">
-                <AlertCircle className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Advanced Filter */}
-        <AdvancedFilter
-          fields={filterFields}
-          values={filterValues}
-          onChange={handleFilterChange}
-          onSearch={handleSearch}
-          onClear={handleClearFilters}
-          defaultExpanded
-        />
-
-        {/* Invoices Table */}
-        <Card>
+        {/* ===== JADVAL ===== */}
+        <Card className={`rounded-none ${showFilters ? '' : 'border-t-0'} rounded-b-lg`}>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+            <table className="w-full text-xs">
+              <thead className="bg-[#e8edf5] border-b border-[#ccd5e0]">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Hisob-faktura №
+                  <th className="w-8 px-1.5 py-1 text-center">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                      onChange={toggleSelectAll}
+                      className="rounded border-gray-300 h-3.5 w-3.5"
+                    />
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Mijoz
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sana
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Jami summa
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    To'langan
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Jo'natildi
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Holat
-                  </th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amallar
-                  </th>
+                  {activeColumns.map(col => (
+                    <th
+                      key={col.key}
+                      className={`px-2 py-1.5 text-[11px] font-semibold text-[#555] uppercase whitespace-nowrap ${
+                        col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
+                      }`}
+                    >
+                      {col.label}
+                    </th>
+                  ))}
+                  <th className="w-8 px-1 py-1"></th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200 text-sm">
+
+              <tbody className="divide-y divide-gray-100">
                 {invoices.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-3 py-12 text-center text-gray-500">
+                    <td colSpan={activeColumns.length + 2} className="px-4 py-8 text-center text-gray-500 text-sm">
                       Hisob-fakturalar topilmadi
                     </td>
                   </tr>
                 ) : (
-                  invoices.map((invoice) => (
-                    <tr key={invoice._id} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {invoice.invoiceNumber}
-                      </td>
-                      <td className="px-3 py-2 text-sm text-gray-900">
-                        <div className="max-w-[180px] truncate">{invoice.customerName}</div>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(invoice.invoiceDate)}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {formatCurrency(invoice.totalAmount)}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-green-600 font-medium">
-                        {formatCurrency(invoice.paidAmount)}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getShippedStatusColor(invoice.shippedStatus || 'not_shipped')}`}>
-                          {getShippedStatusLabel(invoice.shippedStatus || 'not_shipped')}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getInvoiceStatusColor(invoice.status)}`}>
-                          {getStatusIcon(invoice.status)}
-                          {getInvoiceStatusLabel(invoice.status)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleView(invoice)}
-                            title="Ko'rish"
+                  invoices.map((invoice) => {
+                    const isSelected = selectedRows.has(invoice._id);
+                    return (
+                      <tr
+                        key={invoice._id}
+                        className={`hover:bg-[#f0f7ff] transition-colors ${isSelected ? 'bg-blue-50/40' : ''}`}
+                      >
+                        <td className="w-8 px-1.5 py-1 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectRow(invoice._id)}
+                            className="rounded border-gray-300 h-3.5 w-3.5"
+                          />
+                        </td>
+                        {activeColumns.map(col => (
+                          <td
+                            key={col.key}
+                            className={`px-2 py-1 whitespace-nowrap ${
+                              col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
+                            }`}
                           >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePrintBoth(invoice)}
-                            title="Chek chiqarish (Mijoz + Ombor)"
-                            className="text-blue-600 hover:text-blue-700"
-                          >
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(invoice)}
-                            title="Tahrirlash"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {invoice.status !== 'paid' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handlePayment(invoice)}
-                              title="To'lov qabul qilish"
-                              className="text-green-600 hover:text-green-700"
-                            >
-                              <DollarSign className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(invoice._id)}
-                            title="O'chirish"
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            {renderCell(invoice, col)}
+                          </td>
+                        ))}
+                        <td className="px-1 py-1 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreHorizontal className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleView(invoice)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ko'rish
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(invoice)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Tahrirlash
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {invoice.status !== 'paid' && (
+                                <DropdownMenuItem onClick={() => handlePayment(invoice)}>
+                                  <DollarSign className="h-4 w-4 mr-2" />
+                                  To'lov qabul qilish
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem onClick={() => handlePrintBoth(invoice)}>
+                                <Printer className="h-4 w-4 mr-2" />
+                                Chop etish
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleDelete(invoice._id)} className="text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                O'chirish
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
+
+              {/* Jami qatori */}
+              {invoices.length > 0 && showSummary && (
+                <tfoot className="bg-[#f5f7fa] border-t border-[#ccd5e0]">
+                  <tr className="font-bold text-xs">
+                    <td className="px-1.5 py-1"></td>
+                    {activeColumns.map(col => (
+                      <td
+                        key={col.key}
+                        className={`px-2 py-1 whitespace-nowrap ${
+                          col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
+                        }`}
+                      >
+                        {col.key === 'totalAmount' && formatAmount(summaryTotals.totalAmount)}
+                        {col.key === 'paidAmount' && formatAmount(summaryTotals.paidAmount)}
+                        {col.key === 'shippedAmount' && formatAmount(summaryTotals.shippedAmount)}
+                      </td>
+                    ))}
+                    <td className="px-1 py-1"></td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
 
-          {/* Pagination */}
-          <DataPagination
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            onPageChange={(p) => setFilters(prev => ({ ...prev, page: p }))}
-            onPageSizeChange={(ps) => setFilters(prev => ({ ...prev, pageSize: ps, page: 1 }))}
-          />
+          {/* ===== PAGINATION — MoySklad uslubida ===== */}
+          <div className="flex items-center justify-between px-2 py-1 border-t text-xs text-gray-600">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                disabled={page <= 1}
+                onClick={() => setFilters(prev => ({ ...prev, page: prev.page! - 1 }))}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                disabled={page >= totalPages}
+                onClick={() => setFilters(prev => ({ ...prev, page: prev.page! + 1 }))}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <span className="text-xs ml-1">
+                {total > 0 ? `${startItem}-${endItem} dan ${total}` : '0'}
+              </span>
+            </div>
+          </div>
         </Card>
       </div>
 
@@ -595,7 +842,25 @@ const CustomerInvoices = () => {
         onSave={handleSavePayment}
         invoice={selectedInvoice}
       />
-    </Layout>
+
+      {/* O'chirish dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hisob-fakturani o'chirish</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hisob-fakturani o'chirishni tasdiqlaysizmi? Bu amalni ortga qaytarib bo'lmaydi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              O'chirish
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

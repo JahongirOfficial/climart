@@ -1,8 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import { DateShortcuts } from "./DateShortcuts";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +9,8 @@ export interface FilterField {
   type: "text" | "select" | "date" | "dateRange";
   placeholder?: string;
   options?: { value: string; label: string }[];
+  /** MoySklad uslubida muhim maydon belgisi (turunj nuqta) */
+  primary?: boolean;
 }
 
 interface AdvancedFilterProps {
@@ -29,9 +28,7 @@ export const AdvancedFilter = ({
   onChange,
   onSearch,
   onClear,
-  defaultExpanded = false,
 }: AdvancedFilterProps) => {
-  const [expanded, setExpanded] = useState(defaultExpanded);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const isInitialMount = useRef(true);
 
@@ -55,7 +52,6 @@ export const AdvancedFilter = ({
   const handleDateShortcut = (startDate: string, endDate: string) => {
     onChange("startDate", startDate);
     onChange("endDate", endDate);
-    // Auto-trigger search after shortcut
     setTimeout(onSearch, 0);
   };
 
@@ -65,102 +61,108 @@ export const AdvancedFilter = ({
     setTimeout(onSearch, 0);
   };
 
+  // Maydonlarni ajratish
+  const dateFields = fields.filter(f => f.type === 'date');
+  const otherFields = fields.filter(f => f.type !== 'date');
+  const hasDateFields = dateFields.length > 0;
+
   return (
-    <div className="bg-white border rounded-lg">
-      {/* Toggle header */}
-      <button
-        type="button"
-        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">Filtr</span>
-          {hasActiveFilters && (
-            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-blue-600 text-white text-xs">
-              {Object.values(values).filter((v) => v !== "").length}
-            </span>
-          )}
-        </div>
-        {expanded ? (
-          <ChevronUp className="h-4 w-4 text-gray-500" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-gray-500" />
-        )}
-      </button>
+    <div>
+      {/* ===== 1-qator: Tugmalar + Davr + tezkor filtrlar ===== */}
+      <div className="flex items-center gap-2 flex-wrap mb-2">
+        {/* Topish tugmasi — turunj (MoySklad uslubi) */}
+        <button
+          type="button"
+          onClick={onSearch}
+          className="h-[26px] px-3 text-[11px] font-medium text-white bg-[#ff8c00] hover:bg-[#e07800] rounded border border-[#cc7000] shadow-sm"
+        >
+          Topish
+        </button>
 
-      {/* Filter content */}
-      {expanded && (
-        <div className="px-4 pb-4 border-t">
-          {/* Date shortcuts */}
-          {fields.some((f) => f.type === "date" || f.type === "dateRange") && (
-            <div className="pt-3 pb-1">
-              <DateShortcuts onSelect={handleDateShortcut} />
-            </div>
+        {/* Tozalash tugmasi */}
+        <button
+          type="button"
+          onClick={onClear}
+          className={cn(
+            "h-[26px] px-3 text-[11px] font-medium rounded border shadow-sm",
+            hasActiveFilters
+              ? "text-gray-700 bg-white hover:bg-gray-50 border-gray-300"
+              : "text-gray-400 bg-gray-50 border-gray-200 cursor-default"
           )}
+          disabled={!hasActiveFilters}
+        >
+          Tozalash
+        </button>
 
-          {/* Filter grid - 4 columns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3">
-            {fields.map((field) => (
-              <div key={field.key}>
-                <Label className="text-xs text-gray-500 mb-1 block">
-                  {field.label}
-                </Label>
-                {field.type === "text" && (
-                  <Input
-                    value={values[field.key] || ""}
-                    onChange={(e) => onChange(field.key, e.target.value)}
-                    placeholder={field.placeholder || field.label}
-                    className="h-8 text-sm"
-                  />
-                )}
-                {field.type === "date" && (
-                  <Input
+        {/* Davr: bch·bug·haf·oy + sana diapazon */}
+        {hasDateFields && (
+          <>
+            <div className="h-4 w-px bg-gray-300 mx-0.5" />
+
+            <span className="text-[11px] text-[#666] font-medium">Davr:</span>
+            <DateShortcuts onSelect={handleDateShortcut} />
+
+            {/* Sana inputlar */}
+            <div className="flex items-center gap-1">
+              {dateFields[0] && (
+                <input
+                  type="date"
+                  value={values[dateFields[0].key] || ""}
+                  onChange={(e) => handleSelectChange(dateFields[0].key, e.target.value)}
+                  className="h-[26px] w-[130px] px-1.5 text-[11px] border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-400"
+                />
+              )}
+              {dateFields[1] && (
+                <>
+                  <span className="text-gray-400 text-[11px]">—</span>
+                  <input
                     type="date"
-                    value={values[field.key] || ""}
-                    onChange={(e) => handleSelectChange(field.key, e.target.value)}
-                    className="h-8 text-sm"
+                    value={values[dateFields[1].key] || ""}
+                    onChange={(e) => handleSelectChange(dateFields[1].key, e.target.value)}
+                    className="h-[26px] w-[130px] px-1.5 text-[11px] border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-400"
                   />
-                )}
-                {field.type === "select" && (
-                  <select
-                    value={values[field.key] || ""}
-                    onChange={(e) => handleSelectChange(field.key, e.target.value)}
-                    className={cn(
-                      "w-full h-8 px-2 text-sm border border-input rounded-md bg-background",
-                      "focus:outline-none focus:ring-2 focus:ring-ring"
-                    )}
-                  >
-                    <option value="">{field.placeholder || "Barchasi"}</option>
-                    {field.options?.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            ))}
-          </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 pt-3">
-            <Button size="sm" onClick={onSearch} className="h-8">
-              <Search className="h-3.5 w-3.5 mr-1" />
-              Qidirish
-            </Button>
-            {hasActiveFilters && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onClear}
-                className="h-8"
-              >
-                <X className="h-3.5 w-3.5 mr-1" />
-                Tozalash
-              </Button>
-            )}
-          </div>
+      {/* ===== 2-qator: 5 ustunli grid — qolgan filtrlar ===== */}
+      {otherFields.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-1.5">
+          {otherFields.map((field) => (
+            <div key={field.key}>
+              <label className="text-[11px] text-[#666] block mb-0.5 leading-tight">
+                {field.primary && <span className="text-orange-500 mr-0.5">&bull;</span>}
+                {field.label}
+              </label>
+
+              {field.type === "text" && (
+                <input
+                  value={values[field.key] || ""}
+                  onChange={(e) => onChange(field.key, e.target.value)}
+                  placeholder={field.placeholder || field.label}
+                  className="w-full h-[26px] px-1.5 text-[12px] border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-400 placeholder:text-gray-400"
+                />
+              )}
+
+              {field.type === "select" && (
+                <select
+                  value={values[field.key] || ""}
+                  onChange={(e) => handleSelectChange(field.key, e.target.value)}
+                  className="w-full h-[26px] px-1 text-[12px] border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-400 appearance-auto"
+                >
+                  <option value="">{field.placeholder || ""}</option>
+                  {field.options?.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

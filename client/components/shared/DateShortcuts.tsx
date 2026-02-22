@@ -1,5 +1,3 @@
-import { Button } from "@/components/ui/button";
-
 interface DateShortcutsProps {
   onSelect: (startDate: string, endDate: string) => void;
 }
@@ -31,46 +29,38 @@ const monthStart = () => {
 
 export const DateShortcuts = ({ onSelect }: DateShortcutsProps) => {
   return (
-    <div className="flex items-center gap-1 flex-wrap">
-      <Button
+    <span className="inline-flex items-center gap-0.5 text-[11px]">
+      <button
         type="button"
-        variant="link"
-        size="sm"
-        className="h-auto p-0 text-xs text-blue-600"
+        className="text-blue-600 hover:text-blue-800 hover:underline"
         onClick={() => onSelect(yesterday(), yesterday())}
       >
-        kecha
-      </Button>
-      <span className="text-gray-300">|</span>
-      <Button
+        bch
+      </button>
+      <span className="text-gray-400">&middot;</span>
+      <button
         type="button"
-        variant="link"
-        size="sm"
-        className="h-auto p-0 text-xs text-blue-600"
+        className="text-blue-600 hover:text-blue-800 hover:underline"
         onClick={() => onSelect(today(), today())}
       >
-        bugun
-      </Button>
-      <span className="text-gray-300">|</span>
-      <Button
+        bug
+      </button>
+      <span className="text-gray-400">&middot;</span>
+      <button
         type="button"
-        variant="link"
-        size="sm"
-        className="h-auto p-0 text-xs text-blue-600"
+        className="text-blue-600 hover:text-blue-800 hover:underline"
         onClick={() => onSelect(weekStart(), today())}
       >
-        hafta
-      </Button>
-      <span className="text-gray-300">|</span>
-      <Button
+        haf
+      </button>
+      <span className="text-gray-400">&middot;</span>
+      <button
         type="button"
-        variant="link"
-        size="sm"
-        className="h-auto p-0 text-xs text-blue-600"
+        className="text-blue-600 hover:text-blue-800 hover:underline"
         onClick={() => onSelect(monthStart(), today())}
       >
         oy
-      </Button>
-    </div>
+      </button>
+    </span>
   );
 };

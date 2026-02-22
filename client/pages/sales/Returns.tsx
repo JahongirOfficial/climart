@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { printViaIframe } from "@/utils/print";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,6 +15,8 @@ import {
   Plus, Trash2, Loader2, RotateCcw, AlertCircle, DollarSign, Package, Printer, CheckCircle, Clock, XCircle
 } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCustomerReturns, CustomerReturnFilters } from "@/hooks/useCustomerReturns";
 import { usePartners } from "@/hooks/usePartners";
@@ -41,6 +42,7 @@ const REASON_OPTIONS = [
 ];
 
 const Returns = () => {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<CustomerReturnFilters>({
     page: 1,
     pageSize: 25,
@@ -75,12 +77,9 @@ const Returns = () => {
     { key: 'search', label: 'Qidirish', type: 'text', placeholder: 'Raqam, mijoz yoki faktura...' },
     { key: 'startDate', label: 'Sana dan', type: 'date' },
     { key: 'endDate', label: 'Sana gacha', type: 'date' },
-    { key: 'status', label: 'Holat', type: 'select', options: STATUS_OPTIONS },
-    {
-      key: 'customerId', label: 'Mijoz', type: 'select',
-      options: customers.map(c => ({ value: c._id, label: c.name }))
-    },
-    { key: 'reason', label: 'Sabab', type: 'select', options: REASON_OPTIONS },
+    { key: 'status', label: 'Holat', type: 'select', options: STATUS_OPTIONS, primary: true },
+    { key: 'customerId', label: 'Mijoz', type: 'select', options: customers.map(c => ({ value: c._id, label: c.name })), primary: true },
+    { key: 'reason', label: 'Sabab', type: 'select', options: REASON_OPTIONS, primary: true },
   ];
 
   const handleFilterChange = useCallback((key: string, value: string) => {
@@ -133,7 +132,7 @@ const Returns = () => {
   const pendingCount = returns.filter(r => r.status === 'pending').length;
 
   const handleCreate = () => {
-    setIsModalOpen(true);
+    navigate('/sales/returns/new');
   };
 
   const handleSave = async (data: any) => {
@@ -252,18 +251,16 @@ const Returns = () => {
 
   if (loading && returns.length === 0) {
     return (
-      <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+      <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -359,7 +356,17 @@ const Returns = () => {
                 ) : (
                   returns.map((ret) => (
                     <tr key={ret._id} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">{ret.returnNumber}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => {
+                            storeDocumentIds('returns', returns.map(r => r._id));
+                            navigate(`/sales/returns/${ret._id}`);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {ret.returnNumber}
+                        </button>
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm">{ret.customerName}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm">{ret.invoiceNumber}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm">{formatDate(ret.returnDate)}</td>
@@ -454,7 +461,7 @@ const Returns = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Layout>
+    </>
   );
 };
 

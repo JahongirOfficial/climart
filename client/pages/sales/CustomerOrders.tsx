@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,24 +21,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Plus, Edit, Trash2, Loader2, Truck, Lock, Unlock,
-  ChevronDown, MoreHorizontal, Filter, Search, Columns3,
+  ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal, Filter, Search, Columns3,
   RefreshCw, FileText, Printer, Copy, CreditCard
 } from "lucide-react";
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useModal } from "@/contexts/ModalContext";
 import { useCustomerOrders, CustomerOrderFilters } from "@/hooks/useCustomerOrders";
-import { CustomerOrderModal } from "@/components/CustomerOrderModal";
 import { ShipmentModal } from "@/components/ShipmentModal";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { useShipments } from "@/hooks/useShipments";
 import { usePartners } from "@/hooks/usePartners";
 import { useWarehouses } from "@/hooks/useWarehouses";
 import { CustomerOrder, CustomerOrderStatus } from "@shared/api";
 import { ExportButton } from "@/components/ExportButton";
-import { formatCurrency, formatDate, getOrderStatusLabel } from "@/lib/format";
+import { formatAmount, formatDate, getOrderStatusLabel } from "@/lib/format";
 import { api } from '@/lib/api';
 import { AdvancedFilter, FilterField } from "@/components/shared/AdvancedFilter";
-import { DataPagination } from "@/components/shared/DataPagination";
+// DataPagination o'rniga inline MoySklad-style pagination ishlatiladi
 import { StatusBadge, ORDER_STATUS_CONFIG } from "@/components/shared/StatusBadge";
 
 const STATUS_OPTIONS = [
@@ -77,8 +77,8 @@ const STATUS_TRANSITIONS: Record<string, CustomerOrderStatus[]> = {
   'fulfilled': [],
 };
 
-// Ustun ta'riflari (spec 4.1)
-type ColumnKey = 'orderNumber' | 'orderDate' | 'customerName' | 'assignedWorkerName' | 'warehouseName' | 'totalAmount' | 'invoicedSum' | 'paidAmount' | 'shippedAmount' | 'reservedSum' | 'status' | 'deliveryDate' | 'notes';
+// Ustun ta'riflari — MoySklad uslubida
+type ColumnKey = 'orderNumber' | 'orderDate' | 'customerName' | 'warehouseName' | 'totalAmount' | 'invoicedSum' | 'paidAmount' | 'shippedAmount' | 'reservedSum' | 'status' | 'sent' | 'printed' | 'notes' | 'assignedWorkerName' | 'deliveryDate';
 
 interface ColumnDef {
   key: ColumnKey;
@@ -91,45 +91,50 @@ const ALL_COLUMNS: ColumnDef[] = [
   { key: 'orderNumber', label: '№', defaultVisible: true, align: 'left' },
   { key: 'orderDate', label: 'Vaqt', defaultVisible: true, align: 'left' },
   { key: 'customerName', label: 'Kontragent', defaultVisible: true, align: 'left' },
-  { key: 'assignedWorkerName', label: 'Usta', defaultVisible: true, align: 'left' },
-  { key: 'warehouseName', label: 'Ombor', defaultVisible: false, align: 'left' },
+  { key: 'warehouseName', label: 'Tashkilot', defaultVisible: true, align: 'left' },
   { key: 'totalAmount', label: 'Summa', defaultVisible: true, align: 'right' },
-  { key: 'invoicedSum', label: 'Hisob-faktura', defaultVisible: false, align: 'right' },
+  { key: 'invoicedSum', label: 'Hisob-faktura', defaultVisible: true, align: 'right' },
   { key: 'paidAmount', label: "To'langan", defaultVisible: true, align: 'right' },
   { key: 'shippedAmount', label: "Jo'natilgan", defaultVisible: true, align: 'right' },
-  { key: 'reservedSum', label: 'Zahiralangan', defaultVisible: false, align: 'right' },
+  { key: 'reservedSum', label: 'Zahiralangan', defaultVisible: true, align: 'right' },
   { key: 'status', label: 'Holat', defaultVisible: true, align: 'left' },
+  { key: 'sent', label: 'Yuborilgan', defaultVisible: true, align: 'center' },
+  { key: 'printed', label: 'Chop etilgan', defaultVisible: true, align: 'center' },
+  { key: 'notes', label: 'Izoh', defaultVisible: true, align: 'left' },
+  { key: 'assignedWorkerName', label: 'Usta', defaultVisible: false, align: 'left' },
   { key: 'deliveryDate', label: 'Yetkazish sanasi', defaultVisible: false, align: 'left' },
-  { key: 'notes', label: 'Izoh', defaultVisible: false, align: 'left' },
 ];
 
 const CustomerOrders = () => {
-  const [filters, setFilters] = useState<CustomerOrderFilters>({
+  const [urlParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const [filters, setFilters] = useState<CustomerOrderFilters>(() => ({
     page: 1,
     pageSize: 25,
-  });
-  const [filterValues, setFilterValues] = useState<Record<string, string>>({
-    search: '',
+    search: urlParams.get('q') || undefined,
+    startDate: urlParams.get('from') || undefined,
+    endDate: urlParams.get('to') || undefined,
+  }));
+  const [filterValues, setFilterValues] = useState<Record<string, string>>(() => ({
+    search: urlParams.get('q') || '',
     status: '',
     customerId: '',
     warehouseId: '',
-    startDate: '',
-    endDate: '',
+    startDate: urlParams.get('from') || '',
+    endDate: urlParams.get('to') || '',
     paymentStatus: '',
     shipmentStatus: '',
-  });
+  }));
 
-  const { orders, total, page, pageSize, loading, refetch, createOrder, updateOrder, updateStatus, deleteOrder } = useCustomerOrders(filters);
+  const { orders, total, page, pageSize, loading, refetch, updateStatus, deleteOrder } = useCustomerOrders(filters);
   const { createShipment } = useShipments();
   const { partners } = usePartners('customer');
   const { warehouses } = useWarehouses();
   const { showError } = useModal();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isShipmentModalOpen, setIsShipmentModalOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
   const [selectedOrderForShipment, setSelectedOrderForShipment] = useState<string | undefined>(undefined);
-  const [isEditMode, setIsEditMode] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [showUnreserveDialog, setShowUnreserveDialog] = useState(false);
@@ -141,7 +146,7 @@ const CustomerOrders = () => {
     ALL_COLUMNS.forEach(c => { if (c.defaultVisible) defaults.add(c.key); });
     return defaults;
   });
-  const [searchInput, setSearchInput] = useState('');
+  const [searchInput, setSearchInput] = useState(urlParams.get('q') || '');
   const debouncedSearch = useDebounce(searchInput, 500);
   const [showSummary, setShowSummary] = useState(true);
 
@@ -151,16 +156,27 @@ const CustomerOrders = () => {
     setFilters(prev => ({ ...prev, search: debouncedSearch, page: 1 }));
   }, [debouncedSearch]);
 
+  // Navigation filtri o'zgarganda sinxronlash (URL search params)
+  useEffect(() => {
+    const q = urlParams.get('q') || '';
+    const from = urlParams.get('from') || '';
+    const to = urlParams.get('to') || '';
+
+    setSearchInput(q);
+    setFilterValues(prev => ({ ...prev, search: q, startDate: from, endDate: to }));
+    setFilters(prev => ({ ...prev, search: q || undefined, startDate: from || undefined, endDate: to || undefined, page: 1 }));
+  }, [urlParams]);
+
   // Filtr maydonlari (spec 3.1 - Climart uchun moslashtirilgan)
   const filterFields: FilterField[] = [
     { key: 'search', label: 'Qidirish', type: 'text', placeholder: 'Raqam yoki izoh...' },
     { key: 'startDate', label: 'Davr dan', type: 'date' },
     { key: 'endDate', label: 'Davr gacha', type: 'date' },
-    { key: 'status', label: 'Holat', type: 'select', options: STATUS_OPTIONS },
-    { key: 'paymentStatus', label: "To'lov", type: 'select', options: PAYMENT_OPTIONS },
-    { key: 'shipmentStatus', label: "Jo'natilgan", type: 'select', options: SHIPMENT_OPTIONS },
-    { key: 'customerId', label: 'Kontragent', type: 'select', options: partners.map(p => ({ value: p._id, label: p.name })) },
-    { key: 'warehouseId', label: 'Ombor', type: 'select', options: warehouses.map(w => ({ value: w._id, label: w.name })) },
+    { key: 'status', label: 'Holat', type: 'select', options: STATUS_OPTIONS, primary: true },
+    { key: 'paymentStatus', label: "To'lov", type: 'select', options: PAYMENT_OPTIONS, primary: true },
+    { key: 'shipmentStatus', label: "Jo'natilgan", type: 'select', options: SHIPMENT_OPTIONS, primary: true },
+    { key: 'customerId', label: 'Kontragent', type: 'select', options: partners.map(p => ({ value: p._id, label: p.name })), primary: true },
+    { key: 'warehouseId', label: 'Ombor', type: 'select', options: warehouses.map(w => ({ value: w._id, label: w.name })), primary: true },
   ];
 
   const handleFilterChange = useCallback((key: string, value: string) => {
@@ -249,30 +265,13 @@ const CustomerOrders = () => {
   }, [selectedRows, deleteOrder, refetch]);
 
   const handleCreate = () => {
-    setSelectedOrder(null);
-    setIsEditMode(false);
-    setIsModalOpen(true);
+    navigate('/sales/customer-orders/new');
   };
 
   const handleEdit = (order: CustomerOrder) => {
-    setSelectedOrder(order);
-    setIsEditMode(true);
-    setIsModalOpen(true);
-  };
-
-  const handleSave = async (data: any) => {
-    try {
-      if (isEditMode && selectedOrder) {
-        await updateOrder(selectedOrder._id, data);
-      } else {
-        await createOrder(data);
-      }
-      setIsModalOpen(false);
-      refetch();
-    } catch (error) {
-      console.error('Error saving order:', error);
-      throw error;
-    }
+    // IDlar ro'yxatini saqlash — detail sahifada ← → navigatsiya uchun
+    storeDocumentIds('customer-orders', orders.map(o => o._id));
+    navigate(`/sales/customer-orders/${order._id}`);
   };
 
   const handleDelete = async (id: string) => {
@@ -354,21 +353,16 @@ const CustomerOrders = () => {
 
   if (loading && orders.length === 0) {
     return (
-      <Layout>
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         </div>
-      </Layout>
     );
   }
 
-  // Yacheyka chiqarish (spec 4.1 ga mos)
+  // Yacheyka chiqarish — MoySklad uslubida
   const renderCell = (order: CustomerOrder, col: ColumnDef) => {
-    const paidPercent = order.totalAmount > 0 ? (order.paidAmount / order.totalAmount) * 100 : 0;
-    const shippedPercent = order.totalAmount > 0 ? (order.shippedAmount / order.totalAmount) * 100 : 0;
-
     switch (col.key) {
       case 'orderNumber':
         return (
@@ -379,68 +373,59 @@ const CustomerOrders = () => {
             {order.orderNumber}
           </button>
         );
-      case 'orderDate':
-        return <span className="text-gray-600">{formatDate(order.orderDate)}</span>;
+      case 'orderDate': {
+        const d = new Date(order.orderDate);
+        return (
+          <span className="text-gray-600">
+            {d.toLocaleDateString('ru-RU')} {d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        );
+      }
       case 'customerName':
         return <span className="font-medium">{order.customerName}</span>;
-      case 'assignedWorkerName':
-        return <span className="text-gray-600">{order.assignedWorkerName || '-'}</span>;
       case 'warehouseName':
-        return <span className="text-gray-600">{order.warehouseName || '-'}</span>;
+        return <span className="text-gray-600">{order.warehouseName || 'Climart'}</span>;
       case 'totalAmount':
-        return <span className="font-medium">{formatCurrency(order.totalAmount)}</span>;
+        return <span className="font-medium">{formatAmount(order.totalAmount)}</span>;
       case 'invoicedSum':
-        return <span className="text-gray-600">{formatCurrency(order.invoicedSum || 0)}</span>;
-      case 'paidAmount':
+        return <span>{formatAmount(order.invoicedSum || 0)}</span>;
+      case 'paidAmount': {
+        const paidVal = order.paidAmount || 0;
         return (
-          <div className="flex items-center gap-1.5 justify-end">
-            <span className={`text-xs ${paidPercent >= 100 ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
-              {formatCurrency(order.paidAmount || 0)}
-            </span>
-            <div className="w-12 bg-gray-200 rounded-full h-1.5 shrink-0">
-              <div
-                className={`h-1.5 rounded-full ${paidPercent >= 100 ? 'bg-green-500' : paidPercent > 0 ? 'bg-yellow-500' : 'bg-gray-200'}`}
-                style={{ width: `${Math.min(paidPercent, 100)}%` }}
-              />
-            </div>
-          </div>
-        );
-      case 'shippedAmount':
-        return (
-          <div className="flex items-center gap-1.5 justify-end">
-            <span className={`text-xs ${shippedPercent >= 100 ? 'text-blue-600 font-medium' : 'text-gray-600'}`}>
-              {formatCurrency(order.shippedAmount || 0)}
-            </span>
-            <div className="w-12 bg-gray-200 rounded-full h-1.5 shrink-0">
-              <div
-                className={`h-1.5 rounded-full ${shippedPercent >= 100 ? 'bg-blue-500' : shippedPercent > 0 ? 'bg-blue-300' : 'bg-gray-200'}`}
-                style={{ width: `${Math.min(shippedPercent, 100)}%` }}
-              />
-            </div>
-          </div>
-        );
-      case 'reservedSum':
-        return order.reserved ? (
-          <span className="text-orange-600 text-xs font-medium">
-            <Lock className="h-3 w-3 inline mr-0.5" />
-            {formatCurrency(order.reservedSum || order.totalAmount)}
+          <span className={paidVal > 0 ? 'bg-[#fff3cd] px-1.5 py-0.5 rounded' : ''}>
+            {formatAmount(paidVal)}
           </span>
-        ) : (
-          <span className="text-gray-300 text-xs">—</span>
         );
+      }
+      case 'shippedAmount': {
+        const shippedVal = order.shippedAmount || 0;
+        return (
+          <span className={shippedVal > 0 ? 'bg-[#fff3cd] px-1.5 py-0.5 rounded' : ''}>
+            {formatAmount(shippedVal)}
+          </span>
+        );
+      }
+      case 'reservedSum':
+        return <span>{formatAmount(order.reservedSum || 0)}</span>;
       case 'status':
         return <StatusBadge status={order.status} config={ORDER_STATUS_CONFIG} />;
+      case 'sent':
+        return order.sent ? <span className="text-green-600">✓</span> : <span className="text-gray-300">—</span>;
+      case 'printed':
+        return order.printed ? <span className="text-green-600">✓</span> : <span className="text-gray-300">—</span>;
+      case 'notes':
+        return <span className="text-gray-500 text-xs truncate max-w-[200px] block">{order.notes || ''}</span>;
+      case 'assignedWorkerName':
+        return <span className="text-gray-600">{order.assignedWorkerName || '-'}</span>;
       case 'deliveryDate':
         return <span className="text-gray-600">{order.deliveryDate ? formatDate(order.deliveryDate) : '-'}</span>;
-      case 'notes':
-        return <span className="text-gray-500 text-xs truncate max-w-[200px] block">{order.notes || '-'}</span>;
       default:
         return null;
     }
   };
 
   return (
-    <Layout>
+    <>
       <div className="p-4 md:p-6 max-w-[1920px] mx-auto space-y-0">
         {/* ===== TOOLBAR (spec 2.1) ===== */}
         <div className="bg-white border rounded-t-lg px-3 py-2">
@@ -529,10 +514,10 @@ const CustomerOrders = () => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Yaratish dropdown (spec #10) */}
+            {/* Yaratish dropdown — MoySklad "Создать" uslubida yashil */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" disabled={selectedCount === 0}>
+                <Button size="sm" className="h-8 gap-1 text-xs bg-green-600 hover:bg-green-700 text-white" disabled={selectedCount === 0}>
                   Yaratish
                   <ChevronDown className="h-3 w-3" />
                 </Button>
@@ -624,36 +609,36 @@ const CustomerOrders = () => {
         {/* ===== JADVAL (spec 4) ===== */}
         <Card className={`rounded-none ${showFilters ? '' : 'border-t-0'} rounded-b-lg`}>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+            <table className="w-full text-xs">
+              <thead className="bg-[#e8edf5] border-b border-[#ccd5e0]">
                 <tr>
-                  <th className="w-10 px-3 py-2 text-center">
+                  <th className="w-8 px-1.5 py-1 text-center">
                     <input
                       type="checkbox"
                       checked={allSelected}
                       ref={(el) => { if (el) el.indeterminate = someSelected; }}
                       onChange={toggleSelectAll}
-                      className="rounded border-gray-300"
+                      className="rounded border-gray-300 h-3.5 w-3.5"
                     />
                   </th>
                   {activeColumns.map(col => (
                     <th
                       key={col.key}
-                      className={`px-3 py-2 text-xs font-medium text-gray-500 uppercase whitespace-nowrap ${
+                      className={`px-2 py-1.5 text-[11px] font-semibold text-[#555] uppercase whitespace-nowrap ${
                         col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
                       }`}
                     >
                       {col.label}
                     </th>
                   ))}
-                  <th className="w-12 px-3 py-2"></th>
+                  <th className="w-8 px-1 py-1"></th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-gray-100">
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={activeColumns.length + 2} className="px-4 py-12 text-center text-gray-500">
+                    <td colSpan={activeColumns.length + 2} className="px-4 py-8 text-center text-gray-500 text-sm">
                       Buyurtmalar topilmadi
                     </td>
                   </tr>
@@ -667,29 +652,29 @@ const CustomerOrders = () => {
                         key={order._id}
                         className={`hover:bg-[#f0f7ff] transition-colors ${isSelected ? 'bg-blue-50/40' : ''}`}
                       >
-                        <td className="w-10 px-3 py-2 text-center">
+                        <td className="w-8 px-1.5 py-1 text-center">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleSelectRow(order._id)}
-                            className="rounded border-gray-300"
+                            className="rounded border-gray-300 h-3.5 w-3.5"
                           />
                         </td>
                         {activeColumns.map(col => (
                           <td
                             key={col.key}
-                            className={`px-3 py-2 whitespace-nowrap ${
+                            className={`px-2 py-1 whitespace-nowrap ${
                               col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
                             }`}
                           >
                             {renderCell(order, col)}
                           </td>
                         ))}
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-1 py-1 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreHorizontal className="h-3.5 w-3.5" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -757,58 +742,66 @@ const CustomerOrders = () => {
                 )}
               </tbody>
 
-              {/* Jami qatori (spec 4.3) */}
+              {/* Jami qatori — MoySklad uslubida */}
               {orders.length > 0 && showSummary && (
-                <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-                  <tr className="font-medium text-sm">
-                    <td className="px-3 py-2"></td>
+                <tfoot className="bg-[#f5f7fa] border-t border-[#ccd5e0]">
+                  <tr className="font-medium text-xs">
+                    <td className="px-1.5 py-1"></td>
                     {activeColumns.map(col => (
                       <td
                         key={col.key}
-                        className={`px-3 py-2 whitespace-nowrap ${
+                        className={`px-2 py-1 whitespace-nowrap ${
                           col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
                         }`}
                       >
-                        {col.key === 'orderNumber' && <span className="text-gray-700">Σ Jami</span>}
-                        {col.key === 'totalAmount' && <span className="font-bold">{formatCurrency(summaryTotals.totalAmount)}</span>}
-                        {col.key === 'invoicedSum' && <span className="text-gray-600">{formatCurrency(summaryTotals.invoicedSum)}</span>}
-                        {col.key === 'paidAmount' && <span className="text-green-600 font-medium">{formatCurrency(summaryTotals.paidAmount)}</span>}
-                        {col.key === 'shippedAmount' && <span className="text-blue-600 font-medium">{formatCurrency(summaryTotals.shippedAmount)}</span>}
-                        {col.key === 'reservedSum' && <span className="text-orange-600">{formatCurrency(summaryTotals.reservedSum)}</span>}
+                        {col.key === 'totalAmount' && <span className="font-bold">{formatAmount(summaryTotals.totalAmount)}</span>}
+                        {col.key === 'invoicedSum' && <span>{formatAmount(summaryTotals.invoicedSum)}</span>}
+                        {col.key === 'paidAmount' && <span className="font-medium">{formatAmount(summaryTotals.paidAmount)}</span>}
+                        {col.key === 'shippedAmount' && <span className="font-medium">{formatAmount(summaryTotals.shippedAmount)}</span>}
+                        {col.key === 'reservedSum' && <span>{formatAmount(summaryTotals.reservedSum)}</span>}
                       </td>
                     ))}
-                    <td className="px-3 py-2"></td>
+                    <td className="px-1 py-1"></td>
                   </tr>
                 </tfoot>
               )}
             </table>
           </div>
 
-          {/* Jami ko'rsatish toggle + Pagination (spec 4.3 + 4.4) */}
-          <div className="flex items-center justify-between border-t px-3 py-1">
+          {/* Pagination — MoySklad uslubida */}
+          <div className="flex items-center justify-between border-t px-2 py-1">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={() => setFilters(prev => ({ ...prev, page: Math.max(1, (prev.page || 1) - 1) }))}
+                disabled={page <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={() => setFilters(prev => ({ ...prev, page: (prev.page || 1) + 1 }))}
+                disabled={page * pageSize >= total}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <span className="text-xs text-gray-600 ml-1">
+                {total === 0 ? '0' : `${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, total)}`} dan {total}
+              </span>
+            </div>
             <button
               onClick={() => setShowSummary(!showSummary)}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              className="text-xs text-gray-400 hover:text-gray-600"
             >
-              {showSummary ? 'Jamini yashirish' : 'Σ Jamini ko\'rsatish'}
+              {showSummary ? 'Jamini yashirish' : 'Σ Jami'}
             </button>
-            <DataPagination
-              page={page}
-              pageSize={pageSize}
-              total={total}
-              onPageChange={(p) => setFilters(prev => ({ ...prev, page: p }))}
-              onPageSizeChange={(ps) => setFilters(prev => ({ ...prev, pageSize: ps, page: 1 }))}
-            />
           </div>
         </Card>
       </div>
-
-      <CustomerOrderModal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSave}
-        order={isEditMode ? selectedOrder : null}
-      />
 
       <ShipmentModal
         open={isShipmentModalOpen}
@@ -877,7 +870,7 @@ const CustomerOrders = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Layout>
+    </>
   );
 };
 

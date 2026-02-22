@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, DollarSign, Package, AlertCircle, AlertTriangle } from "lucide-react";
@@ -37,29 +36,25 @@ const UnitEconomics = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-12 w-full" />
-          <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
-          </div>
-          <Skeleton className="h-96" />
+      <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-12 w-full" />
+        <div className="grid grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
         </div>
-      </Layout>
+        <Skeleton className="h-96" />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
-          <div className="flex items-center justify-center h-64 text-red-600">
-            <AlertCircle className="h-8 w-8 mr-2" />
-            <span>Xatolik: {error}</span>
-          </div>
+      <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
+        <div className="flex items-center justify-center h-64 text-red-600">
+          <AlertCircle className="h-8 w-8 mr-2" />
+          <span>Xatolik: {error}</span>
         </div>
-      </Layout>
+      </div>
     );
   }
 
@@ -68,12 +63,11 @@ const UnitEconomics = () => {
   const unprofitableCount = products.filter(p => p.profit <= 0).length;
 
   return (
-    <Layout>
-      <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Unit ekonomika</h1>
+    <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Unit ekonomika</h1>
             <p className="text-gray-600 mt-1">Mahsulotlar bo'yicha rentabellik tahlili</p>
           </div>
           <ExportButton
@@ -240,8 +234,7 @@ const UnitEconomics = () => {
             </table>
           </div>
         </Card>
-      </div>
-    </Layout>
+    </div>
   );
 };
 

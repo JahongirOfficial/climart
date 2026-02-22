@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -73,20 +72,18 @@ const CorrectedInvoices = () => {
 
   if (error) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-            <p className="text-lg font-semibold">Xatolik yuz berdi</p>
-            <p className="text-muted-foreground">{error}</p>
-          </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <p className="text-lg font-semibold">Xatolik yuz berdi</p>
+          <p className="text-muted-foreground">{error}</p>
         </div>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
@@ -275,7 +272,7 @@ const CorrectedInvoices = () => {
           }}
         />
       )}
-    </Layout>
+    </>
   );
 };
 

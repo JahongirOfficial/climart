@@ -35,6 +35,8 @@ export interface ICustomerOrder extends Document {
   assignedWorkerName?: string;
   salesChannel?: string;
   notes?: string;
+  sent: boolean;
+  printed: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -182,6 +184,14 @@ const CustomerOrderSchema: Schema = new Schema(
     notes: {
       type: String,
       trim: true,
+    },
+    sent: {
+      type: Boolean,
+      default: false,
+    },
+    printed: {
+      type: Boolean,
+      default: false,
     },
   },
   {

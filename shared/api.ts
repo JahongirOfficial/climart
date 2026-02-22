@@ -174,6 +174,8 @@ export interface CustomerOrder {
   assignedWorkerName?: string;
   salesChannel?: string;
   notes?: string;
+  sent?: boolean;
+  printed?: boolean;
   createdAt: string;
   updatedAt: string;
 }

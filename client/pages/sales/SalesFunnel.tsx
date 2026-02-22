@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Users, TrendingUp, AlertCircle } from "lucide-react";
@@ -61,35 +60,30 @@ const SalesFunnel = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-12 w-full" />
-          <div className="grid grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}
-          </div>
-          <Skeleton className="h-96" />
+      <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-12 w-full" />
+        <div className="grid grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}
         </div>
-      </Layout>
+        <Skeleton className="h-96" />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
-          <div className="flex items-center justify-center h-64 text-red-600">
-            <AlertCircle className="h-8 w-8 mr-2" />
-            <span>Xatolik: {error}</span>
-          </div>
+      <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
+        <div className="flex items-center justify-center h-64 text-red-600">
+          <AlertCircle className="h-8 w-8 mr-2" />
+          <span>Xatolik: {error}</span>
         </div>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
+    <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Savdo voronkasi</h1>
@@ -268,8 +262,7 @@ const SalesFunnel = () => {
             </div>
           </Card>
         )}
-      </div>
-    </Layout>
+    </div>
   );
 };
 

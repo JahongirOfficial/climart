@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { printViaIframe } from "@/utils/print";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,8 @@ import {
   Search, Plus, Trash2, Loader2, FileText, DollarSign, Send, Printer, CheckCircle, XCircle
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useTaxInvoices } from "@/hooks/useTaxInvoices";
 import { TaxInvoiceModal } from "@/components/TaxInvoiceModal";
@@ -14,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 const TaxInvoices = () => {
+  const navigate = useNavigate();
   const { invoices, loading, error, refetch, createInvoice, updateStatus, deleteInvoice } = useTaxInvoices();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
@@ -60,7 +62,7 @@ const TaxInvoices = () => {
   const sentCount = invoices.filter(inv => inv.status === 'sent').length;
 
   const handleCreate = () => {
-    setIsModalOpen(true);
+    navigate('/sales/tax-invoices/new');
   };
 
   const handleSave = async (data: any) => {
@@ -258,18 +260,16 @@ const TaxInvoices = () => {
 
   if (loading && invoices.length === 0) {
     return (
-      <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+      <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -391,7 +391,17 @@ const TaxInvoices = () => {
                 ) : (
                   filteredInvoices.map((invoice) => (
                     <tr key={invoice._id} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">{invoice.invoiceNumber}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => {
+                            storeDocumentIds('tax-invoices', filteredInvoices.map(i => i._id));
+                            navigate(`/sales/tax-invoices/${invoice._id}`);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {invoice.invoiceNumber}
+                        </button>
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm">{invoice.shipmentNumber}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm">{invoice.customerName}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm">{formatDate(invoice.invoiceDate)}</td>
@@ -457,7 +467,7 @@ const TaxInvoices = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSave}
       />
-    </Layout>
+    </>
   );
 };
 

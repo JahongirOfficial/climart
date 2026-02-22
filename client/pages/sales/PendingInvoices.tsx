@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -72,7 +71,6 @@ const PendingInvoices = () => {
 
   if (error) {
     return (
-      <Layout>
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -82,12 +80,11 @@ const PendingInvoices = () => {
             </div>
           </div>
         </div>
-      </Layout>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
@@ -276,7 +273,7 @@ const PendingInvoices = () => {
           }}
         />
       )}
-    </Layout>
+    </>
   );
 };
 

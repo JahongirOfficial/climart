@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -71,7 +70,6 @@ const Sales = () => {
   }, [invoices, debouncedSearch]);
 
   return (
-    <Layout>
       <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -313,7 +311,6 @@ const Sales = () => {
           </div>
         </div>
       </div>
-    </Layout>
   );
 };
 

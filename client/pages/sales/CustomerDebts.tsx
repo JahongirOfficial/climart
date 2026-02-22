@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { printViaIframe } from "@/utils/print";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -150,36 +149,32 @@ const CustomerDebts = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+      <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </div>
     );
   }
 
   if (error || !data) {
     return (
-      <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
-          <Card className="p-6 bg-red-50 border-red-200">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-6 w-6 text-red-600" />
-              <div>
-                <h3 className="font-semibold text-red-900">Xatolik yuz berdi</h3>
-                <p className="text-red-700">{error || 'Ma\'lumotlarni yuklashda xatolik'}</p>
-              </div>
+      <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
+        <Card className="p-6 bg-red-50 border-red-200">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-6 w-6 text-red-600" />
+            <div>
+              <h3 className="font-semibold text-red-900">Xatolik yuz berdi</h3>
+              <p className="text-red-700">{error || 'Ma\'lumotlarni yuklashda xatolik'}</p>
             </div>
-          </Card>
-        </div>
-      </Layout>
+          </div>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <Layout>
+    <>
       <div className="p-6 md:p-8 max-w-[1920px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -400,7 +395,7 @@ const CustomerDebts = () => {
           debtAmount={selectedDebt.debt}
         />
       )}
-    </Layout>
+    </>
   );
 };
 

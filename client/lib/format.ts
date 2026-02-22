@@ -6,6 +6,16 @@ export const formatCurrency = (amount: number): string => {
   return currencyFormatter.format(amount) + " so'm";
 };
 
+// MoySklad-style jadval formati: "225 000,00" (2 kasrli, "so'm" yo'q)
+const amountFormatter = new Intl.NumberFormat('ru-RU', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+export const formatAmount = (amount: number): string => {
+  return amountFormatter.format(amount);
+};
+
 export const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('uz-UZ');
 };

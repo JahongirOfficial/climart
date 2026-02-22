@@ -1,4 +1,3 @@
-import { Layout } from "@/components/Layout";
 import { printViaIframe } from "@/utils/print";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,7 +33,8 @@ import { useWarehouses } from "@/hooks/useWarehouses";
 import { TaxInvoiceModal } from "@/components/TaxInvoiceModal";
 import { useTaxInvoices } from "@/hooks/useTaxInvoices";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { ExportButton } from "@/components/ExportButton";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { AdvancedFilter, FilterField } from "@/components/shared/AdvancedFilter";
@@ -93,18 +93,23 @@ const getStatusLabel = (status: string) => {
 };
 
 const Shipments = () => {
-  const [filters, setFilters] = useState<ShipmentFilters>({
+  const [urlParams] = useSearchParams();
+
+  const [filters, setFilters] = useState<ShipmentFilters>(() => ({
     page: 1,
     pageSize: 25,
-  });
-  const [filterValues, setFilterValues] = useState<Record<string, string>>({
-    search: '',
-    startDate: '',
-    endDate: '',
+    search: urlParams.get('q') || undefined,
+    startDate: urlParams.get('from') || undefined,
+    endDate: urlParams.get('to') || undefined,
+  }));
+  const [filterValues, setFilterValues] = useState<Record<string, string>>(() => ({
+    search: urlParams.get('q') || '',
+    startDate: urlParams.get('from') || '',
+    endDate: urlParams.get('to') || '',
     status: '',
     customerId: '',
     warehouseId: '',
-  });
+  }));
 
   const { shipments, total, page, pageSize, loading, refetch, updateStatus, deleteShipment, createShipment } = useShipments(filters);
   const { partners: customers } = usePartners('customer');
@@ -124,7 +129,7 @@ const Shipments = () => {
     ALL_COLUMNS.forEach(c => { if (c.defaultVisible) defaults.add(c.key); });
     return defaults;
   });
-  const [searchInput, setSearchInput] = useState('');
+  const [searchInput, setSearchInput] = useState(urlParams.get('q') || '');
   const debouncedSearch = useDebounce(searchInput, 500);
   const [showSummary, setShowSummary] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -136,20 +141,25 @@ const Shipments = () => {
     setFilters(prev => ({ ...prev, search: debouncedSearch, page: 1 }));
   }, [debouncedSearch]);
 
+  // Navigation filtri o'zgarganda sinxronlash
+  useEffect(() => {
+    const q = urlParams.get('q') || '';
+    const from = urlParams.get('from') || '';
+    const to = urlParams.get('to') || '';
+
+    setSearchInput(q);
+    setFilterValues(prev => ({ ...prev, search: q, startDate: from, endDate: to }));
+    setFilters(prev => ({ ...prev, search: q || undefined, startDate: from || undefined, endDate: to || undefined, page: 1 }));
+  }, [urlParams]);
+
   // Filtr maydonlari
   const filterFields: FilterField[] = [
     { key: 'search', label: 'Qidirish', type: 'text', placeholder: 'Raqam, mijoz yoki kuzatuv...' },
     { key: 'startDate', label: 'Davr dan', type: 'date' },
     { key: 'endDate', label: 'Davr gacha', type: 'date' },
-    { key: 'status', label: 'Holat', type: 'select', options: STATUS_OPTIONS },
-    {
-      key: 'customerId', label: 'Kontragent', type: 'select',
-      options: customers.map(c => ({ value: c._id, label: c.name }))
-    },
-    {
-      key: 'warehouseId', label: 'Ombor', type: 'select',
-      options: warehouses.map(w => ({ value: w._id, label: w.name }))
-    },
+    { key: 'status', label: 'Holat', type: 'select', options: STATUS_OPTIONS, primary: true },
+    { key: 'customerId', label: 'Kontragent', type: 'select', options: customers.map(c => ({ value: c._id, label: c.name })), primary: true },
+    { key: 'warehouseId', label: 'Ombor', type: 'select', options: warehouses.map(w => ({ value: w._id, label: w.name })), primary: true },
   ];
 
   const handleFilterChange = useCallback((key: string, value: string) => {
@@ -258,8 +268,7 @@ const Shipments = () => {
   };
 
   const handleCreateTaxInvoice = (shipmentId: string) => {
-    setSelectedShipmentId(shipmentId);
-    setIsTaxInvoiceModalOpen(true);
+    navigate(`/sales/tax-invoices/new?shipmentId=${shipmentId}`);
   };
 
   const handleSaveTaxInvoice = async (data: any) => {
@@ -358,13 +367,11 @@ const Shipments = () => {
 
   if (loading && shipments.length === 0) {
     return (
-      <Layout>
-        <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+      <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </div>
     );
   }
 
@@ -375,9 +382,15 @@ const Shipments = () => {
     switch (col.key) {
       case 'shipmentNumber':
         return (
-          <span className="font-medium text-blue-600">
+          <button
+            onClick={() => {
+              storeDocumentIds('shipments', shipments.map(s => s._id));
+              navigate(`/sales/shipments/${shipment._id}`);
+            }}
+            className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+          >
             {shipment.shipmentNumber}
-          </span>
+          </button>
         );
       case 'shipmentDate':
         return <span className="text-gray-600">{formatDate(shipment.shipmentDate)}</span>;
@@ -417,7 +430,7 @@ const Shipments = () => {
   };
 
   return (
-    <Layout>
+    <>
       <div className="p-4 md:p-6 max-w-[1920px] mx-auto space-y-0">
         {/* ===== TOOLBAR ===== */}
         <div className="bg-white border rounded-t-lg px-3 py-2">
@@ -434,7 +447,7 @@ const Shipments = () => {
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             </Button>
 
-            <Button size="sm" onClick={() => setIsShipmentModalOpen(true)} className="h-8 gap-1.5">
+            <Button size="sm" onClick={() => navigate('/sales/shipments/new')} className="h-8 gap-1.5">
               <Plus className="h-3.5 w-3.5" />
               Jo'natish
             </Button>
@@ -591,36 +604,36 @@ const Shipments = () => {
         {/* ===== JADVAL ===== */}
         <Card className={`rounded-none ${showFilters ? '' : 'border-t-0'} rounded-b-lg`}>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+            <table className="w-full text-xs">
+              <thead className="bg-[#e8edf5] border-b border-[#ccd5e0]">
                 <tr>
-                  <th className="w-10 px-3 py-2 text-center">
+                  <th className="w-8 px-1.5 py-1 text-center">
                     <input
                       type="checkbox"
                       checked={allSelected}
                       ref={(el) => { if (el) el.indeterminate = someSelected; }}
                       onChange={toggleSelectAll}
-                      className="rounded border-gray-300"
+                      className="rounded border-gray-300 h-3.5 w-3.5"
                     />
                   </th>
                   {activeColumns.map(col => (
                     <th
                       key={col.key}
-                      className={`px-3 py-2 text-xs font-medium text-gray-500 uppercase whitespace-nowrap ${
+                      className={`px-2 py-1.5 text-[11px] font-semibold text-[#555] uppercase whitespace-nowrap ${
                         col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
                       }`}
                     >
                       {col.label}
                     </th>
                   ))}
-                  <th className="w-12 px-3 py-2"></th>
+                  <th className="w-8 px-1 py-1"></th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-gray-100">
                 {shipments.length === 0 ? (
                   <tr>
-                    <td colSpan={activeColumns.length + 2} className="px-4 py-12 text-center text-gray-500">
+                    <td colSpan={activeColumns.length + 2} className="px-4 py-8 text-center text-gray-500 text-sm">
                       Jo'natishlar topilmadi
                     </td>
                   </tr>
@@ -634,29 +647,29 @@ const Shipments = () => {
                         key={shipment._id}
                         className={`hover:bg-[#f0f7ff] transition-colors ${isSelected ? 'bg-blue-50/40' : ''}`}
                       >
-                        <td className="w-10 px-3 py-2 text-center">
+                        <td className="w-8 px-1.5 py-1 text-center">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleSelectRow(shipment._id)}
-                            className="rounded border-gray-300"
+                            className="rounded border-gray-300 h-3.5 w-3.5"
                           />
                         </td>
                         {activeColumns.map(col => (
                           <td
                             key={col.key}
-                            className={`px-3 py-2 whitespace-nowrap ${
+                            className={`px-2 py-1 whitespace-nowrap ${
                               col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
                             }`}
                           >
                             {renderCell(shipment, col)}
                           </td>
                         ))}
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-1 py-1 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreHorizontal className="h-3.5 w-3.5" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -701,22 +714,22 @@ const Shipments = () => {
 
               {/* Jami qatori */}
               {shipments.length > 0 && showSummary && (
-                <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-                  <tr className="font-medium text-sm">
-                    <td className="px-3 py-2"></td>
+                <tfoot className="bg-[#f5f7fa] border-t border-[#ccd5e0]">
+                  <tr className="font-medium text-xs">
+                    <td className="px-1.5 py-1"></td>
                     {activeColumns.map(col => (
                       <td
                         key={col.key}
-                        className={`px-3 py-2 whitespace-nowrap ${
+                        className={`px-2 py-1 whitespace-nowrap ${
                           col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
                         }`}
                       >
-                        {col.key === 'shipmentNumber' && <span className="text-gray-700">Σ Jami</span>}
+                        {col.key === 'shipmentNumber' && <span className="text-gray-700">Jami</span>}
                         {col.key === 'totalAmount' && <span className="font-bold">{formatCurrency(summaryTotals.totalAmount)}</span>}
                         {col.key === 'paidAmount' && <span className="text-green-600 font-medium">{formatCurrency(summaryTotals.paidAmount)}</span>}
                       </td>
                     ))}
-                    <td className="px-3 py-2"></td>
+                    <td className="px-1 py-1"></td>
                   </tr>
                 </tfoot>
               )}
@@ -724,7 +737,7 @@ const Shipments = () => {
           </div>
 
           {/* Jami ko'rsatish toggle + Pagination */}
-          <div className="flex items-center justify-between border-t px-3 py-1">
+          <div className="flex items-center justify-between border-t px-2 py-1">
             <button
               onClick={() => setShowSummary(!showSummary)}
               className="text-xs text-blue-600 hover:text-blue-800 font-medium"
@@ -786,7 +799,7 @@ const Shipments = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Layout>
+    </>
   );
 };
 
