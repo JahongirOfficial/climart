@@ -7,7 +7,21 @@
       "Bash(grep:*)",
       "Bash(wc:*)",
       "Bash(find:*)",
-      "Bash(npx vite build)"
+      "Bash(npx vite build)",
+      "Bash(npx vitest:*)",
+      "Bash(npx vite build:*)",
+      "Bash(npx tsx:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(ssh -o StrictHostKeyChecking=no root@167.86.95.237 \"cd /var/www/climart && pwd && git status && git log --oneline -3 && pm2 list\")",
+      "Bash(ssh:*)",
+      "Bash(scp:*)",
+      "Bash(npm run build:*)",
+      "WebFetch(domain:167.86.95.237)"
     ]
   }
 }

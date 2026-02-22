@@ -11,6 +11,8 @@ import { useDocumentNavigation } from "@/hooks/useDocumentNavigation";
 import { Trash2, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DocumentDetailLayout } from "@/components/shared/DocumentDetailLayout";
+import { CurrencySelector } from "@/components/shared/CurrencySelector";
+import { formatCurrency } from "@/lib/format";
 import type { StatusConfig } from "@/components/shared/StatusBadge";
 
 // To'lov status konfiguratsiyasi
@@ -71,6 +73,8 @@ const PaymentDetail = () => {
     purpose: "",
     status: "draft" as string,
     notes: "",
+    currency: "UZS",
+    exchangeRate: 1,
   });
 
   // To'lov yuklanganida formani to'ldirish
@@ -91,6 +95,8 @@ const PaymentDetail = () => {
         purpose: payment.purpose || "",
         status: payment.status || "draft",
         notes: payment.notes || "",
+        currency: payment.currency || "UZS",
+        exchangeRate: payment.exchangeRate || 1,
       });
     }
   }, [payment]);
@@ -297,6 +303,11 @@ const PaymentDetail = () => {
                 placeholder="0"
                 className="h-9 text-sm mt-1"
               />
+              {formData.currency !== "UZS" && formData.amount > 0 && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  ≈ {formatCurrency(Math.round(formData.amount * formData.exchangeRate))}
+                </div>
+              )}
             </div>
             <div>
               <Label className="text-xs text-gray-500">To'lov usuli</Label>
@@ -340,6 +351,33 @@ const PaymentDetail = () => {
                 className="h-9 text-sm mt-1"
               />
             </div>
+            <div>
+              <Label className="text-xs text-gray-500">Valyuta</Label>
+              <CurrencySelector
+                value={formData.currency}
+                onValueChange={(code, rate) =>
+                  setFormData((prev) => ({ ...prev, currency: code, exchangeRate: rate }))
+                }
+                className="h-9 text-sm mt-1"
+              />
+            </div>
+            {formData.currency !== "UZS" && (
+              <div>
+                <Label className="text-xs text-gray-500">
+                  Kurs (1 {formData.currency} = ? so'm)
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.exchangeRate}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, exchangeRate: parseFloat(e.target.value) || 1 }))
+                  }
+                  className="h-9 text-sm mt-1"
+                />
+              </div>
+            )}
             <div>
               <Label className="text-xs text-gray-500">Izoh</Label>
               <Textarea

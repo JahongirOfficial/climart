@@ -13,6 +13,7 @@ import { useDocumentNavigation } from "@/hooks/useDocumentNavigation";
 import { Loader2, Send, CheckCircle, XCircle } from "lucide-react";
 import { printViaIframe } from "@/utils/print";
 import { DocumentDetailLayout } from "@/components/shared/DocumentDetailLayout";
+import { CurrencySelector } from "@/components/shared/CurrencySelector";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 interface TaxItem {
@@ -41,6 +42,8 @@ const TaxInvoiceDetail = () => {
   const [organization, setOrganization] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<TaxItem[]>([]);
+  const [currency, setCurrency] = useState("UZS");
+  const [exchangeRate, setExchangeRate] = useState(1);
 
   // ---------- Load existing invoice ----------
   useEffect(() => {
@@ -51,6 +54,8 @@ const TaxInvoiceDetail = () => {
       setInvoiceDate(invoice.invoiceDate?.split("T")[0] || "");
       setOrganization(invoice.organization || "");
       setNotes(invoice.notes || "");
+      setCurrency((invoice as any).currency || "UZS");
+      setExchangeRate((invoice as any).exchangeRate || 1);
       setItems(
         (invoice.items || []).map((it: any) => ({
           product: typeof it.product === "object" ? it.product._id : it.product,
@@ -133,6 +138,8 @@ const TaxInvoiceDetail = () => {
         invoiceDate,
         items,
         notes,
+        currency,
+        exchangeRate,
       };
 
       const result = await save(payload);
@@ -290,6 +297,26 @@ ${notes ? `<div style="margin-top:30px;padding:15px;background:#f0f9ff;border-ra
         />
       </div>
 
+      <div>
+        <Label>Valyuta</Label>
+        <CurrencySelector
+          value={currency}
+          onValueChange={(code, rate) => { setCurrency(code); setExchangeRate(rate); }}
+          className="h-9 text-sm"
+        />
+      </div>
+      {currency !== "UZS" && (
+        <div>
+          <Label>Kurs (1 {currency} = ? so'm)</Label>
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={exchangeRate}
+            onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
+          />
+        </div>
+      )}
       <div className="md:col-span-3">
         <Label>Izoh</Label>
         <Textarea
@@ -370,6 +397,12 @@ ${notes ? `<div style="margin-top:30px;padding:15px;background:#f0f9ff;border-ra
           <span>Jami:</span>
           <span>{formatCurrency(totals.total)}</span>
         </div>
+        {currency !== "UZS" && (
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>UZS ekvivalenti:</span>
+            <span>{formatCurrency(Math.round(totals.total * exchangeRate))}</span>
+          </div>
+        )}
       </div>
     </div>
   ) : null;

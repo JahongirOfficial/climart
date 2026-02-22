@@ -17,6 +17,8 @@ export interface IPurchaseOrder extends Document {
   items: IPurchaseOrderItem[];
   totalAmount: number;
   notes?: string;
+  currency: string;
+  exchangeRate: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,6 +84,17 @@ const PurchaseOrderSchema: Schema = new Schema(
     notes: {
       type: String,
       trim: true,
+    },
+    currency: {
+      type: String,
+      default: 'UZS',
+      uppercase: true,
+      trim: true,
+    },
+    exchangeRate: {
+      type: Number,
+      default: 1,
+      min: 0,
     },
   },
   {

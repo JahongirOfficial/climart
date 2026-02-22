@@ -106,6 +106,7 @@ const Documents = lazy(() => import("./pages/dashboard/Documents"));
 const Cart = lazy(() => import("./pages/dashboard/Cart"));
 const Audit = lazy(() => import("./pages/dashboard/Audit"));
 const Files = lazy(() => import("./pages/dashboard/Files"));
+const Currencies = lazy(() => import("./pages/settings/Currencies"));
 
 // Finance pages
 const Payments = lazy(() => import("./pages/finance/Payments"));
@@ -178,6 +179,7 @@ const App = () => (
                 <Route path="/dashboard/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
                 <Route path="/dashboard/audit" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
                 <Route path="/dashboard/files" element={<ProtectedRoute><Files /></ProtectedRoute>} />
+                <Route path="/dashboard/currencies" element={<ProtectedRoute requireAdmin><Currencies /></ProtectedRoute>} />
                 <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
                 <Route path="/purchases/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                 <Route path="/purchases/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />

@@ -4,6 +4,21 @@ export interface DemoResponse {
   message: string;
 }
 
+// Currency types
+export interface Currency {
+  _id: string;
+  code: string;
+  name: string;
+  symbol: string;
+  nominal: number;
+  exchangeRate: number;
+  isBase: boolean;
+  isActive: boolean;
+  lastUpdated: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Helper type for populated MongoDB references
 // Fields can be either a string ID or a populated object
 export interface PopulatedRef {
@@ -123,6 +138,7 @@ export interface Contract {
   startDate: string;
   endDate: string;
   currency: 'UZS' | 'USD' | 'EUR' | 'RUB';
+  exchangeRate?: number;
   totalAmount?: number;
   creditLimit?: number;
   paymentTerms?: string;
@@ -176,6 +192,8 @@ export interface CustomerOrder {
   notes?: string;
   sent?: boolean;
   printed?: boolean;
+  currency?: string;
+  exchangeRate?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -206,6 +224,8 @@ export interface PurchaseOrder {
   }>;
   totalAmount: number;
   notes?: string;
+  currency?: string;
+  exchangeRate?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -256,6 +276,8 @@ export interface Shipment {
   deliveryAddress: string;
   trackingNumber?: string;
   notes?: string;
+  currency?: string;
+  exchangeRate?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -280,6 +302,8 @@ export interface SupplierInvoice {
   totalAmount: number;
   paidAmount: number;
   notes?: string;
+  currency?: string;
+  exchangeRate?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -306,6 +330,8 @@ export interface SupplierReturn {
   totalAmount: number;
   reason: string;
   notes?: string;
+  currency?: string;
+  exchangeRate?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -453,6 +479,8 @@ export interface CustomerInvoice {
   isMinusCorrection?: boolean;
   customerOrder?: string;
   orderNumber?: string;
+  currency?: string;
+  exchangeRate?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -529,6 +557,66 @@ export interface CustomerReturn {
   totalAmount: number;
   reason: 'defective' | 'wrong_item' | 'customer_request' | 'other';
   notes?: string;
+  currency?: string;
+  exchangeRate?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Payment types
+export interface Payment {
+  _id: string;
+  paymentNumber: string;
+  type: 'incoming' | 'outgoing' | 'transfer';
+  paymentDate: string;
+  amount: number;
+  partner?: string | PopulatedRef;
+  partnerName?: string;
+  organization?: string;
+  account: 'cash' | 'bank';
+  accountNumber?: string;
+  paymentMethod: 'cash' | 'bank_transfer' | 'card' | 'click' | 'other';
+  purpose: string;
+  linkedDocument?: string;
+  linkedDocumentType?: string;
+  linkedDocumentNumber?: string;
+  fromAccount?: 'cash' | 'bank';
+  toAccount?: 'cash' | 'bank';
+  status: 'draft' | 'confirmed' | 'cancelled';
+  notes?: string;
+  currency?: string;
+  exchangeRate?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Tax Invoice types
+export interface TaxInvoice {
+  _id: string;
+  invoiceNumber: string;
+  shipment: string | PopulatedRef;
+  shipmentNumber: string;
+  customer: string | PopulatedRef;
+  customerName: string;
+  organization: string;
+  invoiceDate: string;
+  items: Array<{
+    product: string | PopulatedRef;
+    productName: string;
+    quantity: number;
+    price: number;
+    subtotal: number;
+    taxRate: number;
+    taxAmount: number;
+    total: number;
+  }>;
+  subtotal: number;
+  totalTax: number;
+  totalAmount: number;
+  status: 'sent' | 'not_sent';
+  notes?: string;
+  currency?: string;
+  exchangeRate?: number;
   createdAt: string;
   updatedAt: string;
 }

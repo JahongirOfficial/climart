@@ -17,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useSupplierInvoices } from "@/hooks/useSupplierInvoices";
 import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatCurrencyAmount, formatDate } from "@/lib/format";
 
 const ReceivedInvoices = () => {
   const navigate = useNavigate();
@@ -209,13 +209,13 @@ const ReceivedInvoices = () => {
                         {formatDate(invoice.invoiceDate)}
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        {formatCurrency(invoice.totalAmount)}
+                        {formatCurrencyAmount(invoice.totalAmount, (invoice as any).currency || 'UZS')}
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-green-600">
-                        {formatCurrency(invoice.paidAmount)}
+                        {formatCurrencyAmount(invoice.paidAmount, (invoice as any).currency || 'UZS')}
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-red-600">
-                        {formatCurrency(remainingAmount)}
+                        {formatCurrencyAmount(remainingAmount, (invoice as any).currency || 'UZS')}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border rounded ${getStatusColor(invoice.status)}`}>

@@ -24,7 +24,7 @@ import { SupplierReturnModal } from "@/components/SupplierReturnModal";
 import { ViewReturnModal } from "@/components/ViewReturnModal";
 import { SupplierReturn } from "@shared/api";
 import { ExportButton } from "@/components/ExportButton";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatCurrencyAmount, formatDate } from "@/lib/format";
 
 const Returns = () => {
   const navigate = useNavigate();
@@ -287,7 +287,7 @@ const Returns = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-red-600 dark:text-red-400">
-                      -{formatCurrency(ret.totalAmount)}
+                      -{formatCurrencyAmount(ret.totalAmount, (ret as any).currency || 'UZS')}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">

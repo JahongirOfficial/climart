@@ -20,6 +20,8 @@ export interface ISupplierInvoice extends Document {
   totalAmount: number;
   paidAmount: number;
   notes?: string;
+  currency: string;
+  exchangeRate: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -96,6 +98,17 @@ const SupplierInvoiceSchema: Schema = new Schema(
     notes: {
       type: String,
       trim: true,
+    },
+    currency: {
+      type: String,
+      default: 'UZS',
+      uppercase: true,
+      trim: true,
+    },
+    exchangeRate: {
+      type: Number,
+      default: 1,
+      min: 0,
     },
   },
   {

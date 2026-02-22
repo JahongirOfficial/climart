@@ -16,6 +16,26 @@ export const formatAmount = (amount: number): string => {
   return amountFormatter.format(amount);
 };
 
+// ==================== MULTI-CURRENCY ====================
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  UZS: "so'm",
+  USD: '$',
+  EUR: '€',
+  RUB: '₽',
+};
+
+export const getCurrencySymbol = (code: string): string =>
+  CURRENCY_SYMBOLS[code] || code;
+
+// Runtime da yangi valyutalarni ro'yxatdan o'tkazish (useCurrencies hook dan chaqiriladi)
+export const registerCurrencySymbol = (code: string, symbol: string) => {
+  CURRENCY_SYMBOLS[code] = symbol;
+};
+
+// Multi-valyuta format: "12 500,00 $" yoki "1 250 000,00 so'm"
+export const formatCurrencyAmount = (amount: number, currencyCode: string = 'UZS'): string =>
+  amountFormatter.format(amount) + ' ' + getCurrencySymbol(currencyCode);
+
 export const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('uz-UZ');
 };

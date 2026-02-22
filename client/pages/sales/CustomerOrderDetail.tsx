@@ -21,7 +21,8 @@ import { QuickProductModal } from "@/components/QuickProductModal";
 import { printViaIframe } from "@/utils/print";
 import { StatusBadge, ORDER_STATUS_CONFIG } from "@/components/shared/StatusBadge";
 import { DocumentDetailLayout } from "@/components/shared/DocumentDetailLayout";
-import { formatCurrency } from "@/lib/format";
+import { CurrencySelector } from "@/components/shared/CurrencySelector";
+import { formatCurrency, formatCurrencyAmount } from "@/lib/format";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -93,6 +94,8 @@ const CustomerOrderDetail = () => {
     assignedWorkerName: "",
     notes: "",
     reserved: false,
+    currency: "UZS",
+    exchangeRate: 1,
   });
 
   const [items, setItems] = useState<OrderItem[]>([
@@ -113,6 +116,8 @@ const CustomerOrderDetail = () => {
         assignedWorkerName: order.assignedWorkerName || '',
         notes: order.notes || "",
         reserved: order.reserved || false,
+        currency: order.currency || 'UZS',
+        exchangeRate: order.exchangeRate || 1,
       });
       setItems(order.items.map(item => ({
         product: typeof item.product === 'string' ? item.product : item.product._id,
@@ -152,12 +157,14 @@ const CustomerOrderDetail = () => {
 
   const handleProductSelect = (index: number, productId: string) => {
     const product = products.find(p => p._id === productId);
+    const basePrice = product ? product.sellingPrice : 0;
+    const docPrice = formData.currency === 'UZS' ? basePrice : Math.round((basePrice / formData.exchangeRate) * 100) / 100;
     const newItems = [...items];
     newItems[index] = {
       ...newItems[index],
       product: productId,
       productName: product ? product.name : "",
-      price: product ? product.sellingPrice : 0,
+      price: docPrice,
     };
     newItems[index].total = recalcItemTotal(newItems[index]);
     if (index === newItems.length - 1 && productId) {
@@ -567,6 +574,27 @@ const CustomerOrderDetail = () => {
                 />
               </div>
               <div>
+                <Label className="text-xs text-gray-500">Valyuta</Label>
+                <CurrencySelector
+                  value={formData.currency}
+                  onValueChange={(code, rate) =>
+                    setFormData(prev => ({ ...prev, currency: code, exchangeRate: rate }))
+                  }
+                  className="h-9 text-sm mt-1"
+                />
+              </div>
+              {formData.currency !== 'UZS' && (
+                <div>
+                  <Label className="text-xs text-gray-500">Kurs (1 {formData.currency} = ? so'm)</Label>
+                  <Input
+                    type="number" min="0" step="0.01"
+                    value={formData.exchangeRate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, exchangeRate: parseFloat(e.target.value) || 1 }))}
+                    className="h-9 text-sm mt-1"
+                  />
+                </div>
+              )}
+              <div>
                 <Label className="text-xs text-gray-500">Izoh</Label>
                 <Textarea
                   value={formData.notes}
@@ -728,16 +756,23 @@ const CustomerOrderDetail = () => {
             </div>
             <div className="text-right space-y-1">
               <div className="text-sm text-gray-500">
-                Oraliq jami <span className="font-medium text-gray-700 ml-4">{formatCurrency(totalAmount)}</span>
+                Oraliq jami <span className="font-medium text-gray-700 ml-4">{formatCurrencyAmount(totalAmount, formData.currency)}</span>
               </div>
               {totalVat > 0 && (
                 <div className="text-sm text-gray-500">
-                  QQS summasi <span className="font-medium text-gray-700 ml-4">{formatCurrency(Math.round(totalVat))}</span>
+                  QQS summasi <span className="font-medium text-gray-700 ml-4">{formatCurrencyAmount(Math.round(totalVat), formData.currency)}</span>
                 </div>
               )}
               <div className="text-lg font-bold text-gray-900 pt-1 border-t">
-                Umumiy summa <span className="ml-4">{formatCurrency(totalAmount + Math.round(totalVat))} so'm</span>
+                Umumiy summa <span className="ml-4">{formatCurrencyAmount(totalAmount + Math.round(totalVat), formData.currency)}</span>
               </div>
+              {formData.currency !== 'UZS' && (
+                <div className="text-sm text-gray-500 mt-1">
+                  UZS ekvivalenti <span className="font-medium text-gray-700 ml-4">
+                    {formatCurrency(Math.round((totalAmount + Math.round(totalVat)) * formData.exchangeRate))}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         }

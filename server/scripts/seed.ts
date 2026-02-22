@@ -5,6 +5,7 @@ import Warehouse from '../models/Warehouse';
 import Supplier from '../models/Supplier';
 import Partner from '../models/Partner';
 import { User } from '../models/User';
+import Currency from '../models/Currency';
 import { hashPassword } from '../utils/password';
 import { generateDocNumber } from '../utils/documentNumber';
 
@@ -224,6 +225,18 @@ async function seed() {
     console.log(`  │ ${e.name.padEnd(20)} │ ${e.username.padEnd(14)} │ ${e.password.padEnd(16)} │ ${e.phone.padEnd(16)} │`);
   }
   console.log('  └──────────────────────┴────────────────┴──────────────────┴──────────────────┘');
+
+  // ===== 6. VALYUTALAR =====
+  const defaultCurrencies = [
+    { code: 'UZS', name: "O'zbek so'mi", symbol: "so'm", nominal: 1, exchangeRate: 1, isBase: true, isActive: true, lastUpdated: new Date() },
+    { code: 'USD', name: 'AQSH dollari', symbol: '$', nominal: 1, exchangeRate: 12850, isBase: false, isActive: true, lastUpdated: new Date() },
+    { code: 'EUR', name: 'Evro', symbol: '€', nominal: 1, exchangeRate: 14360, isBase: false, isActive: true, lastUpdated: new Date() },
+    { code: 'RUB', name: 'Rossiya rubli', symbol: '₽', nominal: 1, exchangeRate: 137, isBase: false, isActive: true, lastUpdated: new Date() },
+  ];
+  for (const cur of defaultCurrencies) {
+    await Currency.findOneAndUpdate({ code: cur.code }, cur, { upsert: true, new: true });
+  }
+  console.log(`${defaultCurrencies.length} ta valyuta yaratildi (UZS, USD, EUR, RUB)`);
 
   await mongoose.disconnect();
   console.log('\nSeed muvaffaqiyatli yakunlandi!');

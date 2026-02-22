@@ -13,7 +13,8 @@ import { Trash2, Loader2, ChevronDown } from "lucide-react";
 import { printViaIframe } from "@/utils/print";
 import { StatusBadge, RETURN_STATUS_CONFIG } from "@/components/shared/StatusBadge";
 import { DocumentDetailLayout } from "@/components/shared/DocumentDetailLayout";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { CurrencySelector } from "@/components/shared/CurrencySelector";
+import { formatCurrency, formatCurrencyAmount, formatDate } from "@/lib/format";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,6 +73,8 @@ const ReturnDetail = () => {
     returnDate: new Date().toISOString().split('T')[0],
     reason: "customer_request",
     notes: "",
+    currency: "UZS",
+    exchangeRate: 1,
   });
 
   const [items, setItems] = useState<ReturnItem[]>([]);
@@ -90,6 +93,8 @@ const ReturnDetail = () => {
         returnDate: new Date(customerReturn.returnDate).toISOString().split('T')[0],
         reason: customerReturn.reason || 'customer_request',
         notes: customerReturn.notes || '',
+        currency: (customerReturn as any).currency || 'UZS',
+        exchangeRate: (customerReturn as any).exchangeRate || 1,
       });
       setItems((customerReturn.items || []).map((item: any) => ({
         product: typeof item.product === 'string' ? item.product : item.product?._id || '',
@@ -316,6 +321,27 @@ const ReturnDetail = () => {
               </select>
             </div>
             <div>
+              <Label className="text-xs text-gray-500">Valyuta</Label>
+              <CurrencySelector
+                value={formData.currency}
+                onValueChange={(code, rate) =>
+                  setFormData(prev => ({ ...prev, currency: code, exchangeRate: rate }))
+                }
+                className="h-9 text-sm mt-1"
+              />
+            </div>
+            {formData.currency !== 'UZS' && (
+              <div>
+                <Label className="text-xs text-gray-500">Kurs (1 {formData.currency} = ? so'm)</Label>
+                <Input
+                  type="number" min="0" step="0.01"
+                  value={formData.exchangeRate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, exchangeRate: parseFloat(e.target.value) || 1 }))}
+                  className="h-9 text-sm mt-1"
+                />
+              </div>
+            )}
+            <div>
               <Label className="text-xs text-gray-500">Izoh</Label>
               <Textarea value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
@@ -388,7 +414,14 @@ const ReturnDetail = () => {
             Qaytariladigan: <strong className="text-gray-700">{items.filter(i => i.quantity > 0).length}</strong> pozitsiya
           </div>
           <div className="text-lg font-bold text-red-600">
-            Jami qaytarish: {formatCurrency(totalAmount)} so'm
+            Jami qaytarish: {formatCurrencyAmount(totalAmount, formData.currency)}
+            {formData.currency !== 'UZS' && (
+              <div className="text-sm font-normal text-gray-500 mt-1">
+                UZS ekvivalenti <span className="font-medium text-gray-700 ml-4">
+                  {formatCurrency(Math.round(totalAmount * formData.exchangeRate))}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       }

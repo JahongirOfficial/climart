@@ -22,6 +22,8 @@ export interface ISupplierReturn extends Document {
   totalAmount: number;
   reason: string; // Umumiy sabab
   notes?: string;
+  currency: string;
+  exchangeRate: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -107,6 +109,17 @@ const SupplierReturnSchema: Schema = new Schema(
     notes: {
       type: String,
       trim: true,
+    },
+    currency: {
+      type: String,
+      default: 'UZS',
+      uppercase: true,
+      trim: true,
+    },
+    exchangeRate: {
+      type: Number,
+      default: 1,
+      min: 0,
     },
   },
   {

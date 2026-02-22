@@ -36,7 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { ExportButton } from "@/components/ExportButton";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatCurrencyAmount, formatDate } from "@/lib/format";
 import { AdvancedFilter, FilterField } from "@/components/shared/AdvancedFilter";
 import { DataPagination } from "@/components/shared/DataPagination";
 import { StatusBadge, SHIPMENT_STATUS_CONFIG } from "@/components/shared/StatusBadge";
@@ -401,7 +401,7 @@ const Shipments = () => {
       case 'warehouseName':
         return <span className="text-gray-600">{shipment.warehouseName || '-'}</span>;
       case 'totalAmount':
-        return <span className="font-medium">{formatCurrency(shipment.totalAmount)}</span>;
+        return <span className="font-medium">{formatCurrencyAmount(shipment.totalAmount, (shipment as any).currency || 'UZS')}</span>;
       case 'paidAmount':
         return (
           <div className="flex items-center gap-1.5 justify-end">

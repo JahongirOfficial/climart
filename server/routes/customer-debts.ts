@@ -49,11 +49,11 @@ router.get('/', async (req: Request, res: Response) => {
       }
       const payments = await Payment.find(paymentQuery);
 
-      // Calculate totals
-      const totalSales = shipments.reduce((sum, s) => sum + s.totalAmount, 0);
-      const totalPaid = shipments.reduce((sum, s) => sum + s.paidAmount, 0);
-      const totalReturns = returns.reduce((sum, r) => sum + r.totalAmount, 0);
-      const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0);
+      // Calculate totals (convert to UZS using exchangeRate)
+      const totalSales = shipments.reduce((sum, s) => sum + (s.totalAmount * ((s as any).exchangeRate || 1)), 0);
+      const totalPaid = shipments.reduce((sum, s) => sum + (s.paidAmount * ((s as any).exchangeRate || 1)), 0);
+      const totalReturns = returns.reduce((sum, r) => sum + (r.totalAmount * ((r as any).exchangeRate || 1)), 0);
+      const totalPayments = payments.reduce((sum, p) => sum + (p.amount * ((p as any).exchangeRate || 1)), 0);
 
       // Debt = Sales - Paid - Returns
       const debt = totalSales - totalPaid - totalReturns;

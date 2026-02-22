@@ -17,7 +17,8 @@ import { QuickProductModal } from "@/components/QuickProductModal";
 import { printViaIframe } from "@/utils/print";
 import { StatusBadge, ORDER_STATUS_CONFIG } from "@/components/shared/StatusBadge";
 import { DocumentDetailLayout } from "@/components/shared/DocumentDetailLayout";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { CurrencySelector } from "@/components/shared/CurrencySelector";
+import { formatCurrency, formatCurrencyAmount, formatDate } from "@/lib/format";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,6 +76,8 @@ const OrderDetail = () => {
     supplierName: "",
     orderDate: new Date().toISOString().split('T')[0],
     notes: "",
+    currency: "UZS",
+    exchangeRate: 1,
   });
 
   const [items, setItems] = useState<OrderItem[]>([
@@ -89,6 +92,8 @@ const OrderDetail = () => {
         supplierName: order.supplierName,
         orderDate: new Date(order.orderDate).toISOString().split('T')[0],
         notes: order.notes || "",
+        currency: (order as any).currency || 'UZS',
+        exchangeRate: (order as any).exchangeRate || 1,
       });
       setItems(order.items.map(item => ({
         product: typeof item.product === 'string' ? item.product : item.product?._id,
@@ -111,12 +116,14 @@ const OrderDetail = () => {
 
   const handleProductSelect = (index: number, productName: string) => {
     const product = products.find(p => p.name === productName);
+    const basePrice = product ? product.costPrice : 0;
+    const docPrice = formData.currency === 'UZS' ? basePrice : Math.round((basePrice / formData.exchangeRate) * 100) / 100;
     const newItems = [...items];
     newItems[index] = {
       ...newItems[index],
       product: product?._id,
       productName,
-      price: product ? product.costPrice : 0,
+      price: docPrice,
     };
     newItems[index].total = newItems[index].quantity * newItems[index].price;
     setItems(newItems);
@@ -294,6 +301,27 @@ const OrderDetail = () => {
           {/* 3-ustun */}
           <div className="space-y-3">
             <div>
+              <Label className="text-xs text-gray-500">Valyuta</Label>
+              <CurrencySelector
+                value={formData.currency}
+                onValueChange={(code, rate) =>
+                  setFormData(prev => ({ ...prev, currency: code, exchangeRate: rate }))
+                }
+                className="h-9 text-sm mt-1"
+              />
+            </div>
+            {formData.currency !== 'UZS' && (
+              <div>
+                <Label className="text-xs text-gray-500">Kurs (1 {formData.currency} = ? so'm)</Label>
+                <Input
+                  type="number" min="0" step="0.01"
+                  value={formData.exchangeRate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, exchangeRate: parseFloat(e.target.value) || 1 }))}
+                  className="h-9 text-sm mt-1"
+                />
+              </div>
+            )}
+            <div>
               <Label className="text-xs text-gray-500">Izoh</Label>
               <Textarea value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
@@ -369,7 +397,16 @@ const OrderDetail = () => {
 
       footer={
         <div className="flex justify-end gap-6 text-sm">
-          <div><span className="text-gray-500">Jami:</span> <span className="font-bold text-base">{formatCurrency(totalAmount)}</span></div>
+          <div>
+            <span className="text-gray-500">Jami:</span> <span className="font-bold text-base">{formatCurrencyAmount(totalAmount, formData.currency)}</span>
+            {formData.currency !== 'UZS' && (
+              <div className="text-xs text-gray-500 mt-1">
+                UZS ekvivalenti <span className="font-medium text-gray-700 ml-2">
+                  {formatCurrency(Math.round(totalAmount * formData.exchangeRate))}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       }
     />

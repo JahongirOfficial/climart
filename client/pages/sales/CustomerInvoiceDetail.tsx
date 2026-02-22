@@ -20,7 +20,8 @@ import { QuickProductModal } from "@/components/QuickProductModal";
 import { printViaIframe } from "@/utils/print";
 import { StatusBadge, INVOICE_STATUS_CONFIG } from "@/components/shared/StatusBadge";
 import { DocumentDetailLayout } from "@/components/shared/DocumentDetailLayout";
-import { formatCurrency } from "@/lib/format";
+import { CurrencySelector } from "@/components/shared/CurrencySelector";
+import { formatCurrency, formatCurrencyAmount } from "@/lib/format";
 import { api } from "@/lib/api";
 import {
   DropdownMenu,
@@ -72,6 +73,8 @@ const CustomerInvoiceDetail = () => {
     invoiceDate: new Date().toISOString().split('T')[0],
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     notes: "",
+    currency: "UZS",
+    exchangeRate: 1,
   });
 
   const emptyItem: InvoiceItem = { product: "", productName: "", quantity: 1, sellingPrice: 0, costPrice: 0, discount: 0, discountAmount: 0, total: 0, warehouse: "", warehouseName: "" };
@@ -90,6 +93,8 @@ const CustomerInvoiceDetail = () => {
         invoiceDate: new Date(invoice.invoiceDate).toISOString().split('T')[0],
         dueDate: new Date(invoice.dueDate).toISOString().split('T')[0],
         notes: invoice.notes || "",
+        currency: invoice.currency || 'UZS',
+        exchangeRate: invoice.exchangeRate || 1,
       });
       setItems(invoice.items.map(item => ({
         product: (typeof item.product === 'object' && item.product ? item.product._id : item.product) as string,
@@ -176,11 +181,13 @@ const CustomerInvoiceDetail = () => {
 
   const handleProductSelect = (index: number, productId: string) => {
     const product = products.find(p => p._id === productId);
+    const basePrice = product ? product.sellingPrice : 0;
+    const docPrice = formData.currency === 'UZS' ? basePrice : Math.round((basePrice / formData.exchangeRate) * 100) / 100;
     const newItems = [...items];
     newItems[index] = {
       ...newItems[index],
       product: productId, productName: product ? product.name : "",
-      sellingPrice: product ? product.sellingPrice : 0,
+      sellingPrice: docPrice,
       costPrice: product ? product.costPrice : 0,
       warehouse: newItems[index].warehouse || formData.warehouse,
       warehouseName: newItems[index].warehouseName || formData.warehouseName,
@@ -472,6 +479,27 @@ const CustomerInvoiceDetail = () => {
                     placeholder="Tashkilot nomi..." className="h-9 text-sm mt-1" />
                 </div>
                 <div>
+                  <Label className="text-xs text-gray-500">Valyuta</Label>
+                  <CurrencySelector
+                    value={formData.currency}
+                    onValueChange={(code, rate) =>
+                      setFormData(prev => ({ ...prev, currency: code, exchangeRate: rate }))
+                    }
+                    className="h-9 text-sm mt-1"
+                  />
+                </div>
+                {formData.currency !== 'UZS' && (
+                  <div>
+                    <Label className="text-xs text-gray-500">Kurs (1 {formData.currency} = ? so'm)</Label>
+                    <Input
+                      type="number" min="0" step="0.01"
+                      value={formData.exchangeRate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, exchangeRate: parseFloat(e.target.value) || 1 }))}
+                      className="h-9 text-sm mt-1"
+                    />
+                  </div>
+                )}
+                <div>
                   <Label className="text-xs text-gray-500">Izoh</Label>
                   <Textarea value={formData.notes}
                     onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
@@ -582,16 +610,23 @@ const CustomerInvoiceDetail = () => {
               {discountTotal > 0 && (
                 <>
                   <div className="text-sm text-gray-500">
-                    Summa <span className="font-medium text-gray-700 ml-4">{formatCurrency(subtotal)}</span>
+                    Summa <span className="font-medium text-gray-700 ml-4">{formatCurrencyAmount(subtotal, formData.currency)}</span>
                   </div>
                   <div className="text-sm text-red-500">
-                    Chegirma <span className="font-semibold ml-4">-{formatCurrency(discountTotal)}</span>
+                    Chegirma <span className="font-semibold ml-4">-{formatCurrencyAmount(discountTotal, formData.currency)}</span>
                   </div>
                 </>
               )}
               <div className="text-lg font-bold text-gray-900 pt-1 border-t">
-                Jami to'lov <span className="ml-4">{formatCurrency(totalAmount)} so'm</span>
+                Jami to'lov <span className="ml-4">{formatCurrencyAmount(totalAmount, formData.currency)}</span>
               </div>
+              {formData.currency !== 'UZS' && (
+                <div className="text-sm text-gray-500 mt-1">
+                  UZS ekvivalenti <span className="font-medium text-gray-700 ml-4">
+                    {formatCurrency(Math.round(totalAmount * formData.exchangeRate))}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         }

@@ -11,6 +11,8 @@ import { useDocumentNavigation } from "@/hooks/useDocumentNavigation";
 import { Trash2, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DocumentDetailLayout } from "@/components/shared/DocumentDetailLayout";
+import { CurrencySelector } from "@/components/shared/CurrencySelector";
+import { formatCurrency } from "@/lib/format";
 import type { StatusConfig } from "@/components/shared/StatusBadge";
 
 // Shartnoma status konfiguratsiyasi
@@ -33,14 +35,6 @@ const paymentTermsOptions: ComboboxOption[] = [
   { value: "prepaid", label: "Oldindan to'lov" },
   { value: "postpaid", label: "Keyingi to'lov" },
   { value: "installment", label: "Bo'lib to'lash" },
-];
-
-// Valyuta opsiyalari
-const currencyOptions: ComboboxOption[] = [
-  { value: "UZS", label: "UZS" },
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "RUB", label: "RUB" },
 ];
 
 // Status opsiyalari
@@ -68,6 +62,7 @@ const ContractDetail = () => {
     endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     totalAmount: 0,
     currency: "UZS",
+    exchangeRate: 1,
     paymentTerms: "",
     status: "active",
     isDefault: false,
@@ -85,6 +80,7 @@ const ContractDetail = () => {
         endDate: new Date(contract.endDate).toISOString().split("T")[0],
         totalAmount: contract.totalAmount || 0,
         currency: contract.currency || "UZS",
+        exchangeRate: contract.exchangeRate || 1,
         paymentTerms: contract.paymentTerms || "",
         status: contract.status || "active",
         isDefault: contract.isDefault || false,
@@ -209,14 +205,31 @@ const ContractDetail = () => {
               </div>
               <div>
                 <Label className="text-xs text-gray-500">Valyuta</Label>
-                <Combobox
-                  options={currencyOptions}
+                <CurrencySelector
                   value={formData.currency}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, currency: value }))}
-                  placeholder="Valyuta tanlang..."
+                  onValueChange={(code, rate) =>
+                    setFormData((prev) => ({ ...prev, currency: code, exchangeRate: rate }))
+                  }
                   className="h-9 text-sm mt-1"
                 />
               </div>
+              {formData.currency !== "UZS" && (
+                <div>
+                  <Label className="text-xs text-gray-500">
+                    Kurs (1 {formData.currency} = ? so'm)
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.exchangeRate}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, exchangeRate: parseFloat(e.target.value) || 1 }))
+                    }
+                    className="h-9 text-sm mt-1"
+                  />
+                </div>
+              )}
               <div>
                 <Label className="text-xs text-gray-500">Holat</Label>
                 <Combobox
@@ -270,6 +283,11 @@ const ContractDetail = () => {
                   placeholder="0"
                   className="h-9 text-sm mt-1"
                 />
+                {formData.currency !== "UZS" && formData.totalAmount > 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    ≈ {formatCurrency(Math.round(formData.totalAmount * formData.exchangeRate))}
+                  </div>
+                )}
               </div>
             </div>
 

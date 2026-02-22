@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { ImportPaymentsModal } from "@/components/ImportPaymentsModal";
 import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
+import { formatCurrencyAmount } from "@/lib/format";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -103,7 +104,7 @@ const PaymentRow = memo(({
         }`}>
           {payment.type === 'incoming' && '+'}
           {payment.type === 'outgoing' && '-'}
-          {payment.amount.toLocaleString()} so'm
+          {formatCurrencyAmount(payment.amount, payment.currency || 'UZS')}
         </span>
       </td>
       <td className="px-3 py-2 text-center">{getStatusBadge(payment.status)}</td>

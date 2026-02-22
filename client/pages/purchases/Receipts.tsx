@@ -29,7 +29,7 @@ import { Receipt } from "@shared/api";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { ExportButton } from "@/components/ExportButton";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatCurrencyAmount, formatDate } from "@/lib/format";
 import { api } from "@/lib/api";
 
 const Receipts = () => {
@@ -324,7 +324,7 @@ const Receipts = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        {formatCurrency(receipt.totalAmount)}
+                        {formatCurrencyAmount(receipt.totalAmount, (receipt as any).currency || 'UZS')}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">

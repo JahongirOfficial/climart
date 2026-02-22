@@ -48,9 +48,10 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Calculate sales
     shipments.forEach(shipment => {
+      const rate = (shipment as any).exchangeRate || 1;
       shipment.items.forEach((item: any) => {
-        const revenue = item.quantity * item.price;
-        const cost = item.quantity * (item.costPrice || item.price * 0.7); // Fallback if no cost
+        const revenue = item.quantity * item.price * rate;
+        const cost = item.quantity * (item.costPrice || item.price * 0.7) * rate; // Fallback if no cost
         totalRevenue += revenue;
         totalCost += cost;
         totalProfit += (revenue - cost);
@@ -60,9 +61,10 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Calculate returns
     returns.forEach(ret => {
+      const rate = (ret as any).exchangeRate || 1;
       ret.items.forEach((item: any) => {
-        const revenue = item.quantity * item.price;
-        const cost = item.quantity * (item.costPrice || item.price * 0.7);
+        const revenue = item.quantity * item.price * rate;
+        const cost = item.quantity * (item.costPrice || item.price * 0.7) * rate;
         totalReturnRevenue += revenue;
         totalReturnCost += cost;
         totalReturnLoss += (revenue - cost);
@@ -84,6 +86,7 @@ router.get('/', async (req: Request, res: Response) => {
       const productData: Record<string, any> = {};
 
       shipments.forEach(shipment => {
+        const rate = (shipment as any).exchangeRate || 1;
         shipment.items.forEach((item: any) => {
           const key = item.productName;
           if (!productData[key]) {
@@ -99,8 +102,8 @@ router.get('/', async (req: Request, res: Response) => {
               returnLoss: 0,
             };
           }
-          const revenue = item.quantity * item.price;
-          const cost = item.quantity * (item.costPrice || item.price * 0.7);
+          const revenue = item.quantity * item.price * rate;
+          const cost = item.quantity * (item.costPrice || item.price * 0.7) * rate;
           productData[key].salesQuantity += item.quantity;
           productData[key].salesRevenue += revenue;
           productData[key].salesCost += cost;
@@ -109,6 +112,7 @@ router.get('/', async (req: Request, res: Response) => {
       });
 
       returns.forEach(ret => {
+        const rate = (ret as any).exchangeRate || 1;
         ret.items.forEach((item: any) => {
           const key = item.productName;
           if (!productData[key]) {
@@ -124,8 +128,8 @@ router.get('/', async (req: Request, res: Response) => {
               returnLoss: 0,
             };
           }
-          const revenue = item.quantity * item.price;
-          const cost = item.quantity * (item.costPrice || item.price * 0.7);
+          const revenue = item.quantity * item.price * rate;
+          const cost = item.quantity * (item.costPrice || item.price * 0.7) * rate;
           productData[key].returnQuantity += item.quantity;
           productData[key].returnRevenue += revenue;
           productData[key].returnCost += cost;
@@ -147,6 +151,7 @@ router.get('/', async (req: Request, res: Response) => {
       const customerData: Record<string, any> = {};
 
       shipments.forEach(shipment => {
+        const rate = (shipment as any).exchangeRate || 1;
         const key = shipment.customerName;
         if (!customerData[key]) {
           customerData[key] = {
@@ -165,8 +170,8 @@ router.get('/', async (req: Request, res: Response) => {
         }
         customerData[key].salesCount += 1;
         shipment.items.forEach((item: any) => {
-          const revenue = item.quantity * item.price;
-          const cost = item.quantity * (item.costPrice || item.price * 0.7);
+          const revenue = item.quantity * item.price * rate;
+          const cost = item.quantity * (item.costPrice || item.price * 0.7) * rate;
           customerData[key].salesQuantity += item.quantity;
           customerData[key].salesRevenue += revenue;
           customerData[key].salesCost += cost;
@@ -175,6 +180,7 @@ router.get('/', async (req: Request, res: Response) => {
       });
 
       returns.forEach(ret => {
+        const rate = (ret as any).exchangeRate || 1;
         const key = ret.customerName;
         if (!customerData[key]) {
           customerData[key] = {
@@ -193,8 +199,8 @@ router.get('/', async (req: Request, res: Response) => {
         }
         customerData[key].returnCount += 1;
         ret.items.forEach((item: any) => {
-          const revenue = item.quantity * item.price;
-          const cost = item.quantity * (item.costPrice || item.price * 0.7);
+          const revenue = item.quantity * item.price * rate;
+          const cost = item.quantity * (item.costPrice || item.price * 0.7) * rate;
           customerData[key].returnQuantity += item.quantity;
           customerData[key].returnRevenue += revenue;
           customerData[key].returnCost += cost;

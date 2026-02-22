@@ -9,6 +9,7 @@ export interface IContract extends Document {
   startDate: Date;
   endDate: Date;
   currency: 'UZS' | 'USD' | 'EUR' | 'RUB';
+  exchangeRate: number;
   totalAmount?: number;
   creditLimit?: number;
   paymentTerms?: string;
@@ -59,6 +60,11 @@ const ContractSchema: Schema = new Schema(
       type: String,
       enum: ['UZS', 'USD', 'EUR', 'RUB'],
       default: 'UZS',
+    },
+    exchangeRate: {
+      type: Number,
+      default: 1,
+      min: 0,
     },
     totalAmount: {
       type: Number,

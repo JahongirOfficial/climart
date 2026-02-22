@@ -36,6 +36,8 @@ export interface ICustomerInvoice extends Document {
   customerOrder?: mongoose.Types.ObjectId;
   orderNumber?: string;
   createdBy?: mongoose.Types.ObjectId;
+  currency: string;
+  exchangeRate: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -189,6 +191,17 @@ const CustomerInvoiceSchema: Schema = new Schema(
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
+    },
+    currency: {
+      type: String,
+      default: 'UZS',
+      uppercase: true,
+      trim: true,
+    },
+    exchangeRate: {
+      type: Number,
+      default: 1,
+      min: 0,
     },
   },
   {

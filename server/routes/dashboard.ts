@@ -85,7 +85,7 @@ router.get('/stats', async (req: Request, res: Response) => {
             {
               $group: {
                 _id: null,
-                revenue: { $sum: "$totalAmount" },
+                revenue: { $sum: { $multiply: ["$totalAmount", { $ifNull: ["$exchangeRate", 1] }] } },
                 profit: { $sum: "$profit" },
                 count: { $sum: 1 }
               }
@@ -94,7 +94,7 @@ router.get('/stats', async (req: Request, res: Response) => {
 
           const returns = await CustomerReturn.aggregate([
             { $match: { returnDate: { $gte: start, $lte: end }, status: 'accepted' } },
-            { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+            { $group: { _id: null, total: { $sum: { $multiply: ["$totalAmount", { $ifNull: ["$exchangeRate", 1] }] } } } }
           ]);
 
           const data = result[0] || { revenue: 0, profit: 0, count: 0 };
@@ -117,14 +117,14 @@ router.get('/stats', async (req: Request, res: Response) => {
               ]),
               CustomerInvoice.aggregate([
                 { $match: { ...employeeFilter, invoiceDate: { $gte: startDate, $lte: endDate }, status: { $ne: 'cancelled' } } },
-                { $group: { _id: "$customerName", count: { $sum: 1 }, sales: { $sum: "$totalAmount" } } },
+                { $group: { _id: "$customerName", count: { $sum: 1 }, sales: { $sum: { $multiply: ["$totalAmount", { $ifNull: ["$exchangeRate", 1] }] } } } },
                 { $sort: { sales: -1 } },
                 { $limit: 5 },
                 { $project: { name: "$_id", orders: "$count", sales: 1, _id: 0 } }
               ]),
               Receipt.aggregate([
                 { $match: { ...employeeFilter, receiptDate: { $gte: startDate, $lte: endDate } } },
-                { $group: { _id: "$supplierName", count: { $sum: 1 }, sales: { $sum: "$totalAmount" } } },
+                { $group: { _id: "$supplierName", count: { $sum: 1 }, sales: { $sum: { $multiply: ["$totalAmount", { $ifNull: ["$exchangeRate", 1] }] } } } },
                 { $sort: { sales: -1 } },
                 { $limit: 5 },
                 { $project: { name: "$_id", orders: "$count", sales: 1, _id: 0 } }
@@ -170,7 +170,7 @@ router.get('/stats', async (req: Request, res: Response) => {
 
         const aggregation = await CustomerInvoice.aggregate([
           { $match: { ...employeeFilter, invoiceDate: { $gte: sixMonthsAgo }, status: { $ne: 'cancelled' } } },
-          { $group: { _id: { month: { $month: "$invoiceDate" }, year: { $year: "$invoiceDate" } }, total: { $sum: "$totalAmount" } } },
+          { $group: { _id: { month: { $month: "$invoiceDate" }, year: { $year: "$invoiceDate" } }, total: { $sum: { $multiply: ["$totalAmount", { $ifNull: ["$exchangeRate", 1] }] } } } },
           { $sort: { "_id.year": 1, "_id.month": 1 } }
         ]);
 

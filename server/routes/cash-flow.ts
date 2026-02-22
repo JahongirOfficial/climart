@@ -40,16 +40,16 @@ router.get('/', async (req: Request, res: Response) => {
     
     openingPayments.forEach(payment => {
       if (payment.type === 'incoming') {
-        if (payment.account === 'cash') openingCash += payment.amount;
-        if (payment.account === 'bank') openingBank += payment.amount;
+        if (payment.account === 'cash') openingCash += payment.amount * (payment.exchangeRate || 1);
+        if (payment.account === 'bank') openingBank += payment.amount * (payment.exchangeRate || 1);
       } else if (payment.type === 'outgoing') {
-        if (payment.account === 'cash') openingCash -= payment.amount;
-        if (payment.account === 'bank') openingBank -= payment.amount;
+        if (payment.account === 'cash') openingCash -= payment.amount * (payment.exchangeRate || 1);
+        if (payment.account === 'bank') openingBank -= payment.amount * (payment.exchangeRate || 1);
       } else if (payment.type === 'transfer') {
-        if (payment.fromAccount === 'cash') openingCash -= payment.amount;
-        if (payment.fromAccount === 'bank') openingBank -= payment.amount;
-        if (payment.toAccount === 'cash') openingCash += payment.amount;
-        if (payment.toAccount === 'bank') openingBank += payment.amount;
+        if (payment.fromAccount === 'cash') openingCash -= payment.amount * (payment.exchangeRate || 1);
+        if (payment.fromAccount === 'bank') openingBank -= payment.amount * (payment.exchangeRate || 1);
+        if (payment.toAccount === 'cash') openingCash += payment.amount * (payment.exchangeRate || 1);
+        if (payment.toAccount === 'bank') openingBank += payment.amount * (payment.exchangeRate || 1);
       }
     });
     
@@ -76,11 +76,11 @@ router.get('/', async (req: Request, res: Response) => {
         grouped[dateKey].payments.push(payment);
         
         if (payment.type === 'incoming') {
-          if (payment.account === 'cash') grouped[dateKey].cashIncoming += payment.amount;
-          if (payment.account === 'bank') grouped[dateKey].bankIncoming += payment.amount;
+          if (payment.account === 'cash') grouped[dateKey].cashIncoming += payment.amount * (payment.exchangeRate || 1);
+          if (payment.account === 'bank') grouped[dateKey].bankIncoming += payment.amount * (payment.exchangeRate || 1);
         } else if (payment.type === 'outgoing') {
-          if (payment.account === 'cash') grouped[dateKey].cashOutgoing += payment.amount;
-          if (payment.account === 'bank') grouped[dateKey].bankOutgoing += payment.amount;
+          if (payment.account === 'cash') grouped[dateKey].cashOutgoing += payment.amount * (payment.exchangeRate || 1);
+          if (payment.account === 'bank') grouped[dateKey].bankOutgoing += payment.amount * (payment.exchangeRate || 1);
         }
       });
       
@@ -108,11 +108,11 @@ router.get('/', async (req: Request, res: Response) => {
         }
         
         grouped[categoryKey].count++;
-        
+
         if (payment.type === 'incoming') {
-          grouped[categoryKey].incoming += payment.amount;
+          grouped[categoryKey].incoming += payment.amount * (payment.exchangeRate || 1);
         } else if (payment.type === 'outgoing') {
-          grouped[categoryKey].outgoing += payment.amount;
+          grouped[categoryKey].outgoing += payment.amount * (payment.exchangeRate || 1);
         }
       });
     }
@@ -125,11 +125,11 @@ router.get('/', async (req: Request, res: Response) => {
     
     payments.forEach(payment => {
       if (payment.type === 'incoming') {
-        if (payment.account === 'cash') periodCashIncoming += payment.amount;
-        if (payment.account === 'bank') periodBankIncoming += payment.amount;
+        if (payment.account === 'cash') periodCashIncoming += payment.amount * (payment.exchangeRate || 1);
+        if (payment.account === 'bank') periodBankIncoming += payment.amount * (payment.exchangeRate || 1);
       } else if (payment.type === 'outgoing') {
-        if (payment.account === 'cash') periodCashOutgoing += payment.amount;
-        if (payment.account === 'bank') periodBankOutgoing += payment.amount;
+        if (payment.account === 'cash') periodCashOutgoing += payment.amount * (payment.exchangeRate || 1);
+        if (payment.account === 'bank') periodBankOutgoing += payment.amount * (payment.exchangeRate || 1);
       }
     });
     

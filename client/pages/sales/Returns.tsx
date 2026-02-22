@@ -23,7 +23,7 @@ import { usePartners } from "@/hooks/usePartners";
 import { CustomerReturnModal } from "@/components/CustomerReturnModal";
 import { useToast } from "@/hooks/use-toast";
 import { ExportButton } from "@/components/ExportButton";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatCurrencyAmount, formatDate } from "@/lib/format";
 import { AdvancedFilter, FilterField } from "@/components/shared/AdvancedFilter";
 import { DataPagination } from "@/components/shared/DataPagination";
 import { StatusBadge, RETURN_STATUS_CONFIG } from "@/components/shared/StatusBadge";
@@ -371,7 +371,7 @@ const Returns = () => {
                       <td className="px-3 py-2 whitespace-nowrap text-sm">{ret.invoiceNumber}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm">{formatDate(ret.returnDate)}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-red-600">
-                        {formatCurrency(ret.totalAmount)}
+                        {formatCurrencyAmount(ret.totalAmount, ret.currency || 'UZS')}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getReasonColor(ret.reason)}`}>

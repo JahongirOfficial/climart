@@ -36,7 +36,7 @@ import { ViewOrderModal } from "@/components/ViewOrderModal";
 import { CreatePaymentModal } from "@/components/CreatePaymentModal";
 import { ReceiveOrderModal } from "@/components/ReceiveOrderModal";
 import { PurchaseOrder } from "@shared/api";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatCurrencyAmount, formatDate } from "@/lib/format";
 import { api } from '@/lib/api';
 import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 
@@ -382,7 +382,7 @@ const Orders = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(order.totalAmount)}
+                        {formatCurrencyAmount(order.totalAmount, order.currency || 'UZS')}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">

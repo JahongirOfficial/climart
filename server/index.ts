@@ -45,6 +45,7 @@ import auditRouter from "./routes/audit";
 import tasksRouter from "./routes/tasks";
 import salesFunnelRouter from "./routes/sales-funnel";
 import unitEconomicsRouter from "./routes/unit-economics";
+import currenciesRouter from "./routes/currencies";
 import { authenticateToken } from "./middleware/auth";
 
 // Connect to MongoDB
@@ -145,6 +146,7 @@ export function createServer() {
   app.use("/api/tasks", authenticateToken, tasksRouter);
   app.use("/api/sales-funnel", authenticateToken, salesFunnelRouter);
   app.use("/api/unit-economics", authenticateToken, unitEconomicsRouter);
+  app.use("/api/currencies", authenticateToken, currenciesRouter);
 
   return app;
 }

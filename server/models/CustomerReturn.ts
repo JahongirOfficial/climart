@@ -28,6 +28,8 @@ export interface ICustomerReturn extends Document {
   totalAmount: number;
   reason: 'defective' | 'wrong_item' | 'customer_request' | 'other';
   notes?: string;
+  currency: string;
+  exchangeRate: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -140,6 +142,17 @@ const CustomerReturnSchema: Schema = new Schema(
     notes: {
       type: String,
       trim: true,
+    },
+    currency: {
+      type: String,
+      default: 'UZS',
+      uppercase: true,
+      trim: true,
+    },
+    exchangeRate: {
+      type: Number,
+      default: 1,
+      min: 0,
     },
   },
   {

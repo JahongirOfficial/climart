@@ -16,7 +16,8 @@ import {
 import { printViaIframe } from "@/utils/print";
 import { StatusBadge, INVOICE_STATUS_CONFIG } from "@/components/shared/StatusBadge";
 import { DocumentDetailLayout } from "@/components/shared/DocumentDetailLayout";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { CurrencySelector } from "@/components/shared/CurrencySelector";
+import { formatCurrency, formatCurrencyAmount, formatDate } from "@/lib/format";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +54,8 @@ const ReceivedInvoiceDetail = () => {
     invoiceDate: new Date().toISOString().split('T')[0],
     dueDate: new Date().toISOString().split('T')[0],
     notes: "",
+    currency: "UZS",
+    exchangeRate: 1,
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -68,6 +71,8 @@ const ReceivedInvoiceDetail = () => {
         invoiceDate: new Date(invoice.invoiceDate).toISOString().split('T')[0],
         dueDate: new Date(invoice.dueDate).toISOString().split('T')[0],
         notes: invoice.notes || "",
+        currency: (invoice as any).currency || 'UZS',
+        exchangeRate: (invoice as any).exchangeRate || 1,
       });
       setItems(invoice.items.map(item => ({
         productName: item.productName,
@@ -248,6 +253,27 @@ const ReceivedInvoiceDetail = () => {
             {/* 3-ustun */}
             <div className="space-y-3">
               <div>
+                <Label className="text-xs text-gray-500">Valyuta</Label>
+                <CurrencySelector
+                  value={formData.currency}
+                  onValueChange={(code, rate) =>
+                    setFormData(prev => ({ ...prev, currency: code, exchangeRate: rate }))
+                  }
+                  className="h-9 text-sm mt-1"
+                />
+              </div>
+              {formData.currency !== 'UZS' && (
+                <div>
+                  <Label className="text-xs text-gray-500">Kurs (1 {formData.currency} = ? so'm)</Label>
+                  <Input
+                    type="number" min="0" step="0.01"
+                    value={formData.exchangeRate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, exchangeRate: parseFloat(e.target.value) || 1 }))}
+                    className="h-9 text-sm mt-1"
+                  />
+                </div>
+              )}
+              <div>
                 <Label className="text-xs text-gray-500">Izoh</Label>
                 <Textarea value={formData.notes}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
@@ -352,7 +378,16 @@ const ReceivedInvoiceDetail = () => {
 
       footer={
         <div className="flex justify-end gap-6 text-sm">
-          <div><span className="text-gray-500">Jami:</span> <span className="font-bold text-base">{formatCurrency(invoice?.totalAmount || totalAmount)}</span></div>
+          <div>
+            <span className="text-gray-500">Jami:</span> <span className="font-bold text-base">{formatCurrencyAmount(invoice?.totalAmount || totalAmount, formData.currency)}</span>
+            {formData.currency !== 'UZS' && (
+              <div className="text-xs text-gray-500 mt-1">
+                UZS ekvivalenti <span className="font-medium text-gray-700 ml-2">
+                  {formatCurrency(Math.round((invoice?.totalAmount || totalAmount) * formData.exchangeRate))}
+                </span>
+              </div>
+            )}
+          </div>
           {!isNew && (
             <>
               <div><span className="text-green-600">To'langan:</span> <span className="font-bold text-base text-green-600">{formatCurrency(invoice?.paidAmount || 0)}</span></div>

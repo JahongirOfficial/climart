@@ -17,7 +17,8 @@ import {
 import { printViaIframe } from "@/utils/print";
 import { StatusBadge, SHIPMENT_STATUS_CONFIG } from "@/components/shared/StatusBadge";
 import { DocumentDetailLayout } from "@/components/shared/DocumentDetailLayout";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { CurrencySelector } from "@/components/shared/CurrencySelector";
+import { formatCurrency, formatCurrencyAmount, formatDate } from "@/lib/format";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,6 +85,8 @@ const ShipmentDetail = () => {
     trackingNumber: "",
     notes: "",
     allowNegativeStock: false,
+    currency: "UZS",
+    exchangeRate: 1,
   });
 
   const [items, setItems] = useState<ShipmentItem[]>([]);
@@ -105,6 +108,8 @@ const ShipmentDetail = () => {
         trackingNumber: shipment.trackingNumber || '',
         notes: shipment.notes || '',
         allowNegativeStock: false,
+        currency: (shipment as any).currency || 'UZS',
+        exchangeRate: (shipment as any).exchangeRate || 1,
       });
       setItems((shipment.items || []).map((item: any) => ({
         product: typeof item.product === 'string' ? item.product : item.product?._id || '',
@@ -404,6 +409,27 @@ const ShipmentDetail = () => {
                   className="h-9 text-sm mt-1" placeholder="Masalan: TRK123456" />
               </div>
               <div>
+                <Label className="text-xs text-gray-500">Valyuta</Label>
+                <CurrencySelector
+                  value={formData.currency}
+                  onValueChange={(code, rate) =>
+                    setFormData(prev => ({ ...prev, currency: code, exchangeRate: rate }))
+                  }
+                  className="h-9 text-sm mt-1"
+                />
+              </div>
+              {formData.currency !== 'UZS' && (
+                <div>
+                  <Label className="text-xs text-gray-500">Kurs (1 {formData.currency} = ? so'm)</Label>
+                  <Input
+                    type="number" min="0" step="0.01"
+                    value={formData.exchangeRate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, exchangeRate: parseFloat(e.target.value) || 1 }))}
+                    className="h-9 text-sm mt-1"
+                  />
+                </div>
+              )}
+              <div>
                 <Label className="text-xs text-gray-500">Izoh</Label>
                 <Textarea value={formData.notes}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
@@ -504,7 +530,14 @@ const ShipmentDetail = () => {
                     <td colSpan={2} className="px-3 py-2 text-right text-gray-500">Pozitsiyalar: {items.length}</td>
                     <td className="px-3 py-2 text-right font-medium">{totalQuantity}</td>
                     <td className="px-3 py-2"></td>
-                    <td className="px-3 py-2 text-right font-bold">{formatCurrency(totalAmount)}</td>
+                    <td className="px-3 py-2 text-right font-bold">
+                      {formatCurrencyAmount(totalAmount, formData.currency)}
+                      {formData.currency !== 'UZS' && (
+                        <div className="text-xs font-normal text-gray-500">
+                          {formatCurrency(Math.round(totalAmount * formData.exchangeRate))}
+                        </div>
+                      )}
+                    </td>
                     <td colSpan={2} className="px-3 py-2"></td>
                   </tr>
                 </tfoot>

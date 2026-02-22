@@ -17,7 +17,8 @@ import {
 import { QuickProductModal } from "@/components/QuickProductModal";
 import { printViaIframe } from "@/utils/print";
 import { DocumentDetailLayout } from "@/components/shared/DocumentDetailLayout";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { CurrencySelector } from "@/components/shared/CurrencySelector";
+import { formatCurrency, formatCurrencyAmount, formatDate } from "@/lib/format";
 
 interface ReceiptItem {
   product: string;
@@ -51,6 +52,8 @@ const ReceiptDetail = () => {
     warehouseName: "",
     receiptDate: new Date().toISOString().split('T')[0],
     notes: "",
+    currency: "UZS",
+    exchangeRate: 1,
   });
 
   const [items, setItems] = useState<ReceiptItem[]>([
@@ -67,6 +70,8 @@ const ReceiptDetail = () => {
         warehouseName: receipt.warehouseName || '',
         receiptDate: new Date(receipt.receiptDate).toISOString().split('T')[0],
         notes: receipt.notes || "",
+        currency: (receipt as any).currency || 'UZS',
+        exchangeRate: (receipt as any).exchangeRate || 1,
       });
       setItems(receipt.items.map((item: any) => ({
         product: typeof item.product === 'string' ? item.product : item.product?._id || '',
@@ -91,13 +96,15 @@ const ReceiptDetail = () => {
   const handleProductSelect = (index: number, productId: string) => {
     const product = products.find(p => p._id === productId);
     if (product) {
+      const basePrice = product.costPrice;
+      const docPrice = formData.currency === 'UZS' ? basePrice : Math.round((basePrice / formData.exchangeRate) * 100) / 100;
       const newItems = [...items];
       newItems[index] = {
         ...newItems[index],
         product: productId,
         productName: product.name,
-        costPrice: product.costPrice,
-        total: newItems[index].quantity * product.costPrice,
+        costPrice: docPrice,
+        total: newItems[index].quantity * docPrice,
       };
       setItems(newItems);
     }
@@ -257,6 +264,27 @@ const ReceiptDetail = () => {
           {/* 3-ustun */}
           <div className="space-y-3">
             <div>
+              <Label className="text-xs text-gray-500">Valyuta</Label>
+              <CurrencySelector
+                value={formData.currency}
+                onValueChange={(code, rate) =>
+                  setFormData(prev => ({ ...prev, currency: code, exchangeRate: rate }))
+                }
+                className="h-9 text-sm mt-1"
+              />
+            </div>
+            {formData.currency !== 'UZS' && (
+              <div>
+                <Label className="text-xs text-gray-500">Kurs (1 {formData.currency} = ? so'm)</Label>
+                <Input
+                  type="number" min="0" step="0.01"
+                  value={formData.exchangeRate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, exchangeRate: parseFloat(e.target.value) || 1 }))}
+                  className="h-9 text-sm mt-1"
+                />
+              </div>
+            )}
+            <div>
               <Label className="text-xs text-gray-500">Izoh</Label>
               <Textarea value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
@@ -333,7 +361,16 @@ const ReceiptDetail = () => {
 
       footer={
         <div className="flex justify-end gap-6 text-sm">
-          <div><span className="text-gray-500">Jami:</span> <span className="font-bold text-base">{formatCurrency(totalAmount)}</span></div>
+          <div>
+            <span className="text-gray-500">Jami:</span> <span className="font-bold text-base">{formatCurrencyAmount(totalAmount, formData.currency)}</span>
+            {formData.currency !== 'UZS' && (
+              <div className="text-xs text-gray-500 mt-1">
+                UZS ekvivalenti <span className="font-medium text-gray-700 ml-2">
+                  {formatCurrency(Math.round(totalAmount * formData.exchangeRate))}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       }
     />

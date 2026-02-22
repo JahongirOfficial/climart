@@ -37,6 +37,8 @@ export interface ICustomerOrder extends Document {
   notes?: string;
   sent: boolean;
   printed: boolean;
+  currency: string;
+  exchangeRate: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -192,6 +194,17 @@ const CustomerOrderSchema: Schema = new Schema(
     printed: {
       type: Boolean,
       default: false,
+    },
+    currency: {
+      type: String,
+      default: 'UZS',
+      uppercase: true,
+      trim: true,
+    },
+    exchangeRate: {
+      type: Number,
+      default: 1,
+      min: 0,
     },
   },
   {

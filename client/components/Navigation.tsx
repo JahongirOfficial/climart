@@ -48,6 +48,7 @@ const dashboardSubMenu = [
   { id: "cart", name: "Korzina", path: "/dashboard/cart" },
   { id: "audit", name: "Audit", path: "/dashboard/audit" },
   { id: "files", name: "Fayllar", path: "/dashboard/files" },
+  { id: "currencies", name: "Valyutalar", path: "/dashboard/currencies" },
 ];
 
 const purchasesSubMenu = [

@@ -37,7 +37,7 @@ router.get('/', async (req: Request, res: Response) => {
     let costOfGoodsSold = 0;
     
     for (const shipment of shipments) {
-      revenue += shipment.totalAmount || 0;
+      revenue += (shipment.totalAmount || 0) * ((shipment as any).exchangeRate || 1);
       
       // Calculate cost of goods sold
       for (const item of shipment.items) {
@@ -58,7 +58,7 @@ router.get('/', async (req: Request, res: Response) => {
     let returnCost = 0;
     
     for (const returnDoc of returns) {
-      returnAmount += returnDoc.totalAmount || 0;
+      returnAmount += (returnDoc.totalAmount || 0) * ((returnDoc as any).exchangeRate || 1);
       
       for (const item of returnDoc.items) {
         const product = await Product.findById(item.product);
@@ -96,8 +96,8 @@ router.get('/', async (req: Request, res: Response) => {
       if (!expensesByCategory[category]) {
         expensesByCategory[category] = 0;
       }
-      expensesByCategory[category] += expense.amount;
-      totalExpenses += expense.amount;
+      expensesByCategory[category] += expense.amount * ((expense as any).exchangeRate || 1);
+      totalExpenses += expense.amount * ((expense as any).exchangeRate || 1);
     });
     
     // 5. Calculate Gross Profit (Валовая прибыль)

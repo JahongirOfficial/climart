@@ -16,7 +16,7 @@ router.get('/summary', async (req: Request, res: Response) => {
         $group: {
           _id: '$supplier',
           supplierName: { $first: '$supplierName' },
-          totalReceived: { $sum: '$totalAmount' },
+          totalReceived: { $sum: { $multiply: ['$totalAmount', { $ifNull: ['$exchangeRate', 1] }] } },
           lastOperationDate: { $max: '$receiptDate' },
           receipts: { 
             $push: {
@@ -39,7 +39,7 @@ router.get('/summary', async (req: Request, res: Response) => {
       {
         $group: {
           _id: '$supplier',
-          totalPaid: { $sum: '$amount' },
+          totalPaid: { $sum: { $multiply: ['$amount', { $ifNull: ['$exchangeRate', 1] }] } },
           payments: {
             $push: {
               paymentNumber: '$paymentNumber',
@@ -56,7 +56,7 @@ router.get('/summary', async (req: Request, res: Response) => {
       {
         $group: {
           _id: '$supplier',
-          totalReturned: { $sum: '$totalAmount' }
+          totalReturned: { $sum: { $multiply: ['$totalAmount', { $ifNull: ['$exchangeRate', 1] }] } }
         }
       }
     ]);
