@@ -17,9 +17,11 @@ import {
   Undo2
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useModal } from "@/contexts/ModalContext";
 import { useReceipts } from "@/hooks/useReceipts";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { ViewReceiptModal } from "@/components/ViewReceiptModal";
 import { ReceiptModal } from "@/components/ReceiptModal";
 import { SupplierReturnModal } from "@/components/SupplierReturnModal";
@@ -31,6 +33,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { api } from "@/lib/api";
 
 const Receipts = () => {
+  const navigate = useNavigate();
   const [dateFilter, setDateFilter] = useState<{ startDate: string; endDate: string }>({
     startDate: format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd')
@@ -62,12 +65,12 @@ const Receipts = () => {
   const totalItems = receipts.reduce((sum, r) => sum + r.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
 
   const handleViewReceipt = (receipt: Receipt) => {
-    setViewingReceipt(receipt);
-    setShowViewModal(true);
+    storeDocumentIds('receipts', filteredReceipts.map(r => r._id));
+    navigate(`/purchases/receipts/${receipt._id}`);
   };
 
   const handleCreateReceipt = () => {
-    setShowCreateModal(true);
+    navigate('/purchases/receipts/new');
   };
 
   const handleSaveReceipt = async (receiptData: any) => {
@@ -96,8 +99,7 @@ const Receipts = () => {
   };
 
   const handleReturnReceipt = (receipt: Receipt) => {
-    setReturningReceipt(receipt);
-    setShowReturnModal(true);
+    navigate(`/purchases/returns/new?receiptId=${receipt._id}`);
   };
 
   const handleSaveReturn = async (returnData: any) => {
@@ -302,7 +304,9 @@ const Receipts = () => {
                   return (
                     <tr key={receipt._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 text-sm font-medium text-primary">
-                        {receipt.receiptNumber}
+                        <button onClick={() => handleViewReceipt(receipt)} className="hover:underline">
+                          {receipt.receiptNumber}
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                         {supplierName}

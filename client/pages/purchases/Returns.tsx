@@ -15,9 +15,11 @@ import {
   Trash2
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useModal } from "@/contexts/ModalContext";
 import { useSupplierReturns } from "../../hooks/useSupplierReturns";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { SupplierReturnModal } from "@/components/SupplierReturnModal";
 import { ViewReturnModal } from "@/components/ViewReturnModal";
 import { SupplierReturn } from "@shared/api";
@@ -25,6 +27,7 @@ import { ExportButton } from "@/components/ExportButton";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 const Returns = () => {
+  const navigate = useNavigate();
   const { returns, loading, error, refetch, createReturn, deleteReturn } = useSupplierReturns();
   const { showSuccess, showError } = useModal();
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,12 +58,12 @@ const Returns = () => {
   };
 
   const handleCreateReturn = () => {
-    setShowCreateModal(true);
+    navigate('/purchases/returns/new');
   };
 
   const handleViewReturn = (returnData: any) => {
-    setViewingReturn(returnData);
-    setShowViewModal(true);
+    storeDocumentIds('supplier-returns', filteredReturns.map(r => r._id));
+    navigate(`/purchases/returns/${returnData._id}`);
   };
 
   const handleSaveReturn = async (returnData: any) => {
@@ -258,7 +261,9 @@ const Returns = () => {
                 {filteredReturns.map((ret) => (
                   <tr key={ret._id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                     <td className="px-6 py-4 text-sm font-medium text-red-600 dark:text-red-400">
-                      {ret.returnNumber}
+                      <button onClick={() => handleViewReturn(ret)} className="hover:underline">
+                        {ret.returnNumber}
+                      </button>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">
                       {typeof ret.supplier === 'string' ? ret.supplier : (ret.supplier?.name || '-')}

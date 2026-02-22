@@ -13,11 +13,14 @@ import {
   XCircle
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useSupplierInvoices } from "@/hooks/useSupplierInvoices";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 const ReceivedInvoices = () => {
+  const navigate = useNavigate();
   const { invoices, loading, error, refetch } = useSupplierInvoices();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
@@ -192,7 +195,12 @@ const ReceivedInvoices = () => {
                   return (
                     <tr key={invoice._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 text-sm font-medium text-primary">
-                        {invoice.invoiceNumber}
+                        <button onClick={() => {
+                          storeDocumentIds('received-invoices', filteredInvoices.map(i => i._id));
+                          navigate(`/purchases/received-invoices/${invoice._id}`);
+                        }} className="hover:underline">
+                          {invoice.invoiceNumber}
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                         {invoice.supplierName}
@@ -217,8 +225,12 @@ const ReceivedInvoices = () => {
                       </td>
                       <td className="px-6 py-4">
                         <button
+                          onClick={() => {
+                            storeDocumentIds('received-invoices', filteredInvoices.map(i => i._id));
+                            navigate(`/purchases/received-invoices/${invoice._id}`);
+                          }}
                           className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-                          title="Ko'rish"
+                          title="Ochish"
                         >
                           <Eye className="h-4 w-4 text-gray-600" />
                         </button>

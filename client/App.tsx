@@ -44,6 +44,10 @@ const PurchaseReturns = lazy(() => import("./pages/purchases/Returns"));
 const ReceivedInvoices = lazy(() => import("./pages/purchases/ReceivedInvoices"));
 const Procurement = lazy(() => import("./pages/purchases/Procurement"));
 const MyDebts = lazy(() => import("./pages/purchases/MyDebts"));
+const OrderDetail = lazy(() => import("./pages/purchases/OrderDetail"));
+const ReceiptDetail = lazy(() => import("./pages/purchases/ReceiptDetail"));
+const ReceivedInvoiceDetail = lazy(() => import("./pages/purchases/ReceivedInvoiceDetail"));
+const PurchaseReturnDetail = lazy(() => import("./pages/purchases/ReturnDetail"));
 
 // Sales pages
 const CustomerOrders = lazy(() => import("./pages/sales/CustomerOrders"));
@@ -166,10 +170,14 @@ const App = () => (
                 <Route path="/dashboard/files" element={<ProtectedRoute><Files /></ProtectedRoute>} />
                 <Route path="/purchases" element={<ProtectedRoute><Purchases /></ProtectedRoute>} />
                 <Route path="/purchases/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                <Route path="/purchases/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
                 <Route path="/purchases/suppliers-accounts" element={<ProtectedRoute><SuppliersAccounts /></ProtectedRoute>} />
                 <Route path="/purchases/receipts" element={<ProtectedRoute><Receipts /></ProtectedRoute>} />
+                <Route path="/purchases/receipts/:id" element={<ProtectedRoute><ReceiptDetail /></ProtectedRoute>} />
                 <Route path="/purchases/returns" element={<ProtectedRoute><PurchaseReturns /></ProtectedRoute>} />
+                <Route path="/purchases/returns/:id" element={<ProtectedRoute><PurchaseReturnDetail /></ProtectedRoute>} />
                 <Route path="/purchases/received-invoices" element={<ProtectedRoute><ReceivedInvoices /></ProtectedRoute>} />
+                <Route path="/purchases/received-invoices/:id" element={<ProtectedRoute><ReceivedInvoiceDetail /></ProtectedRoute>} />
                 <Route path="/purchases/procurement" element={<ProtectedRoute><Procurement /></ProtectedRoute>} />
                 <Route path="/purchases/my-debts" element={<ProtectedRoute><MyDebts /></ProtectedRoute>} />
                 {/* Sales — nested routes: Layout bir marta renderlanadi, faqat ichki kontent o'zgaradi */}

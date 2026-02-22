@@ -27,6 +27,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useModal } from "@/contexts/ModalContext";
 import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
@@ -37,8 +38,10 @@ import { ReceiveOrderModal } from "@/components/ReceiveOrderModal";
 import { PurchaseOrder } from "@shared/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { api } from '@/lib/api';
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 
 const Orders = () => {
+  const navigate = useNavigate();
   const { orders, loading, error, refetch, receiveOrder, deleteOrder, createOrder, updateOrder } = usePurchaseOrders();
   const { showSuccess, showError } = useModal();
   const [showModal, setShowModal] = useState(false);
@@ -130,13 +133,12 @@ const Orders = () => {
   };
 
   const handleCreateOrder = () => {
-    setEditingOrder(null);
-    setShowModal(true);
+    navigate('/purchases/orders/new');
   };
 
   const handleEditOrder = (order: PurchaseOrder) => {
-    setEditingOrder(order);
-    setShowModal(true);
+    storeDocumentIds('purchase-orders', filteredOrders.map(o => o._id));
+    navigate(`/purchases/orders/${order._id}`);
   };
 
   const handleSaveOrder = async (orderData: any) => {
@@ -360,7 +362,9 @@ const Orders = () => {
                   return (
                     <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                       <td className="px-6 py-4 text-sm font-medium text-primary dark:text-blue-400">
-                        {order.orderNumber}
+                        <button onClick={() => handleEditOrder(order)} className="hover:underline">
+                          {order.orderNumber}
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">
                         {order.supplierName}
@@ -383,19 +387,11 @@ const Orders = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleViewOrder(order)}
-                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
-                            title="Ko'rish"
-                          >
-                            <Eye className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                          </button>
-                          <button
                             onClick={() => handleEditOrder(order)}
                             className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
-                            title="Tahrirlash"
-                            disabled={order.status === 'received'}
+                            title="Ochish"
                           >
-                            <Edit className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                            <Eye className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                           </button>
                           <button
                             onClick={() => handlePayment(order)}
