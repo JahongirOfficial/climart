@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { usePartners } from "@/hooks/usePartners";
 import { PartnerModal } from "@/components/PartnerModal";
 import { PartnerWithStats } from "@shared/api";
+import { useDebounce } from "@/hooks/useDebounce";
 
 /** Map partner.type to Uzbek display label */
 const getTypeLabel = (type: string): string => {
@@ -27,6 +28,7 @@ const formatCurrency = (amount: number): string => {
 const Contacts = () => {
   const { partners, loading, refetch } = usePartners();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [selectedContact, setSelectedContact] = useState<PartnerWithStats | null>(null);
   const [filterType, setFilterType] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -41,10 +43,10 @@ const Contacts = () => {
 
   const filteredContacts = partners.filter((partner) => {
     const matchesSearch =
-      !searchTerm ||
-      partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (partner.email && partner.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (partner.phone && partner.phone.toLowerCase().includes(searchTerm.toLowerCase()));
+      !debouncedSearch ||
+      partner.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      (partner.email && partner.email.toLowerCase().includes(debouncedSearch.toLowerCase())) ||
+      (partner.phone && partner.phone.toLowerCase().includes(debouncedSearch.toLowerCase()));
 
     const matchesType =
       !filterType ||

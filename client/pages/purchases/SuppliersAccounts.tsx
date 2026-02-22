@@ -17,6 +17,7 @@ import {
   Undo2
 } from "lucide-react";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useModal } from "@/contexts/ModalContext";
 import { useSupplierInvoices } from "@/hooks/useSupplierInvoices";
 import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
@@ -24,12 +25,14 @@ import { PaymentModal } from "@/components/PaymentModal";
 import { CreatePaymentModal } from "@/components/CreatePaymentModal";
 import { SupplierReturnModal } from "@/components/SupplierReturnModal";
 import { SupplierInvoice, PurchaseOrder } from "@shared/api";
+import { api } from '@/lib/api';
 
 const SuppliersAccounts = () => {
   const { invoices, loading: invoicesLoading, error: invoicesError, refetch: refetchInvoices, createPayment } = useSupplierInvoices();
   const { orders, loading: ordersLoading, error: ordersError, refetch: refetchOrders } = usePurchaseOrders();
-  const { showSuccess } = useModal();
+  const { showSuccess, showError } = useModal();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<SupplierInvoice | null>(null);
@@ -90,14 +93,14 @@ const SuppliersAccounts = () => {
   };
 
   const filteredInvoices = invoices.filter(invoice =>
-    invoice.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+    invoice.supplierName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    invoice.invoiceNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    invoice.orderNumber?.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const filteredOrders = orders.filter(order =>
-    order.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    order.supplierName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    order.orderNumber.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const handlePayment = async (invoice: SupplierInvoice) => {
@@ -121,16 +124,7 @@ const SuppliersAccounts = () => {
       };
 
       // To'lovni API ga yuborish
-      const response = await fetch('/api/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paymentWithLink),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'To\'lov yaratishda xatolik');
-      }
+      await api.post('/api/payments', paymentWithLink);
 
       setShowOrderPaymentModal(false);
       setSelectedOrder(null);
@@ -164,16 +158,7 @@ const SuppliersAccounts = () => {
 
   const handleSaveReturn = async (returnData: any) => {
     try {
-      const response = await fetch('/api/supplier-returns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(returnData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Qaytarishni saqlashda xatolik');
-      }
+      await api.post('/api/supplier-returns', returnData);
 
       showSuccess('Tovar qaytarish muvaffaqiyatli yaratildi!');
       refetch();

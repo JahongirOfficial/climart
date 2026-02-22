@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useWarehouses } from "@/hooks/useWarehouses";
 import { useProducts } from "@/hooks/useProducts";
+import { api } from "@/lib/api";
 
 interface WarehouseReceiptModalProps {
   open: boolean;
@@ -142,15 +143,12 @@ export const WarehouseReceiptModal = ({ open, onClose, onSuccess, receipt }: War
       };
 
       const url = receipt ? `/api/warehouse-receipts/${receipt._id}` : "/api/warehouse-receipts";
-      const method = receipt ? "PUT" : "POST";
 
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Failed to save receipt");
+      if (receipt) {
+        await api.put(url, payload);
+      } else {
+        await api.post(url, payload);
+      }
 
       toast({
         title: receipt ? "Kirim yangilandi" : "Kirim yaratildi",

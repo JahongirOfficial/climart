@@ -17,6 +17,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { ExportButton } from "@/components/ExportButton";
 import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
 import { format, subMonths } from "date-fns";
@@ -39,6 +40,7 @@ const getStatusColor = (status: string) => {
 
 const Purchases = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState({
     startDate: format(subMonths(new Date(), 1), 'yyyy-MM-dd'),
@@ -63,12 +65,12 @@ const Purchases = () => {
   const filteredData = useMemo(() => {
     return orders.filter((purchase) => {
       const matchesSearch =
-        !searchTerm ||
-        purchase.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (typeof purchase.supplier === 'object' ? purchase.supplier?.name : purchase.supplier)?.toLowerCase().includes(searchTerm.toLowerCase());
+        !debouncedSearch ||
+        purchase.orderNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (typeof purchase.supplier === 'object' ? purchase.supplier?.name : purchase.supplier)?.toLowerCase().includes(debouncedSearch.toLowerCase());
       return matchesSearch;
     });
-  }, [orders, searchTerm]);
+  }, [orders, debouncedSearch]);
 
   const uniqueSuppliers = Array.from(
     new Set(orders.map((p) => typeof p.supplier === 'object' ? p.supplier?.name : p.supplier).filter(Boolean))

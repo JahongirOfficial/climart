@@ -15,11 +15,13 @@ import { PartnerModal } from "@/components/PartnerModal";
 import { PartnerExportModal } from "@/components/PartnerExportModal";
 import { PartnerWithStats } from "@shared/api";
 import { useToast } from "@/hooks/use-toast";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const Partners = () => {
   const { partners, loading, refetch, deletePartner } = usePartners();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [modalOpen, setModalOpen] = useState(false);
@@ -28,9 +30,9 @@ const Partners = () => {
 
   const filteredPartners = partners.filter(p => {
     const matchesSearch =
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.code.toLowerCase().includes(searchTerm.toLowerCase());
+      p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      p.phone?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      p.code.toLowerCase().includes(debouncedSearch.toLowerCase());
 
     const matchesType = typeFilter === "all" || p.type === typeFilter || p.type === "both";
     const matchesStatus = statusFilter === "all" || p.status === statusFilter;

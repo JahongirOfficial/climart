@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, Eye, Users, UserCheck, UserX, KeyRound, Copy, Check } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { api } from '@/lib/api';
 import ErrorCard from '@/components/ErrorCard';
 import { Layout } from '@/components/Layout';
 import {
@@ -44,7 +44,6 @@ interface ResetPasswordCredentials {
 }
 
 export default function Employees() {
-  const { token } = useAuth();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<UserProfile | null>(null);
@@ -56,15 +55,7 @@ export default function Employees() {
   // Fetch employees
   const { data: employeesData, isLoading, error } = useQuery<{ employees: UserProfile[] }>({
     queryKey: ['employees'],
-    queryFn: async () => {
-      const response = await fetch('/api/employees', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) throw new Error('Failed to fetch employees');
-      return response.json();
-    },
+    queryFn: () => api.get<{ employees: UserProfile[] }>('/api/employees'),
   });
 
   const employees = employeesData?.employees || [];
@@ -77,13 +68,7 @@ export default function Employees() {
   // Delete employee mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/employees/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) throw new Error('Failed to delete employee');
+      await api.delete(`/api/employees/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -94,15 +79,7 @@ export default function Employees() {
   // Toggle active status mutation
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const response = await fetch(`/api/employees/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ isActive }),
-      });
-      if (!response.ok) throw new Error('Failed to update employee');
+      await api.put(`/api/employees/${id}`, { isActive });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -112,14 +89,7 @@ export default function Employees() {
   // Reset password mutation
   const resetPasswordMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/employees/${id}/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) throw new Error('Failed to reset password');
-      return response.json();
+      return api.post<{ credentials: ResetPasswordCredentials }>(`/api/employees/${id}/reset-password`, {});
     },
     onSuccess: (data) => {
       setResetPasswordCredentials(data.credentials);

@@ -20,11 +20,13 @@ import { useServices } from "@/hooks/useServices";
 import { ServiceModal } from "@/components/ServiceModal";
 import { Service } from "@shared/api";
 import { formatCurrency } from "@/lib/format";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const Services = () => {
   const { services, loading, error, refetch, createService, updateService, deleteService } = useServices();
   const { showSuccess, showError } = useModal();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [showModal, setShowModal] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [deletingService, setDeletingService] = useState<string | null>(null);
@@ -73,9 +75,9 @@ const Services = () => {
   };
 
   const filteredServices = services.filter(service =>
-    service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    service.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    service.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    service.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    service.code?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    service.category?.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const activeServices = services.filter(s => s.isActive);

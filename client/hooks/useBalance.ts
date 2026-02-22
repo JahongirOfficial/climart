@@ -1,4 +1,5 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 export interface BalanceItem {
     _id: string;
@@ -42,9 +43,7 @@ export const useBalance = (filters: { category?: string; hideZero?: boolean }) =
             if (filters.category && filters.category !== 'all') params.append('category', filters.category);
             if (filters.hideZero) params.append('hideZero', 'true');
 
-            const response = await fetch(`/api/balance?${params.toString()}`);
-            if (!response.ok) throw new Error('Failed to fetch balance');
-            return response.json();
+            return api.get<BalanceData>(`/api/balance?${params.toString()}`);
         },
         placeholderData: keepPreviousData,
     });

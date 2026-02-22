@@ -68,7 +68,6 @@ const ShipmentSchema: Schema = new Schema(
     customer: {
       type: Schema.Types.ObjectId,
       ref: 'Partner',
-      required: true,
     },
     customerName: {
       type: String,

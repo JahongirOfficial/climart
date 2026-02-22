@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhoneNumber, toDbFormat, toDisplayFormat } from "@/lib/phoneUtils";
+import { api } from "@/lib/api";
 
 interface Warehouse {
   _id?: string;
@@ -74,15 +75,12 @@ export function WarehouseModal({ open, onClose, warehouse, onSuccess }: Warehous
       const url = warehouse?._id
         ? `/api/warehouses/${warehouse._id}`
         : "/api/warehouses";
-      const method = warehouse?._id ? "PUT" : "POST";
 
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) throw new Error("Failed to save warehouse");
+      if (warehouse?._id) {
+        await api.put(url, formData);
+      } else {
+        await api.post(url, formData);
+      }
 
       toast({
         title: "Muvaffaqiyatli",

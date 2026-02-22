@@ -17,12 +17,14 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useDebts } from "@/hooks/useDebts";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 const MyDebts = () => {
   const { debts, paymentSchedule, overduePayments, loading, error, refetch } = useDebts();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [filterType, setFilterType] = useState<'all' | 'overdue' | 'with-debt'>('all');
   const [expandedDebt, setExpandedDebt] = useState<string | null>(null);
 
@@ -58,7 +60,7 @@ const MyDebts = () => {
   };
 
   const filteredDebts = debts.filter(debt => {
-    const matchesSearch = debt.supplier.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = debt.supplier.toLowerCase().includes(debouncedSearch.toLowerCase());
 
     if (filterType === 'overdue') {
       return matchesSearch && debt.status === 'overdue';

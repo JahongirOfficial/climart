@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import { api } from '@/lib/api';
 
 const AddTask = () => {
   const navigate = useNavigate();
@@ -37,11 +38,7 @@ const AddTask = () => {
   // Xodimlar ro'yxatini olish
   const { data: employeesData } = useQuery<{ employees: any[] }>({
     queryKey: ["employees"],
-    queryFn: async () => {
-      const res = await fetch("/api/employees");
-      if (!res.ok) throw new Error("Failed to fetch employees");
-      return res.json();
-    },
+    queryFn: () => api.get<{ employees: any[] }>("/api/employees"),
   });
 
   const employees = employeesData?.employees || [];

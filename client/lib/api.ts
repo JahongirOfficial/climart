@@ -24,6 +24,15 @@ export async function apiFetch<T>(url: string, options?: RequestInit): Promise<T
   const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
+    // 401 = token expired or missing — redirect to login
+    if (response.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+      throw new ApiError('Authentication required', 401);
+    }
     const errorText = await response.text().catch(() => 'Request failed');
     throw new ApiError(errorText || `Request failed with status ${response.status}`, response.status);
   }

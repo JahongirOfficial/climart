@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 export interface PurchaseOrderItem {
   product: string;
@@ -33,22 +34,14 @@ export const usePurchaseOrders = (filters?: { startDate?: string; endDate?: stri
       if (filters?.endDate) params.append('endDate', filters.endDate);
       if (filters?.status) params.append('status', filters.status);
 
-      const response = await fetch(`/api/purchase-orders?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch purchase orders');
-      return response.json();
+      return api.get<PurchaseOrder[]>(`/api/purchase-orders?${params.toString()}`);
     },
     placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({
     mutationFn: async (orderData: Partial<PurchaseOrder>) => {
-      const response = await fetch('/api/purchase-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
-      });
-      if (!response.ok) throw new Error('Failed to create order');
-      return response.json();
+      return api.post('/api/purchase-orders', orderData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
@@ -57,13 +50,7 @@ export const usePurchaseOrders = (filters?: { startDate?: string; endDate?: stri
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<PurchaseOrder> }) => {
-      const response = await fetch(`/api/purchase-orders/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to update order');
-      return response.json();
+      return api.put(`/api/purchase-orders/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
@@ -72,8 +59,7 @@ export const usePurchaseOrders = (filters?: { startDate?: string; endDate?: stri
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/purchase-orders/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete order');
+      await api.delete(`/api/purchase-orders/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
@@ -83,16 +69,7 @@ export const usePurchaseOrders = (filters?: { startDate?: string; endDate?: stri
   const receiveMutation = useMutation({
     mutationFn: async (orderId: string) => {
       // Logic for receiving order (creating receipt)
-      const response = await fetch(`/api/receipts/from-order/${orderId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}), // Assume backend handles mapping if not provided
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || 'Failed to receive order');
-      }
-      return response.json();
+      return api.post(`/api/receipts/from-order/${orderId}`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });

@@ -1,5 +1,6 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { CorrectedInvoiceResponse } from '@shared/api';
+import { api } from '@/lib/api';
 
 interface UseCorrectedInvoicesParams {
   startDate?: string;
@@ -12,20 +13,18 @@ export const useCorrectedInvoices = (params?: UseCorrectedInvoicesParams) => {
     queryKey: ['corrected-invoices', params],
     queryFn: async () => {
       let url = '/api/customer-invoices/corrected';
-      
+
       if (params) {
         const searchParams = new URLSearchParams();
         if (params.startDate) searchParams.append('startDate', params.startDate);
         if (params.endDate) searchParams.append('endDate', params.endDate);
         if (params.productId) searchParams.append('productId', params.productId);
-        
+
         const queryString = searchParams.toString();
         if (queryString) url += `?${queryString}`;
       }
-      
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch corrected invoices');
-      return response.json();
+
+      return api.get<CorrectedInvoiceResponse[]>(url);
     },
     placeholderData: keepPreviousData,
   });

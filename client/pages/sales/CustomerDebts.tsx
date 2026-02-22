@@ -8,6 +8,7 @@ import {
   Search, Users, DollarSign, AlertTriangle, Loader2, AlertCircle, FileText, CreditCard, Calendar
 } from "lucide-react";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useCustomerDebts, useReconciliationReport } from "@/hooks/useCustomerDebts";
 import { CustomerPaymentModal } from "@/components/CustomerPaymentModal";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +21,7 @@ const CustomerDebts = () => {
   );
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | undefined>();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedDebt, setSelectedDebt] = useState<any>(null);
@@ -27,9 +29,9 @@ const CustomerDebts = () => {
   const { data, loading, error, refetch } = useCustomerDebts(startDate, endDate);
   const { toast } = useToast();
 
-  const filteredDebts = data?.debts.filter(debt => 
-    debt.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (debt.customerPhone && debt.customerPhone.includes(searchTerm))
+  const filteredDebts = data?.debts.filter(debt =>
+    debt.customerName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    (debt.customerPhone && debt.customerPhone.includes(debouncedSearch))
   ) || [];
 
   const handlePayment = (debt: any) => {

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Search, Loader2, Package, AlertTriangle, TrendingUp, TrendingDown, FilterX } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useBalance } from "@/hooks/useBalance";
 import { ExportButton } from "@/components/ExportButton";
 
@@ -41,6 +42,7 @@ interface BalanceTotals {
 
 const Balance = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [hideZero, setHideZero] = useState(false);
 
@@ -52,11 +54,11 @@ const Balance = () => {
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       const matchesSearch =
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku?.toLowerCase().includes(searchTerm.toLowerCase());
+        item.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        item.sku?.toLowerCase().includes(debouncedSearch.toLowerCase());
       return matchesSearch;
     });
-  }, [items, searchTerm]);
+  }, [items, debouncedSearch]);
 
   const categories = useMemo(() =>
     Array.from(new Set(items.map(item => item.category).filter((c): c is string => !!c))),

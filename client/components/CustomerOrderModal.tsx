@@ -1,18 +1,32 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useModal } from "@/contexts/ModalContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Combobox } from "@/components/ui/combobox";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { usePartners } from "@/hooks/usePartners";
 import { useProducts } from "@/hooks/useProducts";
 import { useWarehouses } from "@/hooks/useWarehouses";
-import { CustomerOrder } from "@shared/api";
-import { Plus, Trash2, Loader2, UserPlus, Printer } from "lucide-react";
+import { CustomerOrder, CustomerOrderStatus } from "@shared/api";
+import {
+  Plus, Trash2, Loader2, UserPlus, Printer, Save, ChevronDown,
+  Copy, Truck, FileText, CreditCard, Lock, DollarSign
+} from "lucide-react";
 import { PartnerModal } from "@/components/PartnerModal";
+import { QuickProductModal } from "@/components/QuickProductModal";
 import { printViaIframe } from "@/utils/print";
+import { StatusBadge, ORDER_STATUS_CONFIG } from "@/components/shared/StatusBadge";
+import { formatCurrency } from "@/lib/format";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface CustomerOrderModalProps {
   open: boolean;
@@ -26,15 +40,46 @@ interface OrderItem {
   productName: string;
   quantity: number;
   price: number;
+  discount: number;
+  vat: number;
   total: number;
 }
 
+// Status o'tish qoidalari (spec 16.3)
+const STATUS_TRANSITIONS: Record<string, CustomerOrderStatus[]> = {
+  'new': ['confirmed', 'cancelled'],
+  'confirmed': ['assembled', 'shipped', 'cancelled'],
+  'assembled': ['shipped', 'cancelled'],
+  'shipped': ['delivered', 'returned'],
+  'delivered': ['returned'],
+  'returned': [],
+  'cancelled': ['new'],
+  'pending': ['confirmed', 'cancelled'],
+  'fulfilled': [],
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  'new': 'Yangi',
+  'confirmed': 'Tasdiqlangan',
+  'assembled': "Yig'ilgan",
+  'shipped': 'Yuborilgan',
+  'delivered': 'Yetkazilgan',
+  'returned': 'Qaytarilgan',
+  'cancelled': 'Bekor qilingan',
+  'pending': 'Kutilmoqda',
+  'fulfilled': 'Bajarilgan',
+};
+
 export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrderModalProps) => {
   const { partners, loading: partnersLoading, refetch: refetchPartners } = usePartners('customer');
-  const { products } = useProducts();
+  const { partners: workers } = usePartners('worker');
+  const { products, refetch: refetchProducts } = useProducts();
   const { warehouses } = useWarehouses();
   const { showWarning, showError } = useModal();
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
+  const [isQuickProductOpen, setIsQuickProductOpen] = useState(false);
+  const [quickProductName, setQuickProductName] = useState("");
+  const [quickProductIndex, setQuickProductIndex] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     customer: "",
@@ -43,17 +88,19 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
     deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     warehouse: "",
     warehouseName: "",
-    notes: ""
+    assignedWorker: "",
+    assignedWorkerName: "",
+    notes: "",
+    reserved: false,
   });
 
   const [items, setItems] = useState<OrderItem[]>([
-    { product: "", productName: "", quantity: 1, price: 0, total: 0 }
+    { product: "", productName: "", quantity: 1, price: 0, discount: 0, vat: 0, total: 0 }
   ]);
 
   const [saving, setSaving] = useState(false);
   const [showPrintOptions, setShowPrintOptions] = useState(false);
   const [savedOrderData, setSavedOrderData] = useState<any>(null);
-  const [productSearchTerms, setProductSearchTerms] = useState<string[]>([]);
 
   useEffect(() => {
     if (order) {
@@ -64,13 +111,18 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
         deliveryDate: new Date(order.deliveryDate).toISOString().split('T')[0],
         warehouse: typeof order.warehouse === 'string' ? order.warehouse : order.warehouse?._id || '',
         warehouseName: order.warehouseName || '',
-        notes: order.notes || ""
+        assignedWorker: typeof order.assignedWorker === 'string' ? order.assignedWorker : order.assignedWorker?._id || '',
+        assignedWorkerName: order.assignedWorkerName || '',
+        notes: order.notes || "",
+        reserved: order.reserved || false,
       });
       setItems(order.items.map(item => ({
         product: typeof item.product === 'string' ? item.product : item.product._id,
         productName: item.productName,
         quantity: item.quantity,
         price: item.price,
+        discount: item.discount || 0,
+        vat: item.vat || 0,
         total: item.total
       })));
     } else {
@@ -81,38 +133,34 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
         deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         warehouse: "",
         warehouseName: "",
-        notes: ""
+        assignedWorker: "",
+        assignedWorkerName: "",
+        notes: "",
+        reserved: false,
       });
-      setItems([{ product: "", productName: "", quantity: 1, price: 0, total: 0 }]);
+      setItems([{ product: "", productName: "", quantity: 1, price: 0, discount: 0, vat: 0, total: 0 }]);
     }
-    setProductSearchTerms(items.map(() => ""));
   }, [order, open]);
 
   const handleCustomerChange = (customerId: string) => {
     if (customerId === "regular") {
-      setFormData(prev => ({
-        ...prev,
-        customer: "regular",
-        customerName: "Oddiy mijoz"
-      }));
+      setFormData(prev => ({ ...prev, customer: "regular", customerName: "Oddiy mijoz" }));
     } else {
       const customer = partners.find(p => p._id === customerId);
-      setFormData(prev => ({
-        ...prev,
-        customer: customerId,
-        customerName: customer?.name || ""
-      }));
+      setFormData(prev => ({ ...prev, customer: customerId, customerName: customer?.name || "" }));
     }
+  };
+
+  const recalcItemTotal = (item: OrderItem) => {
+    const base = (item.quantity || 0) * (item.price || 0);
+    const afterDiscount = base * (1 - (item.discount || 0) / 100);
+    return Math.round(afterDiscount);
   };
 
   const handleItemChange = (index: number, field: keyof OrderItem, value: string | number) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
-
-    if (field === 'quantity' || field === 'price') {
-      newItems[index].total = newItems[index].quantity * newItems[index].price;
-    }
-
+    newItems[index].total = recalcItemTotal(newItems[index]);
     setItems(newItems);
   };
 
@@ -123,84 +171,113 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
       ...newItems[index],
       product: productId,
       productName: product ? product.name : "",
-      price: product ? product.sellingPrice : 0
+      price: product ? product.sellingPrice : 0,
     };
-    newItems[index].total = newItems[index].quantity * newItems[index].price;
+    newItems[index].total = recalcItemTotal(newItems[index]);
+    // Avtomatik keyingi qator — oxirgi qator to'ldirilganda yangi bo'sh qator qo'shiladi
+    if (index === newItems.length - 1 && productId) {
+      newItems.push({ product: "", productName: "", quantity: 1, price: 0, discount: 0, vat: 0, total: 0 });
+    }
     setItems(newItems);
-    
-    // Clear search term after selection
-    const newSearchTerms = [...productSearchTerms];
-    newSearchTerms[index] = "";
-    setProductSearchTerms(newSearchTerms);
-  };
-
-  const handleProductSearchChange = (index: number, searchTerm: string) => {
-    const newSearchTerms = [...productSearchTerms];
-    newSearchTerms[index] = searchTerm;
-    setProductSearchTerms(newSearchTerms);
-  };
-
-  const getFilteredProducts = (index: number) => {
-    const searchTerm = productSearchTerms[index]?.toLowerCase() || "";
-    if (!searchTerm) return products;
-    
-    return products.filter(product => 
-      product.name.toLowerCase().includes(searchTerm) ||
-      product.sku?.toLowerCase().includes(searchTerm) ||
-      product.barcode?.toLowerCase().includes(searchTerm)
-    );
   };
 
   const addItem = () => {
-    setItems([...items, { product: "", productName: "", quantity: 1, price: 0, total: 0 }]);
-    setProductSearchTerms([...productSearchTerms, ""]);
+    setItems([...items, { product: "", productName: "", quantity: 1, price: 0, discount: 0, vat: 0, total: 0 }]);
+  };
+
+  // Tovar yo'q bo'lsa — tezkor yaratish
+  const handleCreateNewProduct = (searchTerm: string, index: number) => {
+    setQuickProductName(searchTerm);
+    setQuickProductIndex(index);
+    setIsQuickProductOpen(true);
+  };
+
+  const handleQuickProductCreated = async (product: any) => {
+    await refetchProducts();
+    if (quickProductIndex !== null) {
+      // Yangi yaratilgan mahsulotni avtomatik tanlash
+      setTimeout(() => {
+        handleProductSelect(quickProductIndex, product._id);
+      }, 300);
+    }
+  };
+
+  // Umumiy narx — barcha mahsulotlarga bir xil narx qo'yish
+  const handleApplyUniformPrice = () => {
+    const defaultPrice = items.find(i => i.price > 0)?.price || 0;
+    const input = prompt("Barcha mahsulotlar uchun narx:", String(defaultPrice));
+    if (input !== null) {
+      const price = parseFloat(input) || 0;
+      setItems(items.map(item => {
+        if (!item.product) return item;
+        const updated = { ...item, price };
+        updated.total = recalcItemTotal(updated);
+        return updated;
+      }));
+    }
   };
 
   const removeItem = (index: number) => {
     if (items.length > 1) {
       setItems(items.filter((_, i) => i !== index));
-      setProductSearchTerms(productSearchTerms.filter((_, i) => i !== index));
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Jami hisoblash (spec 8.5)
+  const totalAmount = useMemo(() => items.reduce((sum, item) => sum + item.total, 0), [items]);
+  const totalQuantity = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
+  const totalVat = useMemo(() => {
+    return items.reduce((sum, item) => {
+      const base = item.quantity * item.price * (1 - (item.discount || 0) / 100);
+      return sum + (base * (item.vat || 0) / 100);
+    }, 0);
+  }, [items]);
 
-    if (!formData.customer || items.some(item => !item.product || item.quantity <= 0 || item.price <= 0)) {
+  // To'lov holati badge (spec 6)
+  const getPaymentBadge = () => {
+    if (!order) return null;
+    const paid = order.paidAmount || 0;
+    if (paid >= order.totalAmount && order.totalAmount > 0) {
+      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">✓ To'langan</span>;
+    }
+    if (paid > 0) {
+      return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">⚠ Qisman to'langan</span>;
+    }
+    return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">✗ To'lanmagan</span>;
+  };
+
+  const handleSubmit = async () => {
+    const filledItemsForValidation = items.filter(i => i.product);
+    if (!formData.customer || filledItemsForValidation.length === 0 || filledItemsForValidation.some(item => item.quantity <= 0 || item.price <= 0)) {
       showWarning("Iltimos, barcha maydonlarni to'ldiring!");
       return;
     }
-
     setSaving(true);
     try {
-      const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
-
-      // Prepare order data - exclude customer field if it's "regular"
+      const filledItems = items.filter(i => i.product);
       const orderData: any = {
         ...formData,
-        items,
+        items: filledItems.map(i => ({
+          product: i.product,
+          productName: i.productName,
+          quantity: i.quantity,
+          price: i.price,
+          discount: i.discount,
+          vat: i.vat,
+          total: i.total,
+        })),
         totalAmount,
-        status: order ? order.status : 'pending'
+        vatSum: Math.round(totalVat),
+        status: order ? order.status : 'new',
       };
-
-      // Remove customer field for regular customers
-      if (formData.customer === 'regular') {
-        delete orderData.customer;
-      }
-
-      // Remove empty warehouse fields
-      if (!formData.warehouse) {
-        delete orderData.warehouse;
-        delete orderData.warehouseName;
-      }
-
+      if (formData.customer === 'regular') delete orderData.customer;
+      if (!formData.warehouse) { delete orderData.warehouse; delete orderData.warehouseName; }
+      if (!formData.assignedWorker) { delete orderData.assignedWorker; delete orderData.assignedWorkerName; }
       await onSave(orderData);
-
-      // Save order data for printing
       setSavedOrderData(orderData);
       setShowPrintOptions(true);
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'Noma\'lum xatolik');
+      showError(error instanceof Error ? error.message : "Noma'lum xatolik");
       setSaving(false);
     }
   };
@@ -212,713 +289,534 @@ export const CustomerOrderModal = ({ open, onClose, onSave, order }: CustomerOrd
     onClose();
   };
 
+  // Chop etish funksiyalari
   const printCustomerReceipt = () => {
     if (!savedOrderData) return;
-
-    const currentDate = new Date().toLocaleDateString('uz-UZ', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    const htmlString = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Mijoz uchun check</title>
-        <style>
-          @media print {
-            @page { margin: 10mm; }
-            body { margin: 0; }
-          }
-          body {
-            font-family: 'Courier New', monospace;
-            max-width: 80mm;
-            margin: 0 auto;
-            padding: 10px;
-            font-size: 12px;
-          }
-          .header {
-            text-align: center;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-          }
-          .company-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 5px;
-          }
-          .receipt-title {
-            font-size: 14px;
-            font-weight: bold;
-            margin: 10px 0;
-          }
-          .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 5px 0;
-          }
-          .items {
-            border-top: 1px dashed #000;
-            border-bottom: 1px dashed #000;
-            padding: 10px 0;
-            margin: 10px 0;
-          }
-          .item-row {
-            margin: 8px 0;
-          }
-          .item-name {
-            font-weight: bold;
-          }
-          .item-details {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11px;
-            margin-top: 2px;
-          }
-          .total {
-            border-top: 2px solid #000;
-            padding-top: 10px;
-            margin-top: 10px;
-            font-size: 14px;
-            font-weight: bold;
-          }
-          .footer {
-            text-align: center;
-            margin-top: 20px;
-            padding-top: 10px;
-            border-top: 1px dashed #000;
-            font-size: 11px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="company-name">CLIMART ERP</div>
-          <div>Buyurtma cheki</div>
-          <div style="font-size: 10px; margin-top: 5px;">${currentDate}</div>
-        </div>
-
-        <div class="receipt-title">MIJOZ UCHUN CHECK</div>
-
-        <div class="info-row">
-          <span>Mijoz:</span>
-          <span><strong>${savedOrderData.customerName}</strong></span>
-        </div>
-        <div class="info-row">
-          <span>Buyurtma sanasi:</span>
-          <span>${new Date(savedOrderData.orderDate).toLocaleDateString('uz-UZ')}</span>
-        </div>
-        <div class="info-row">
-          <span>Yetkazish sanasi:</span>
-          <span>${new Date(savedOrderData.deliveryDate).toLocaleDateString('uz-UZ')}</span>
-        </div>
-
-        <div class="items">
-          ${savedOrderData.items.map((item: OrderItem, index: number) => `
-            <div class="item-row">
-              <div class="item-name">${index + 1}. ${item.productName}</div>
-              <div class="item-details">
-                <span>${item.quantity} x ${new Intl.NumberFormat('uz-UZ').format(item.price)} so'm</span>
-                <span><strong>${new Intl.NumberFormat('uz-UZ').format(item.total)} so'm</strong></span>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-
-        <div class="total">
-          <div class="info-row">
-            <span>JAMI SUMMA:</span>
-            <span>${new Intl.NumberFormat('uz-UZ').format(savedOrderData.totalAmount)} so'm</span>
-          </div>
-        </div>
-
-        ${savedOrderData.notes ? `
-          <div style="margin-top: 15px; font-size: 11px;">
-            <div><strong>Izoh:</strong></div>
-            <div style="margin-top: 5px;">${savedOrderData.notes}</div>
-          </div>
-        ` : ''}
-
-        <div class="footer">
-          <div>Rahmat!</div>
-          <div style="margin-top: 5px;">Yana buyurtma bering!</div>
-        </div>
-      </body>
-      </html>
-    `;
-
+    const currentDate = new Date().toLocaleDateString('uz-UZ', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const htmlString = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Mijoz cheki</title>
+    <style>@media print{@page{margin:10mm}body{margin:0}}body{font-family:'Courier New',monospace;max-width:80mm;margin:0 auto;padding:10px;font-size:12px}.header{text-align:center;border-bottom:2px dashed #000;padding-bottom:10px;margin-bottom:10px}.company-name{font-size:18px;font-weight:bold}.info-row{display:flex;justify-content:space-between;margin:5px 0}.items{border-top:1px dashed #000;border-bottom:1px dashed #000;padding:10px 0;margin:10px 0}.item-row{margin:8px 0}.item-name{font-weight:bold}.item-details{display:flex;justify-content:space-between;font-size:11px;margin-top:2px}.total{border-top:2px solid #000;padding-top:10px;margin-top:10px;font-size:14px;font-weight:bold}.footer{text-align:center;margin-top:20px;padding-top:10px;border-top:1px dashed #000;font-size:11px}</style></head>
+    <body><div class="header"><div class="company-name">CLIMART ERP</div><div>Buyurtma cheki</div><div style="font-size:10px;margin-top:5px">${currentDate}</div></div>
+    <div style="font-size:14px;font-weight:bold;margin:10px 0">MIJOZ UCHUN CHECK</div>
+    <div class="info-row"><span>Mijoz:</span><span><strong>${savedOrderData.customerName}</strong></span></div>
+    <div class="info-row"><span>Sana:</span><span>${new Date(savedOrderData.orderDate).toLocaleDateString('uz-UZ')}</span></div>
+    <div class="info-row"><span>Yetkazish:</span><span>${new Date(savedOrderData.deliveryDate).toLocaleDateString('uz-UZ')}</span></div>
+    <div class="items">${savedOrderData.items.map((item: OrderItem, i: number) => `<div class="item-row"><div class="item-name">${i+1}. ${item.productName}</div><div class="item-details"><span>${item.quantity} x ${new Intl.NumberFormat('uz-UZ').format(item.price)}</span><span><strong>${new Intl.NumberFormat('uz-UZ').format(item.total)} so'm</strong></span></div></div>`).join('')}</div>
+    <div class="total"><div class="info-row"><span>JAMI:</span><span>${new Intl.NumberFormat('uz-UZ').format(savedOrderData.totalAmount)} so'm</span></div></div>
+    ${savedOrderData.notes ? `<div style="margin-top:15px;font-size:11px"><strong>Izoh:</strong> ${savedOrderData.notes}</div>` : ''}
+    <div class="footer"><div>Rahmat!</div></div></body></html>`;
     printViaIframe(htmlString);
   };
 
   const printWarehouseReceipt = () => {
     if (!savedOrderData) return;
-
-    const currentDate = new Date().toLocaleDateString('uz-UZ', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    const htmlString = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Ombor uchun check</title>
-        <style>
-          @media print {
-            @page { margin: 15mm; size: A4; }
-            body { margin: 0; }
-          }
-          body {
-            font-family: Arial, sans-serif;
-            max-width: 210mm;
-            margin: 0 auto;
-            padding: 20px;
-            font-size: 12px;
-          }
-          .header {
-            text-align: center;
-            border-bottom: 3px double #000;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-          }
-          .company-name {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-          }
-          .document-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin: 15px 0;
-            text-transform: uppercase;
-          }
-          .info-section {
-            margin: 20px 0;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-          }
-          .info-row {
-            display: flex;
-            padding: 5px 0;
-          }
-          .info-label {
-            font-weight: bold;
-            min-width: 150px;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-          }
-          th, td {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: left;
-          }
-          th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-          }
-          .text-right {
-            text-align: right;
-          }
-          .text-center {
-            text-align: center;
-          }
-          .total-section {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #f9f9f9;
-            border: 2px solid #000;
-          }
-          .total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            font-size: 14px;
-          }
-          .grand-total {
-            font-size: 18px;
-            font-weight: bold;
-            border-top: 2px solid #000;
-            padding-top: 10px;
-            margin-top: 10px;
-          }
-          .notes {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #fffbf0;
-            border-left: 4px solid #ffc107;
-          }
-          .signatures {
-            margin-top: 40px;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
-          }
-          .signature-box {
-            text-align: center;
-          }
-          .signature-line {
-            border-top: 1px solid #000;
-            margin-top: 50px;
-            padding-top: 5px;
-          }
-          .footer {
-            margin-top: 30px;
-            text-align: center;
-            font-size: 10px;
-            color: #666;
-            border-top: 1px solid #ccc;
-            padding-top: 10px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="company-name">CLIMART ERP SYSTEM</div>
-          <div style="font-size: 12px; color: #666;">Ombor boshqaruv tizimi</div>
-          <div class="document-title">OMBOR UCHUN BUYURTMA CHEKI</div>
-          <div style="font-size: 11px; margin-top: 5px;">Chop etilgan: ${currentDate}</div>
-        </div>
-
-        <div class="info-section">
-          <div>
-            <div class="info-row">
-              <span class="info-label">Mijoz:</span>
-              <span><strong>${savedOrderData.customerName}</strong></span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Buyurtma sanasi:</span>
-              <span>${new Date(savedOrderData.orderDate).toLocaleDateString('uz-UZ')}</span>
-            </div>
-          </div>
-          <div>
-            <div class="info-row">
-              <span class="info-label">Yetkazish sanasi:</span>
-              <span>${new Date(savedOrderData.deliveryDate).toLocaleDateString('uz-UZ')}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Holat:</span>
-              <span><strong>Yangi buyurtma</strong></span>
-            </div>
-          </div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th class="text-center" style="width: 40px;">№</th>
-              <th>Mahsulot nomi</th>
-              <th class="text-center" style="width: 80px;">Miqdor</th>
-              <th class="text-right" style="width: 120px;">Tan narxi (so'm)</th>
-              <th class="text-right" style="width: 120px;">Sotuv narxi (so'm)</th>
-              <th class="text-right" style="width: 140px;">Jami summa (so'm)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${savedOrderData.items.map((item: OrderItem, index: number) => {
-              const product = products.find(p => p._id === item.product);
-              const costPrice = product?.costPrice || 0;
-              return `
-                <tr>
-                  <td class="text-center">${index + 1}</td>
-                  <td><strong>${item.productName}</strong></td>
-                  <td class="text-center"><strong>${item.quantity}</strong></td>
-                  <td class="text-right">${new Intl.NumberFormat('uz-UZ').format(costPrice)}</td>
-                  <td class="text-right">${new Intl.NumberFormat('uz-UZ').format(item.price)}</td>
-                  <td class="text-right"><strong>${new Intl.NumberFormat('uz-UZ').format(item.total)}</strong></td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-
-        <div class="total-section">
-          <div class="total-row">
-            <span>Jami mahsulotlar soni:</span>
-            <span><strong>${savedOrderData.items.reduce((sum: number, item: OrderItem) => sum + item.quantity, 0)} dona</strong></span>
-          </div>
-          <div class="total-row">
-            <span>Jami tan narxi:</span>
-            <span><strong>${new Intl.NumberFormat('uz-UZ').format(
-              savedOrderData.items.reduce((sum: number, item: OrderItem) => {
-                const product = products.find(p => p._id === item.product);
-                return sum + (product?.costPrice || 0) * item.quantity;
-              }, 0)
-            )} so'm</strong></span>
-          </div>
-          <div class="total-row grand-total">
-            <span>JAMI SUMMA:</span>
-            <span>${new Intl.NumberFormat('uz-UZ').format(savedOrderData.totalAmount)} so'm</span>
-          </div>
-          <div class="total-row" style="color: #28a745;">
-            <span>Kutilayotgan foyda:</span>
-            <span><strong>${new Intl.NumberFormat('uz-UZ').format(
-              savedOrderData.totalAmount - savedOrderData.items.reduce((sum: number, item: OrderItem) => {
-                const product = products.find(p => p._id === item.product);
-                return sum + (product?.costPrice || 0) * item.quantity;
-              }, 0)
-            )} so'm</strong></span>
-          </div>
-        </div>
-
-        ${savedOrderData.notes ? `
-          <div class="notes">
-            <div style="font-weight: bold; margin-bottom: 5px;">📝 Izoh:</div>
-            <div>${savedOrderData.notes}</div>
-          </div>
-        ` : ''}
-
-        <div class="signatures">
-          <div class="signature-box">
-            <div style="font-weight: bold; margin-bottom: 10px;">Tayyorlovchi</div>
-            <div class="signature-line">
-              <div style="font-size: 10px; color: #666;">F.I.O. / Imzo</div>
-            </div>
-          </div>
-          <div class="signature-box">
-            <div style="font-weight: bold; margin-bottom: 10px;">Ombor mudiri</div>
-            <div class="signature-line">
-              <div style="font-size: 10px; color: #666;">F.I.O. / Imzo</div>
-            </div>
-          </div>
-          <div class="signature-box">
-            <div style="font-weight: bold; margin-bottom: 10px;">Qabul qiluvchi</div>
-            <div class="signature-line">
-              <div style="font-size: 10px; color: #666;">F.I.O. / Imzo</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="footer">
-          <div>Bu hujjat CLIMART ERP tizimi tomonidan avtomatik yaratilgan</div>
-          <div style="margin-top: 5px;">Chop etilgan sana: ${currentDate}</div>
-        </div>
-      </body>
-      </html>
-    `;
-
+    const currentDate = new Date().toLocaleDateString('uz-UZ', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const htmlString = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ombor cheki</title>
+    <style>@media print{@page{margin:15mm;size:A4}body{margin:0}}body{font-family:Arial,sans-serif;max-width:210mm;margin:0 auto;padding:20px;font-size:12px}.header{text-align:center;border-bottom:3px double #000;padding-bottom:15px;margin-bottom:20px}.company-name{font-size:24px;font-weight:bold}.document-title{font-size:18px;font-weight:bold;margin:15px 0;text-transform:uppercase}.info-section{margin:20px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px}.info-row{display:flex;padding:5px 0}.info-label{font-weight:bold;min-width:150px}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{border:1px solid #000;padding:8px;text-align:left}th{background:#f0f0f0;font-weight:bold}.text-right{text-align:right}.text-center{text-align:center}.total-section{margin-top:20px;padding:15px;background:#f9f9f9;border:2px solid #000}.total-row{display:flex;justify-content:space-between;padding:5px 0;font-size:14px}.grand-total{font-size:18px;font-weight:bold;border-top:2px solid #000;padding-top:10px;margin-top:10px}.signatures{margin-top:40px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}.signature-box{text-align:center}.signature-line{border-top:1px solid #000;margin-top:50px;padding-top:5px}.footer{margin-top:30px;text-align:center;font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:10px}</style></head>
+    <body><div class="header"><div class="company-name">CLIMART ERP</div><div style="font-size:12px;color:#666">Ombor boshqaruv tizimi</div><div class="document-title">OMBOR UCHUN BUYURTMA</div><div style="font-size:11px;margin-top:5px">${currentDate}</div></div>
+    <div class="info-section"><div><div class="info-row"><span class="info-label">Mijoz:</span><span><strong>${savedOrderData.customerName}</strong></span></div><div class="info-row"><span class="info-label">Buyurtma sanasi:</span><span>${new Date(savedOrderData.orderDate).toLocaleDateString('uz-UZ')}</span></div></div><div><div class="info-row"><span class="info-label">Yetkazish:</span><span>${new Date(savedOrderData.deliveryDate).toLocaleDateString('uz-UZ')}</span></div><div class="info-row"><span class="info-label">Holat:</span><span><strong>Yangi</strong></span></div></div></div>
+    <table><thead><tr><th class="text-center" style="width:40px">№</th><th>Mahsulot</th><th class="text-center" style="width:80px">Miqdor</th><th class="text-right" style="width:120px">Tan narx</th><th class="text-right" style="width:120px">Sotuv narx</th><th class="text-right" style="width:140px">Jami</th></tr></thead><tbody>
+    ${savedOrderData.items.map((item: OrderItem, i: number) => { const p = products.find(pr => pr._id === item.product); const cost = p?.costPrice || 0; return `<tr><td class="text-center">${i+1}</td><td><strong>${item.productName}</strong></td><td class="text-center"><strong>${item.quantity}</strong></td><td class="text-right">${new Intl.NumberFormat('uz-UZ').format(cost)}</td><td class="text-right">${new Intl.NumberFormat('uz-UZ').format(item.price)}</td><td class="text-right"><strong>${new Intl.NumberFormat('uz-UZ').format(item.total)}</strong></td></tr>`; }).join('')}
+    </tbody></table>
+    <div class="total-section"><div class="total-row"><span>Jami miqdor:</span><span><strong>${savedOrderData.items.reduce((s: number, i: OrderItem) => s + i.quantity, 0)} dona</strong></span></div><div class="total-row grand-total"><span>JAMI SUMMA:</span><span>${new Intl.NumberFormat('uz-UZ').format(savedOrderData.totalAmount)} so'm</span></div></div>
+    ${savedOrderData.notes ? `<div style="margin-top:20px;padding:10px;background:#fffbf0;border-left:4px solid #ffc107"><strong>Izoh:</strong> ${savedOrderData.notes}</div>` : ''}
+    <div class="signatures"><div class="signature-box"><div style="font-weight:bold">Tayyorlovchi</div><div class="signature-line"><div style="font-size:10px;color:#666">F.I.O. / Imzo</div></div></div><div class="signature-box"><div style="font-weight:bold">Ombor mudiri</div><div class="signature-line"><div style="font-size:10px;color:#666">F.I.O. / Imzo</div></div></div><div class="signature-box"><div style="font-weight:bold">Qabul qiluvchi</div><div class="signature-line"><div style="font-size:10px;color:#666">F.I.O. / Imzo</div></div></div></div>
+    <div class="footer">CLIMART ERP tizimi tomonidan yaratilgan | ${currentDate}</div></body></html>`;
     printViaIframe(htmlString);
   };
+
+  // Combobox opsiyalari
+  const customerOptions: ComboboxOption[] = useMemo(() => [
+    { value: 'regular', label: 'Oddiy mijoz', description: "Ro'yxatdan o'tmagan mijoz" },
+    ...partners.map(p => ({ value: p._id, label: p.name, description: p.phone || '', keywords: `${p.name} ${p.phone || ''}` }))
+  ], [partners]);
+
+  const warehouseOptions: ComboboxOption[] = useMemo(() => [
+    { value: '', label: 'Tanlanmagan' },
+    ...warehouses.map(w => ({ value: w._id, label: w.name }))
+  ], [warehouses]);
+
+  const productOptions: ComboboxOption[] = useMemo(() =>
+    products.map(p => ({
+      value: p._id,
+      label: p.brand ? `${p.brand} • ${p.name}` : p.name,
+      description: `Mavjud: ${p.quantity - (p.reserved || 0)} ${p.unit || 'dona'} • ${(p.sellingPrice || 0).toLocaleString()} so'm`,
+      keywords: `${p.name} ${p.sku || ''} ${p.barcode || ''} ${p.brand || ''} ${p.category || ''}`
+    })),
+  [products]);
+
+  const workerOptions: ComboboxOption[] = useMemo(() =>
+    workers.map(w => ({
+      value: w._id,
+      label: w.name,
+      description: w.phone || '',
+      keywords: `${w.name} ${w.phone || ''}`
+    })),
+  [workers]);
+
+  const currentStatus = order?.status || 'new';
+  const availableTransitions = STATUS_TRANSITIONS[currentStatus] || [];
 
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {order ? "Buyurtmani tahrirlash" : "Yangi buyurtma yaratish"}
-            </DialogTitle>
-            <DialogDescription>
-              {order ? "Buyurtma ma'lumotlarini o'zgartiring" : "Mijozdan yangi buyurtma yarating"}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] overflow-hidden p-0 gap-0">
+          <VisuallyHidden>
+            <DialogTitle>{order ? "Buyurtmani tahrirlash" : "Yangi buyurtma yaratish"}</DialogTitle>
+          </VisuallyHidden>
+          <DialogDescription className="sr-only">
+            {order ? "Buyurtmani tahrirlash" : "Yangi buyurtma yaratish"}
+          </DialogDescription>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="customer">Mijoz *</Label>
-                <div className="flex gap-2">
-                  <select
-                    id="customer"
-                    value={formData.customer}
-                    onChange={(e) => handleCustomerChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    required
-                    disabled={partnersLoading}
-                  >
-                    <option value="">Tanlang...</option>
-                    <option value="regular">Oddiy mijoz</option>
-                    {partners.map(partner => (
-                      <option key={partner._id} value={partner._id}>
-                        {partner.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setIsPartnerModalOpen(true)}
-                    title="Yangi mijoz qo'shish"
-                  >
-                    <UserPlus className="h-4 w-4" />
+          {/* ===== TOOLBAR (spec 5.1) ===== */}
+          <div className="flex items-center gap-2 px-4 py-2 border-b bg-gray-50 flex-wrap">
+            {/* Saqlash */}
+            <Button
+              size="sm"
+              className="h-8 gap-1.5 bg-green-600 hover:bg-green-700"
+              onClick={handleSubmit}
+              disabled={saving}
+            >
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              Saqlash
+            </Button>
+
+            {/* Yopish */}
+            <Button variant="outline" size="sm" className="h-8" onClick={onClose} disabled={saving}>
+              Yopish
+            </Button>
+
+            <div className="h-6 w-px bg-gray-300" />
+
+            {/* O'zgartirish dropdown (spec 5.1 — Izmeniti) */}
+            {order && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1 text-xs">
+                    O'zgartirish
+                    <ChevronDown className="h-3 w-3" />
                   </Button>
-                </div>
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem disabled>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Nusxa ko'chirish
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-red-600" disabled>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    O'chirish
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
-              <div>
-                <Label htmlFor="orderDate">Buyurtma sanasi *</Label>
-                <Input
-                  id="orderDate"
-                  type="date"
-                  value={formData.orderDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, orderDate: e.target.value }))}
-                  required
-                />
-              </div>
-            </div>
+            {/* Hujjat yaratish dropdown (spec 5.1 — Sozdat dokument) */}
+            {order && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1 text-xs">
+                    Hujjat yaratish
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem disabled>
+                    <Truck className="h-4 w-4 mr-2" />
+                    Jo'natish (Otgruzka)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Hisob-faktura
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled>
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Kirim to'lov
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="deliveryDate">Yetkazib berish sanasi *</Label>
-                <Input
-                  id="deliveryDate"
-                  type="date"
-                  value={formData.deliveryDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: e.target.value }))}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="warehouse">Ombor</Label>
-                <select
-                  id="warehouse"
-                  value={formData.warehouse}
-                  onChange={(e) => {
-                    const wh = warehouses.find(w => w._id === e.target.value);
-                    setFormData(prev => ({
-                      ...prev,
-                      warehouse: e.target.value,
-                      warehouseName: wh?.name || ''
-                    }));
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                >
-                  <option value="">Tanlanmagan</option>
-                  {warehouses.map(wh => (
-                    <option key={wh._id} value={wh._id}>
-                      {wh.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Ombor tanlansa, avtomatik hisob-faktura va yuborish yaratiladi
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label>Tovarlar *</Label>
-                <Button type="button" onClick={addItem} size="sm" variant="outline">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Tovar qo'shish
+            {/* Chop etish dropdown (spec 5.1 — Pechat) */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1 text-xs">
+                  <Printer className="h-3.5 w-3.5" />
+                  Chop etish
+                  <ChevronDown className="h-3 w-3" />
                 </Button>
-              </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={printCustomerReceipt} disabled={!savedOrderData}>
+                  Mijoz uchun check
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={printWarehouseReceipt} disabled={!savedOrderData}>
+                  Ombor uchun check
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-              <div className="space-y-2">
-                {items.map((item, index) => {
-                  const productOptions: ComboboxOption[] = products.map(p => ({
-                    value: p._id,
-                    label: p.name,
-                    description: `Mavjud: ${p.quantity} ${p.unit} • Narx: ${p.sellingPrice.toLocaleString()} so'm`,
-                    keywords: `${p.name} ${p.sku || ''} ${p.barcode || ''}`
-                  }));
+            <div className="flex-1" />
 
-                  return (
-                    <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
-                      <div className="col-span-5">
-                        <Label className="text-xs">Mahsulot</Label>
-                        <Combobox
-                          options={productOptions}
-                          value={item.product}
-                          onValueChange={(value) => handleProductSelect(index, value)}
-                          placeholder="Mahsulot tanlang..."
-                          searchPlaceholder="Mahsulot qidirish..."
-                          emptyText="Mahsulot topilmadi"
-                        />
-                      </div>
-
-                    <div className="col-span-2">
-                      <Label className="text-xs">Miqdor</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity || ''}
-                        onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
-                        className="text-sm"
-                        placeholder="0"
-                        required
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <Label className="text-xs">Narx</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={item.price || ''}
-                        onChange={(e) => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)}
-                        className="text-sm"
-                        placeholder="0"
-                        required
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <Label className="text-xs">Jami</Label>
-                      <Input
-                        type="text"
-                        value={new Intl.NumberFormat('uz-UZ').format(item.total)}
-                        readOnly
-                        className="text-sm bg-gray-50"
-                      />
-                    </div>
-
-                    <div className="col-span-1">
-                      <Button
-                        type="button"
-                        onClick={() => removeItem(index)}
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-600 no-scale"
-                        disabled={items.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-                })}
-              </div>
-
-              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold">Jami summa:</span>
-                  <span className="text-lg font-bold text-primary">
-                    {new Intl.NumberFormat('uz-UZ').format(items.reduce((sum, item) => sum + item.total, 0))} so'm
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="notes">Izoh</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Qo'shimcha ma'lumot..."
-                rows={3}
-              />
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-                Bekor qilish
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saqlanmoqda...
-                  </>
-                ) : (
-                  order ? "Saqlash" : "Yaratish"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-
-        <PartnerModal
-          open={isPartnerModalOpen}
-          onClose={() => setIsPartnerModalOpen(false)}
-          onSuccess={() => {
-            refetchPartners();
-          }}
-          initialType="customer"
-        />
-      </Dialog>
-
-      {/* Print Options Dialog */}
-      <Dialog open={showPrintOptions} onOpenChange={handleClosePrintOptions}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Buyurtma muvaffaqiyatli saqlandi! ✅</DialogTitle>
-            <DialogDescription>
-              Check chiqarishni xohlaysizmi?
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 py-4">
-            <Button
-              onClick={() => {
-                printCustomerReceipt();
-                handleClosePrintOptions();
-              }}
-              className="w-full justify-start h-auto py-4"
-              variant="outline"
-            >
-              <div className="flex items-start gap-3">
-                <Printer className="h-5 w-5 mt-1 text-blue-600" />
-                <div className="text-left">
-                  <div className="font-semibold">Mijoz uchun check</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Oddiy kvitansiya - mahsulot nomlari, miqdor va narxlar
-                  </div>
-                </div>
-              </div>
-            </Button>
-
-            <Button
-              onClick={() => {
-                printWarehouseReceipt();
-                handleClosePrintOptions();
-              }}
-              className="w-full justify-start h-auto py-4"
-              variant="outline"
-            >
-              <div className="flex items-start gap-3">
-                <Printer className="h-5 w-5 mt-1 text-green-600" />
-                <div className="text-left">
-                  <div className="font-semibold">Ombor uchun check</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Batafsil ma'lumot - tan narxi, sotuv narxi, foyda hisoblari
-                  </div>
-                </div>
-              </div>
-            </Button>
-
-            <Button
-              onClick={() => {
-                printCustomerReceipt();
-                setTimeout(() => printWarehouseReceipt(), 1500);
-                handleClosePrintOptions();
-              }}
-              className="w-full justify-start h-auto py-4"
-              variant="default"
-            >
-              <div className="flex items-start gap-3">
-                <Printer className="h-5 w-5 mt-1" />
-                <div className="text-left">
-                  <div className="font-semibold">Ikkala checkni chiqarish</div>
-                  <div className="text-xs text-white/80 mt-1">
-                    Mijoz va ombor uchun checklar
-                  </div>
-                </div>
-              </div>
-            </Button>
+            {/* Foydalanuvchi nomi (spec 5.1 o'ng tomon) */}
+            {order && (
+              <span className="text-xs text-gray-400">
+                O'zgartirilgan: {new Date(order.updatedAt).toLocaleDateString('uz-UZ')}
+              </span>
+            )}
           </div>
 
-          <DialogFooter>
-            <Button variant="ghost" onClick={handleClosePrintOptions}>
-              Keyinroq
+          {/* ===== SARLAVHA QATORI (spec 6) ===== */}
+          <div className="flex items-center gap-3 px-4 py-2.5 border-b bg-white flex-wrap">
+            <span className="font-semibold text-gray-700 text-sm">
+              {order ? `Mijoz buyurtmasi № ${order.orderNumber}` : "Yangi buyurtma"}
+            </span>
+            <span className="text-sm text-gray-400">
+              dan {formData.orderDate ? new Date(formData.orderDate).toLocaleDateString('uz-UZ') : '—'}
+            </span>
+
+            {/* To'lov holati badge (spec 6) */}
+            {order && getPaymentBadge()}
+
+            {/* Status dropdown (spec 6 — Holat) */}
+            {order ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="inline-flex items-center gap-1">
+                    <StatusBadge status={order.status} config={ORDER_STATUS_CONFIG} />
+                    {availableTransitions.length > 0 && <ChevronDown className="h-3 w-3 text-gray-400" />}
+                  </button>
+                </DropdownMenuTrigger>
+                {availableTransitions.length > 0 && (
+                  <DropdownMenuContent>
+                    {availableTransitions.map(s => (
+                      <DropdownMenuItem key={s} disabled>
+                        <StatusBadge status={s} config={ORDER_STATUS_CONFIG} className="mr-2" />
+                        {STATUS_LABELS[s] || s}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                )}
+              </DropdownMenu>
+            ) : (
+              <StatusBadge status="new" config={ORDER_STATUS_CONFIG} />
+            )}
+
+            <div className="flex-1" />
+
+            {/* Rezerv checkbox (spec 6) */}
+            <label className="inline-flex items-center gap-1.5 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.reserved}
+                onChange={(e) => setFormData(prev => ({ ...prev, reserved: e.target.checked }))}
+                className="rounded border-gray-300"
+              />
+              <Lock className="h-3.5 w-3.5 text-gray-500" />
+              <span className="text-gray-600">Rezerv</span>
+            </label>
+          </div>
+
+          {/* ===== KONTENT (scrollable) ===== */}
+          <div className="overflow-y-auto max-h-[calc(95vh-130px)]">
+            {/* ===== 3-USTUNLI FORMA (spec 7) ===== */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3 px-4 py-4 border-b bg-white">
+              {/* 1-ustun: Kontragent, Yetkazish sanasi (spec 7.1) */}
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs text-gray-500">* Kontragent</Label>
+                  <div className="flex gap-1 mt-1">
+                    <Combobox
+                      options={customerOptions}
+                      value={formData.customer}
+                      onValueChange={handleCustomerChange}
+                      placeholder="Kontragent tanlang..."
+                      searchPlaceholder="Nom yoki telefon..."
+                      emptyText="Topilmadi"
+                      disabled={partnersLoading}
+                      className="h-9 text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => setIsPartnerModalOpen(true)}
+                      title="Yangi kontragent"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs text-gray-500">Plan. jo'natish sanasi</Label>
+                  <Input
+                    type="date"
+                    value={formData.deliveryDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                    className="h-9 text-sm mt-1"
+                  />
+                </div>
+              </div>
+
+              {/* 2-ustun: Ombor, Buyurtma sanasi (spec 7.2) */}
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs text-gray-500">Ombor</Label>
+                  <Combobox
+                    options={warehouseOptions}
+                    value={formData.warehouse}
+                    onValueChange={(value) => {
+                      const wh = warehouses.find(w => w._id === value);
+                      setFormData(prev => ({ ...prev, warehouse: value, warehouseName: wh?.name || '' }));
+                    }}
+                    placeholder="Ombor tanlang..."
+                    searchPlaceholder="Ombor qidirish..."
+                    emptyText="Topilmadi"
+                    className="h-9 text-sm mt-1"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-0.5">Tanlansa avtomatik hisob-faktura yaratiladi</p>
+                </div>
+
+                <div>
+                  <Label className="text-xs text-gray-500">Buyurtma sanasi</Label>
+                  <Input
+                    type="date"
+                    value={formData.orderDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, orderDate: e.target.value }))}
+                    className="h-9 text-sm mt-1"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* 3-ustun: Usta, Izoh (spec 7.3) */}
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs text-gray-500">Usta</Label>
+                  <Combobox
+                    options={workerOptions}
+                    value={formData.assignedWorker}
+                    onValueChange={(value) => {
+                      const worker = workers.find(w => w._id === value);
+                      setFormData(prev => ({ ...prev, assignedWorker: value, assignedWorkerName: worker?.name || '' }));
+                    }}
+                    placeholder="Usta tanlang..."
+                    emptyText="Usta topilmadi"
+                    className="h-9 text-sm mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Izoh</Label>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Qo'shimcha ma'lumot..."
+                    className="text-sm mt-1 resize-none"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ===== POZITSIYALAR (spec 8) ===== */}
+            <div className="px-4 py-2.5 border-b bg-gray-50 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-semibold text-gray-700">Pozitsiyalar</span>
+                <span className="text-xs text-gray-400 bg-white px-2 py-0.5 rounded">
+                  Jami ({items.filter(i => i.product).length})
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button type="button" onClick={handleApplyUniformPrice} size="sm" variant="outline" className="h-7 text-xs gap-1" title="Barcha mahsulotlarga bir xil narx">
+                  <DollarSign className="h-3 w-3" />
+                  Umumiy narx
+                </Button>
+                <Button type="button" onClick={addItem} size="sm" variant="outline" className="h-7 text-xs gap-1">
+                  <Plus className="h-3 w-3" />
+                  Mahsulot qo'shish
+                </Button>
+              </div>
+            </div>
+
+            {/* Pozitsiyalar jadvali (spec 8.3) */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="w-10 px-2 py-2 text-center text-xs font-medium text-gray-500">№</th>
+                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 min-w-[220px]">Nomi</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 w-20">Miqdor</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 w-16">Mavjud</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 w-16">Qoldiq</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 w-28">Narx</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 w-16">Chegirma %</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 w-28">Summa</th>
+                    <th className="w-10 px-2 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {items.map((item, index) => {
+                    const selectedProduct = products.find(p => p._id === item.product);
+                    const stock = selectedProduct ? selectedProduct.quantity : 0;
+                    const available = selectedProduct ? selectedProduct.quantity - (selectedProduct.reserved || 0) : 0;
+
+                    return (
+                      <tr key={index} className="hover:bg-blue-50/30">
+                        <td className="px-2 py-1.5 text-center text-gray-400 text-xs">{index + 1}</td>
+                        <td className="px-2 py-1">
+                          <Combobox
+                            options={productOptions}
+                            value={item.product}
+                            onValueChange={(value) => handleProductSelect(index, value)}
+                            placeholder="Mahsulot tanlang..."
+                            emptyText="Topilmadi"
+                            className="h-8 text-sm border-0 shadow-none hover:bg-gray-50 px-1"
+                            onCreateNew={(searchTerm) => handleCreateNewProduct(searchTerm, index)}
+                            createNewLabel="Yangi tovar"
+                          />
+                        </td>
+                        <td className="px-2 py-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={item.quantity || ''}
+                            onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
+                            className="h-8 text-sm text-right w-full"
+                          />
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          {selectedProduct ? (
+                            <span className={`text-xs ${available > 0 ? 'text-green-600' : available < 0 ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
+                              {available}
+                            </span>
+                          ) : <span className="text-xs text-gray-300">—</span>}
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          {selectedProduct ? (
+                            <span className="text-xs text-gray-500">{stock}</span>
+                          ) : <span className="text-xs text-gray-300">—</span>}
+                        </td>
+                        <td className="px-2 py-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={item.price || ''}
+                            onChange={(e) => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)}
+                            className="h-8 text-sm text-right w-full"
+                          />
+                        </td>
+                        <td className="px-2 py-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={item.discount || ''}
+                            onChange={(e) => handleItemChange(index, 'discount', parseFloat(e.target.value) || 0)}
+                            className="h-8 text-sm text-right w-full"
+                            placeholder="0"
+                          />
+                        </td>
+                        <td className="px-2 py-1.5 text-right font-medium text-sm">
+                          {item.total > 0 ? formatCurrency(item.total) : '0'}
+                        </td>
+                        <td className="px-2 py-1.5 text-center">
+                          <Button
+                            type="button"
+                            onClick={() => removeItem(index)}
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
+                            disabled={items.length === 1}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Pozitsiya qo'shish qatori (spec 8.4) */}
+                  <tr className="bg-gray-50/50">
+                    <td className="px-2 py-2 text-center text-gray-300">
+                      <Plus className="h-3.5 w-3.5 mx-auto" />
+                    </td>
+                    <td colSpan={8} className="px-2 py-2">
+                      <button
+                        type="button"
+                        onClick={addItem}
+                        className="text-sm text-gray-400 hover:text-blue-600 transition-colors"
+                      >
+                        Pozitsiya qo'shish — nom, kod yoki shtrix-kodni kiriting...
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* ===== JAMI FOOTER (spec 8.5) ===== */}
+            <div className="flex items-start justify-between px-4 py-4 border-t bg-white">
+              <div className="flex items-center gap-6 text-sm text-gray-500">
+                <span>Miqdor: <strong className="text-gray-700">{totalQuantity}</strong></span>
+                <span>Pozitsiyalar: <strong className="text-gray-700">{items.filter(i => i.product).length}</strong></span>
+              </div>
+
+              <div className="text-right space-y-1">
+                <div className="text-sm text-gray-500">
+                  Oraliq jami <span className="font-medium text-gray-700 ml-4">{formatCurrency(totalAmount)}</span>
+                </div>
+                {totalVat > 0 && (
+                  <div className="text-sm text-gray-500">
+                    QQS summasi <span className="font-medium text-gray-700 ml-4">{formatCurrency(Math.round(totalVat))}</span>
+                  </div>
+                )}
+                <div className="text-lg font-bold text-gray-900 pt-1 border-t">
+                  Umumiy summa <span className="ml-4">{formatCurrency(totalAmount + Math.round(totalVat))} so'm</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <PartnerModal
+            open={isPartnerModalOpen}
+            onClose={() => setIsPartnerModalOpen(false)}
+            onSuccess={() => { refetchPartners(); }}
+            initialType="customer"
+          />
+
+          <QuickProductModal
+            open={isQuickProductOpen}
+            onClose={() => setIsQuickProductOpen(false)}
+            onCreated={handleQuickProductCreated}
+            defaultName={quickProductName}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Chop etish dialogi */}
+      <Dialog open={showPrintOptions} onOpenChange={handleClosePrintOptions}>
+        <DialogContent className="max-w-md">
+          <DialogDescription className="sr-only">Check chiqarish</DialogDescription>
+          <div className="text-center py-2">
+            <h3 className="text-lg font-semibold">Buyurtma saqlandi</h3>
+            <p className="text-sm text-gray-500 mt-1">Check chiqarishni xohlaysizmi?</p>
+          </div>
+          <div className="space-y-2 py-2">
+            <Button onClick={() => { printCustomerReceipt(); handleClosePrintOptions(); }} className="w-full justify-start h-auto py-3" variant="outline">
+              <Printer className="h-5 w-5 mr-3 text-blue-600" />
+              <div className="text-left"><div className="font-semibold text-sm">Mijoz uchun check</div><div className="text-xs text-gray-500">Oddiy kvitansiya</div></div>
             </Button>
-          </DialogFooter>
+            <Button onClick={() => { printWarehouseReceipt(); handleClosePrintOptions(); }} className="w-full justify-start h-auto py-3" variant="outline">
+              <Printer className="h-5 w-5 mr-3 text-green-600" />
+              <div className="text-left"><div className="font-semibold text-sm">Ombor uchun check</div><div className="text-xs text-gray-500">Batafsil — tan narx, foyda</div></div>
+            </Button>
+            <Button onClick={() => { printCustomerReceipt(); setTimeout(() => printWarehouseReceipt(), 1500); handleClosePrintOptions(); }} className="w-full justify-start h-auto py-3" variant="default">
+              <Printer className="h-5 w-5 mr-3" />
+              <div className="text-left"><div className="font-semibold text-sm">Ikkala check</div><div className="text-xs text-white/80">Mijoz va ombor uchun</div></div>
+            </Button>
+          </div>
+          <div className="flex justify-end"><Button variant="ghost" size="sm" onClick={handleClosePrintOptions}>Keyinroq</Button></div>
         </DialogContent>
       </Dialog>
     </>

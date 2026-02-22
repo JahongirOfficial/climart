@@ -17,6 +17,7 @@ import {
   Undo2
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useModal } from "@/contexts/ModalContext";
 import { useReceipts } from "@/hooks/useReceipts";
 import { ViewReceiptModal } from "@/components/ViewReceiptModal";
@@ -39,6 +40,7 @@ const Receipts = () => {
   const { showSuccess, showError } = useModal();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -49,9 +51,9 @@ const Receipts = () => {
   const filteredReceipts = receipts.filter(receipt => {
     const supplierName = typeof receipt.supplier === 'string' ? receipt.supplier : receipt.supplier.name;
     return (
-      receipt.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+      receipt.receiptNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      supplierName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      receipt.orderNumber?.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
   });
 

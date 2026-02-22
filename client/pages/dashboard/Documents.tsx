@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useCustomerInvoices } from "@/hooks/useCustomerInvoices";
 import { useReceipts } from "@/hooks/useReceipts";
 import { usePayments } from "@/hooks/usePayments";
@@ -46,6 +47,7 @@ const typeColors: Record<string, string> = {
 
 const Documents = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [typeFilter, setTypeFilter] = useState("all");
 
   const { invoices, loading: loadingInvoices } = useCustomerInvoices();
@@ -119,8 +121,8 @@ const Documents = () => {
   const filtered = documents.filter((doc) => {
     const matchesType = typeFilter === "all" || doc.type === typeFilter;
     const matchesSearch =
-      doc.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (doc.partner || "").toLowerCase().includes(searchTerm.toLowerCase());
+      doc.number.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      (doc.partner || "").toLowerCase().includes(debouncedSearch.toLowerCase());
     return matchesType && matchesSearch;
   });
 

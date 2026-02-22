@@ -13,7 +13,9 @@ import {
   TrendingUp
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useCorrectedInvoices } from "@/hooks/useCorrectedInvoices";
+import { api } from '@/lib/api';
 import { ViewInvoiceModal } from "@/components/ViewInvoiceModal";
 import { format } from "date-fns";
 import { useProducts } from "@/hooks/useProducts";
@@ -32,6 +34,7 @@ const CorrectedInvoices = () => {
   });
   const [productFilter, setProductFilter] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
 
@@ -43,13 +46,13 @@ const CorrectedInvoices = () => {
 
   const { products } = useProducts();
 
-  // Filter invoices by search term
+  // Filter invoices by search term (debounced for performance)
   const filteredInvoices = useMemo(() => {
     return invoices.filter(invoice =>
-      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+      invoice.invoiceNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      invoice.customerName.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
-  }, [invoices, searchTerm]);
+  }, [invoices, debouncedSearch]);
 
   // Calculate KPIs
   const totalCorrectedInvoices = filteredInvoices.length;
@@ -60,9 +63,7 @@ const CorrectedInvoices = () => {
 
   const handleViewInvoice = async (invoiceId: string) => {
     try {
-      const response = await fetch(`/api/customer-invoices/${invoiceId}`);
-      if (!response.ok) throw new Error('Failed to fetch invoice');
-      const invoice = await response.json();
+      const invoice = await api.get(`/api/customer-invoices/${invoiceId}`);
       setSelectedInvoice(invoice);
       setIsViewModalOpen(true);
     } catch (err) {

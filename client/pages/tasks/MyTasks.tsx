@@ -32,6 +32,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useTasks, Task } from "@/hooks/useTasks";
 import { useToast } from "@/hooks/use-toast";
 import { AddTaskModal } from "@/components/AddTaskModal";
@@ -62,6 +63,7 @@ const MyTasks = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [page, setPage] = useState(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
@@ -75,8 +77,8 @@ const MyTasks = () => {
   });
 
   const filteredTasks = tasks.filter((task) =>
-    task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    task.assignedToName.toLowerCase().includes(searchTerm.toLowerCase())
+    task.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    task.assignedToName.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {

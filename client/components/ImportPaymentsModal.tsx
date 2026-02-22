@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "@/lib/api";
 import { useModal } from "@/contexts/ModalContext";
 import {
   Dialog,
@@ -70,17 +71,11 @@ export function ImportPaymentsModal({ open, onClose, onSuccess }: ImportPayments
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/payments/import', {
+      // Use apiFetch directly for FormData upload (not api.post which forces JSON content-type)
+      const result = await apiFetch<{ imported: number }>('/api/payments/import', {
         method: 'POST',
         body: formData,
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Import failed');
-      }
-
-      const result = await response.json();
 
       toast({
         title: "Import muvaffaqiyatli",

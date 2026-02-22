@@ -8,16 +8,62 @@ import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
-// Get all shipments
+// Get all shipments with filters and pagination
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const shipments = await Shipment.find()
-      .populate('customer')
-      .populate('order')
-      .populate('warehouse')
-      .populate('items.product')
-      .sort({ createdAt: -1 });
-    res.json(shipments);
+    const {
+      startDate, endDate, search, status, customerId, warehouseId,
+      page = '1', pageSize = '25',
+    } = req.query;
+    const query: any = {};
+
+    if (startDate || endDate) {
+      query.shipmentDate = {};
+      if (startDate) query.shipmentDate.$gte = new Date(startDate as string);
+      if (endDate) {
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        query.shipmentDate.$lte = end;
+      }
+    }
+
+    if (search) {
+      const s = search as string;
+      query.$or = [
+        { shipmentNumber: { $regex: s, $options: 'i' } },
+        { customerName: { $regex: s, $options: 'i' } },
+        { trackingNumber: { $regex: s, $options: 'i' } },
+      ];
+    }
+
+    if (status && status !== 'all') query.status = status;
+    if (customerId) query.customer = customerId;
+    if (warehouseId) query.warehouse = warehouseId;
+
+    const pageNum = Math.max(1, parseInt(page as string));
+    const limit = Math.min(100, Math.max(1, parseInt(pageSize as string)));
+    const skip = (pageNum - 1) * limit;
+
+    const [shipments, total] = await Promise.all([
+      Shipment.find(query)
+        .populate('customer', 'name phone')
+        .populate('order', 'orderNumber')
+        .populate('warehouse', 'name')
+        .populate('items.product', 'name sku unit')
+        .sort({ shipmentDate: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Shipment.countDocuments(query),
+    ]);
+
+    res.json({
+      data: shipments,
+      total,
+      page: pageNum,
+      pageSize: limit,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }
@@ -60,11 +106,12 @@ router.post('/', async (req: Request, res: Response) => {
       }
     }
 
-    // Create shipment
-    const shipment = new Shipment({
-      ...req.body,
-      shipmentNumber,
-    });
+    // Create shipment - remove empty customer to avoid BSONError
+    const shipmentData = { ...req.body, shipmentNumber };
+    if (!shipmentData.customer) {
+      delete shipmentData.customer;
+    }
+    const shipment = new Shipment(shipmentData);
 
     await shipment.save({ session });
 
@@ -122,7 +169,7 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
       if (shipment.order) {
         await CustomerOrder.findByIdAndUpdate(
           shipment.order,
-          { status: 'fulfilled', shippedAmount: shipment.totalAmount }
+          { status: 'delivered', shippedAmount: shipment.totalAmount }
         );
       }
 

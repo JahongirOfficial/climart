@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Integration {
   id: number;
@@ -243,6 +244,7 @@ const IntegrationCard = ({ integration }: { integration: Integration }) => {
 
 const Solutions = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [selectedCategory, setSelectedCategory] = useState("");
 
   const categories = Array.from(
@@ -251,9 +253,9 @@ const Solutions = () => {
 
   const filteredIntegrations = integrations.filter((integration) => {
     const matchesSearch =
-      !searchTerm ||
-      integration.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      integration.description.toLowerCase().includes(searchTerm.toLowerCase());
+      !debouncedSearch ||
+      integration.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      integration.description.toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchesCategory =
       !selectedCategory || integration.category === selectedCategory;
     return matchesSearch && matchesCategory;

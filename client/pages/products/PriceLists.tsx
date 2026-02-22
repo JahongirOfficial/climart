@@ -25,9 +25,11 @@ import {
 import { useState } from "react";
 import { usePriceLists } from "@/hooks/usePriceLists";
 import { useToast } from "@/hooks/use-toast";
+import { api } from '@/lib/api';
 import { PriceListModal } from "@/components/PriceListModal";
 import { format } from "date-fns";
 import { ExportButton } from "@/components/ExportButton";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +45,7 @@ const PriceLists = () => {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPriceList, setSelectedPriceList] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -53,9 +56,9 @@ const PriceLists = () => {
   });
 
   const filteredPriceLists = priceLists.filter(pl =>
-    pl.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pl.priceListNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pl.organization?.toLowerCase().includes(searchTerm.toLowerCase())
+    pl.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    pl.priceListNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    pl.organization?.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const handleCreate = () => {
@@ -70,19 +73,11 @@ const PriceLists = () => {
 
   const handleSave = async (data: any) => {
     try {
-      const url = selectedPriceList
-        ? `/api/price-lists/${selectedPriceList._id}`
-        : '/api/price-lists';
-      
-      const method = selectedPriceList ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) throw new Error('Failed to save price list');
+      if (selectedPriceList) {
+        await api.put(`/api/price-lists/${selectedPriceList._id}`, data);
+      } else {
+        await api.post('/api/price-lists', data);
+      }
 
       toast({
         title: selectedPriceList ? "Narxlar ro'yxati yangilandi" : "Narxlar ro'yxati yaratildi",
@@ -104,11 +99,7 @@ const PriceLists = () => {
     if (!priceListToDelete) return;
 
     try {
-      const response = await fetch(`/api/price-lists/${priceListToDelete}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete price list');
+      await api.delete(`/api/price-lists/${priceListToDelete}`);
 
       toast({
         title: "Narxlar ro'yxati o'chirildi",
@@ -130,13 +121,7 @@ const PriceLists = () => {
 
   const handleChangeStatus = async (id: string, status: string) => {
     try {
-      const response = await fetch(`/api/price-lists/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-
-      if (!response.ok) throw new Error('Failed to change status');
+      await api.patch(`/api/price-lists/${id}/status`, { status });
 
       toast({
         title: "Holat o'zgartirildi",
@@ -155,16 +140,7 @@ const PriceLists = () => {
 
   const handleApplyPriceList = async (id: string) => {
     try {
-      const response = await fetch(`/api/price-lists/${id}/apply`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to apply price list');
-      }
-
-      const result = await response.json();
+      const result = await api.post<{ count: number }>(`/api/price-lists/${id}/apply`, {});
 
       toast({
         title: "Narxlar qo'llandi",

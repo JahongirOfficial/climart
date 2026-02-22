@@ -25,6 +25,7 @@ import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExportButton } from "@/components/ExportButton";
 import { formatCurrency, getStockStatus } from "@/lib/format";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const ProductsList = () => {
   const { products, loading, error, refetch, createProduct, updateProduct, deleteProduct } = useProducts();
@@ -36,6 +37,7 @@ const ProductsList = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
 
   // Create warehouse lookup map
   const warehouseMap = useMemo(() => {
@@ -47,9 +49,9 @@ const ProductsList = () => {
   }, [warehouses]);
 
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    product.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    product.sku?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    product.category?.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   // Calculate totals with memoization
@@ -340,11 +342,11 @@ const ProductsList = () => {
                         {product.dailyAverage?.toFixed(1) || '0.0'} {product.unit}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`text-sm font-bold ${(product.daysRemaining ?? Infinity) < 7 ? 'text-red-600' :
-                          (product.daysRemaining ?? Infinity) < 14 ? 'text-yellow-600' :
+                        <span className={`text-sm font-bold ${(product.daysRemaining ?? 99999) < 7 ? 'text-red-600' :
+                          (product.daysRemaining ?? 99999) < 14 ? 'text-yellow-600' :
                             'text-green-600'
                           }`}>
-                          {product.daysRemaining === Infinity ? '∞' : Math.ceil(product.daysRemaining || 0)} kun
+                          {(product.daysRemaining ?? 99999) >= 99999 ? '∞' : Math.ceil(product.daysRemaining || 0)} kun
                         </span>
                       </td>
                       <td className="px-6 py-4">

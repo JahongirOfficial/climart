@@ -58,6 +58,8 @@ const salesSubMenu = [
   { id: "profitability", name: "Foydalilik", path: "/sales/profitability" },
   { id: "pending-invoices", name: "Kutilayotgan fakturalar", path: "/sales/pending-invoices" },
   { id: "corrected-invoices", name: "Tuzatilgan fakturalar", path: "/sales/corrected-invoices" },
+  { id: "sales-funnel", name: "Savdo voronkasi", path: "/sales/sales-funnel" },
+  { id: "unit-economics", name: "Unit ekonomika", path: "/sales/unit-economics" },
 ];
 
 const productsSubMenu = [

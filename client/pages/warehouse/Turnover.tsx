@@ -9,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Search, Loader2, Package, CalendarIcon, TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { format } from "date-fns";
 import { uz } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ interface TurnoverTotals {
 
 const Turnover = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showInactive, setShowInactive] = useState(false);
 
@@ -63,11 +65,11 @@ const Turnover = () => {
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       const matchesSearch =
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku?.toLowerCase().includes(searchTerm.toLowerCase());
+        item.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        item.sku?.toLowerCase().includes(debouncedSearch.toLowerCase());
       return matchesSearch;
     });
-  }, [items, searchTerm]);
+  }, [items, debouncedSearch]);
 
   const categories = Array.from(new Set(items.map(item => item.category).filter(Boolean)));
 

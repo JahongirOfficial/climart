@@ -5,23 +5,35 @@ export interface ICustomerOrderItem {
   productName: string;
   quantity: number;
   price: number;
+  discount: number;
+  vat: number;
   total: number;
+  shipped: number;
+  reserved: number;
 }
 
 export interface ICustomerOrder extends Document {
   orderNumber: string;
-  customer?: mongoose.Types.ObjectId; // Optional for regular customers
+  customer?: mongoose.Types.ObjectId;
   customerName: string;
   orderDate: Date;
   deliveryDate: Date;
-  status: 'pending' | 'confirmed' | 'shipped' | 'fulfilled' | 'cancelled';
+  status: 'new' | 'confirmed' | 'assembled' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
   items: ICustomerOrderItem[];
   totalAmount: number;
   paidAmount: number;
   shippedAmount: number;
+  invoicedSum: number;
+  reservedSum: number;
+  vatEnabled: boolean;
+  vatIncluded: boolean;
+  vatSum: number;
   warehouse?: mongoose.Types.ObjectId;
   warehouseName?: string;
   reserved: boolean;
+  assignedWorker?: mongoose.Types.ObjectId;
+  assignedWorkerName?: string;
+  salesChannel?: string;
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -47,9 +59,30 @@ const CustomerOrderItemSchema = new Schema({
     required: true,
     min: 0,
   },
+  discount: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
+  },
+  vat: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
   total: {
     type: Number,
     required: true,
+    min: 0,
+  },
+  shipped: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  reserved: {
+    type: Number,
+    default: 0,
     min: 0,
   },
 });
@@ -63,7 +96,7 @@ const CustomerOrderSchema: Schema = new Schema(
     customer: {
       type: Schema.Types.ObjectId,
       ref: 'Partner',
-      required: false, // Optional for regular customers
+      required: false,
     },
     customerName: {
       type: String,
@@ -80,8 +113,8 @@ const CustomerOrderSchema: Schema = new Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'shipped', 'fulfilled', 'cancelled'],
-      default: 'pending',
+      enum: ['new', 'confirmed', 'assembled', 'shipped', 'delivered', 'returned', 'cancelled'],
+      default: 'new',
     },
     items: [CustomerOrderItemSchema],
     totalAmount: {
@@ -99,6 +132,29 @@ const CustomerOrderSchema: Schema = new Schema(
       default: 0,
       min: 0,
     },
+    invoicedSum: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    reservedSum: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    vatEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    vatIncluded: {
+      type: Boolean,
+      default: true,
+    },
+    vatSum: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     warehouse: {
       type: Schema.Types.ObjectId,
       ref: 'Warehouse',
@@ -110,6 +166,18 @@ const CustomerOrderSchema: Schema = new Schema(
     reserved: {
       type: Boolean,
       default: false,
+    },
+    assignedWorker: {
+      type: Schema.Types.ObjectId,
+      ref: 'Partner',
+    },
+    assignedWorkerName: {
+      type: String,
+      trim: true,
+    },
+    salesChannel: {
+      type: String,
+      trim: true,
     },
     notes: {
       type: String,
@@ -126,5 +194,6 @@ CustomerOrderSchema.index({ orderNumber: 1 }, { unique: true });
 CustomerOrderSchema.index({ customer: 1 });
 CustomerOrderSchema.index({ orderDate: 1 });
 CustomerOrderSchema.index({ status: 1 });
+CustomerOrderSchema.index({ warehouse: 1 });
 
 export default mongoose.models.CustomerOrder || mongoose.model<ICustomerOrder>('CustomerOrder', CustomerOrderSchema);

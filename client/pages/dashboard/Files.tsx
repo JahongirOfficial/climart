@@ -24,6 +24,7 @@ import {
   HardDrive,
 } from "lucide-react";
 import { useState, useRef } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useToast } from "@/hooks/use-toast";
 
 interface UploadedFile {
@@ -47,6 +48,7 @@ const Files = () => {
     }
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const save = (data: UploadedFile[]) => {
@@ -121,7 +123,7 @@ const Files = () => {
   };
 
   const filtered = files.filter((f) =>
-    f.name.toLowerCase().includes(searchTerm.toLowerCase())
+    f.name.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const totalSize = files.reduce((s, f) => s + f.size, 0);

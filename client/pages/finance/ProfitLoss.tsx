@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
+import { api } from '@/lib/api';
 
 interface ProfitLossData {
   period: {
@@ -61,14 +62,12 @@ const ProfitLoss = () => {
 
   const { data, isLoading } = useQuery<ProfitLossData>({
     queryKey: ['profit-loss', dateFilter],
-    queryFn: async () => {
+    queryFn: () => {
       const params = new URLSearchParams({
         startDate: dateFilter.startDate,
         endDate: dateFilter.endDate,
       });
-      const response = await fetch(`/api/profit-loss?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch profit loss');
-      return response.json();
+      return api.get<ProfitLossData>(`/api/profit-loss?${params}`);
     },
   });
 

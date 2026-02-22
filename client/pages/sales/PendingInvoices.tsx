@@ -13,7 +13,9 @@ import {
   TrendingDown
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { usePendingInvoices } from "@/hooks/usePendingInvoices";
+import { api } from '@/lib/api';
 import { ViewInvoiceModal } from "@/components/ViewInvoiceModal";
 import { format } from "date-fns";
 import { usePartners } from "@/hooks/usePartners";
@@ -32,6 +34,7 @@ const PendingInvoices = () => {
   });
   const [customerFilter, setCustomerFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
 
@@ -44,13 +47,13 @@ const PendingInvoices = () => {
   const { partners } = usePartners();
   const customers = partners.filter(p => p.type === 'customer' || p.type === 'both');
 
-  // Filter invoices by search term
+  // Filter invoices by search term (debounced for performance)
   const filteredInvoices = useMemo(() => {
     return invoices.filter(invoice =>
-      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+      invoice.invoiceNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      invoice.customerName.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
-  }, [invoices, searchTerm]);
+  }, [invoices, debouncedSearch]);
 
   // Calculate KPIs
   const totalPendingInvoices = filteredInvoices.length;
@@ -59,9 +62,7 @@ const PendingInvoices = () => {
 
   const handleViewInvoice = async (invoiceId: string) => {
     try {
-      const response = await fetch(`/api/customer-invoices/${invoiceId}`);
-      if (!response.ok) throw new Error('Failed to fetch invoice');
-      const invoice = await response.json();
+      const invoice = await api.get(`/api/customer-invoices/${invoiceId}`);
       setSelectedInvoice(invoice);
       setIsViewModalOpen(true);
     } catch (err) {

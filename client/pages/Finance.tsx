@@ -12,7 +12,7 @@ import {
   X,
   Trash2,
   Building2,
-} from "lucide-react";
+} from "lucide-react";``
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";

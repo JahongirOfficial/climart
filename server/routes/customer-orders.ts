@@ -9,14 +9,108 @@ import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
-// Get all customer orders
+// Get customer orders with filters and pagination
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const orders = await CustomerOrder.find()
-      .populate('customer')
-      .populate('items.product')
-      .sort({ createdAt: -1 });
-    res.json(orders);
+    const {
+      page = '1',
+      pageSize = '25',
+      search,
+      status,
+      customerId,
+      warehouseId,
+      startDate,
+      endDate,
+      paymentStatus,
+      shipmentStatus,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = req.query;
+
+    const query: any = {};
+
+    // Text search
+    if (search) {
+      const s = search as string;
+      query.$or = [
+        { orderNumber: { $regex: s, $options: 'i' } },
+        { customerName: { $regex: s, $options: 'i' } },
+        { notes: { $regex: s, $options: 'i' } },
+      ];
+    }
+
+    // Status filter
+    if (status) {
+      query.status = status;
+    }
+
+    // Customer filter
+    if (customerId) {
+      query.customer = customerId;
+    }
+
+    // Warehouse filter
+    if (warehouseId) {
+      query.warehouse = warehouseId;
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.orderDate = {};
+      if (startDate) {
+        query.orderDate.$gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        query.orderDate.$lte = end;
+      }
+    }
+
+    // Payment status filter
+    if (paymentStatus === 'paid') {
+      query.$expr = { $gte: ['$paidAmount', '$totalAmount'] };
+    } else if (paymentStatus === 'partlyPaid') {
+      query.paidAmount = { $gt: 0 };
+      query.$expr = { $lt: ['$paidAmount', '$totalAmount'] };
+    } else if (paymentStatus === 'unpaid') {
+      query.paidAmount = 0;
+    }
+
+    // Shipment status filter
+    if (shipmentStatus === 'shipped') {
+      query.$expr = { $gte: ['$shippedAmount', '$totalAmount'] };
+    } else if (shipmentStatus === 'partiallyShipped') {
+      query.shippedAmount = { $gt: 0 };
+      query.$expr = { $lt: ['$shippedAmount', '$totalAmount'] };
+    } else if (shipmentStatus === 'unshipped') {
+      query.shippedAmount = 0;
+    }
+
+    const pageNum = Math.max(1, parseInt(page as string));
+    const limit = Math.min(100, Math.max(1, parseInt(pageSize as string)));
+    const skip = (pageNum - 1) * limit;
+
+    const sort: any = {};
+    sort[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
+
+    const [orders, total] = await Promise.all([
+      CustomerOrder.find(query)
+        .populate('customer')
+        .populate('items.product')
+        .sort(sort)
+        .skip(skip)
+        .limit(limit),
+      CustomerOrder.countDocuments(query),
+    ]);
+
+    res.json({
+      data: orders,
+      total,
+      page: pageNum,
+      pageSize: limit,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }
@@ -43,10 +137,14 @@ router.post('/', async (req: Request, res: Response) => {
     // Generate unique order number
     const orderNumber = await generateDocNumber('CO');
 
+    // Map legacy status 'pending' to 'new'
+    const status = req.body.status === 'pending' ? 'new' : (req.body.status || 'new');
+
     // Create order without inventory validation
     const order = new CustomerOrder({
       ...req.body,
       orderNumber,
+      status,
     });
 
     await order.save();
@@ -56,8 +154,9 @@ router.post('/', async (req: Request, res: Response) => {
     // Auto-create CustomerInvoice + Shipment if registered customer AND warehouse selected
     const isRegisteredCustomer = req.body.customer && req.body.customer !== 'regular';
     const hasWarehouse = req.body.warehouse;
+    const hasItems = Array.isArray(req.body.items) && req.body.items.length > 0;
 
-    if (isRegisteredCustomer && hasWarehouse) {
+    if (isRegisteredCustomer && hasWarehouse && hasItems) {
       try {
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -88,7 +187,7 @@ router.post('/', async (req: Request, res: Response) => {
               quantity: item.quantity,
               sellingPrice: item.price,
               costPrice,
-              discount: 0,
+              discount: item.discount || 0,
               discountAmount: 0,
               total: item.total,
               warehouse: req.body.warehouse,
@@ -123,6 +222,10 @@ router.post('/', async (req: Request, res: Response) => {
           });
 
           await invoice.save({ session });
+
+          // Update order invoicedSum
+          order.invoicedSum = totalAmount;
+          await order.save({ session });
 
           // Deduct inventory (global + warehouse-specific)
           for (const item of invoiceItems) {
@@ -182,12 +285,12 @@ router.post('/', async (req: Request, res: Response) => {
 
           await session.commitTransaction();
           session.endSession();
-        } catch (autoErr) {
+        } catch (autoErr: any) {
           await session.abortTransaction();
           session.endSession();
-          // Non-blocking: order is already saved, log error but don't fail
           console.error('Auto-creation failed (invoice/shipment):', autoErr);
-          response.autoCreationError = 'Avtomatik hisob-faktura/yuborish yaratishda xatolik';
+          response.autoCreationError = autoErr?.message || 'Avtomatik hisob-faktura/yuborish yaratishda xatolik';
+          response.autoCreationDetails = String(autoErr);
         }
       } catch (sessionErr) {
         console.error('Session creation failed:', sessionErr);
@@ -293,7 +396,7 @@ router.patch('/:id/reserve', async (req: Request, res: Response) => {
       if (!product) {
         throw new Error(`Product not found`);
       }
-      
+
       const available = product.quantity - product.reserved;
       if (available < item.quantity) {
         warnings.push(`${item.productName}: Mavjud ${available}, So'ralgan ${item.quantity}`);
@@ -308,16 +411,16 @@ router.patch('/:id/reserve', async (req: Request, res: Response) => {
 
     order.reserved = true;
     order.status = 'confirmed';
+    order.reservedSum = order.totalAmount;
     await order.save({ session });
 
     await session.commitTransaction();
-    
-    // Return order with warnings if any
+
     const response: any = { order };
     if (warnings.length > 0) {
       response.warnings = warnings;
     }
-    
+
     res.json(response);
   } catch (error: any) {
     await session.abortTransaction();
@@ -351,7 +454,8 @@ router.patch('/:id/unreserve', async (req: Request, res: Response) => {
     }
 
     order.reserved = false;
-    order.status = 'pending';
+    order.status = 'new';
+    order.reservedSum = 0;
     await order.save({ session });
 
     await session.commitTransaction();

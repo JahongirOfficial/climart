@@ -20,6 +20,7 @@ import {
   Edit, Trash2, Check, Printer
 } from "lucide-react";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useWarehouseReceipts } from "@/hooks/useWarehouseReceipts";
 import { WarehouseReceiptModal } from "@/components/WarehouseReceiptModal";
 import { WarehouseReceipt } from "@shared/api";
@@ -30,6 +31,7 @@ const Receipt = () => {
   const { receipts, loading, refetch, confirmReceipt, deleteReceipt } = useWarehouseReceipts();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<WarehouseReceipt | undefined>();
@@ -41,9 +43,9 @@ const Receipt = () => {
   const [receiptToConfirm, setReceiptToConfirm] = useState<{ id: string; number: string } | null>(null);
 
   const filteredReceipts = receipts.filter(r => {
-    const matchesSearch = 
-      r.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.warehouseName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      r.receiptNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      r.warehouseName.toLowerCase().includes(debouncedSearch.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || r.status === statusFilter;
     

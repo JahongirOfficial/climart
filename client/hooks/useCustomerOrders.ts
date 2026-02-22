@@ -1,13 +1,44 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { CustomerOrder } from '@shared/api';
+import { CustomerOrder, PaginatedResponse } from '@shared/api';
 import { api } from '@/lib/api';
+import { buildQueryString } from '@/lib/format';
 
-export const useCustomerOrders = () => {
+export interface CustomerOrderFilters {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+  customerId?: string;
+  warehouseId?: string;
+  startDate?: string;
+  endDate?: string;
+  paymentStatus?: string;
+  shipmentStatus?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+export const useCustomerOrders = (filters: CustomerOrderFilters = {}) => {
   const queryClient = useQueryClient();
 
-  const { data: orders = [], isLoading: loading, error, refetch } = useQuery<CustomerOrder[]>({
-    queryKey: ['customer-orders'],
-    queryFn: () => api.get<CustomerOrder[]>('/api/customer-orders'),
+  const queryString = buildQueryString({
+    page: filters.page || 1,
+    pageSize: filters.pageSize || 25,
+    search: filters.search,
+    status: filters.status,
+    customerId: filters.customerId,
+    warehouseId: filters.warehouseId,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    paymentStatus: filters.paymentStatus,
+    shipmentStatus: filters.shipmentStatus,
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder,
+  });
+
+  const { data, isLoading: loading, error, refetch } = useQuery<PaginatedResponse<CustomerOrder>>({
+    queryKey: ['customer-orders', filters],
+    queryFn: () => api.get<PaginatedResponse<CustomerOrder>>(`/api/customer-orders${queryString}`),
     placeholderData: keepPreviousData,
   });
 
@@ -45,7 +76,11 @@ export const useCustomerOrders = () => {
   });
 
   return {
-    orders,
+    orders: data?.data || [],
+    total: data?.total || 0,
+    page: data?.page || 1,
+    pageSize: data?.pageSize || 25,
+    totalPages: data?.totalPages || 1,
     loading,
     error: error instanceof Error ? error.message : null,
     refetch,

@@ -15,6 +15,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useModal } from "@/contexts/ModalContext";
 import { useProcurement } from "@/hooks/useProcurement";
 
@@ -22,6 +23,7 @@ const Procurement = () => {
   const { products, loading, error, createOrdersForProducts } = useProcurement();
   const { showSuccess, showError } = useModal();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [forecastDays] = useState(14);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [creatingOrders, setCreatingOrders] = useState(false);
@@ -55,9 +57,9 @@ const Procurement = () => {
   };
 
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.supplier.toLowerCase().includes(searchTerm.toLowerCase())
+    product.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    product.sku?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    product.supplier.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const criticalProducts = products.filter(p => p.status === 'critical');

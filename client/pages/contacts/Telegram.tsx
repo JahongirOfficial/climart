@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { useModal } from "@/contexts/ModalContext";
 import { useTelegram } from "@/hooks/useTelegram";
 import { formatPhoneNumber } from "@/lib/phoneUtils";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Chat {
   id: string;
@@ -61,6 +62,7 @@ const Telegram = () => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [showChatList, setShowChatList] = useState(true); // Mobile uchun
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [messageText, setMessageText] = useState('');
   const [chats, setChats] = useState<Chat[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -261,7 +263,7 @@ const Telegram = () => {
   };
 
   const filteredChats = chats.filter(chat =>
-    chat.name.toLowerCase().includes(searchTerm.toLowerCase())
+    chat.name.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const getMessageStatusIcon = (status: Message['status']) => {

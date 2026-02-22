@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 export interface TurnoverItem {
     _id: string;
@@ -52,9 +53,7 @@ export const useTurnover = (filters: {
             if (filters.category && filters.category !== 'all') params.append('category', filters.category);
             if (filters.showInactive) params.append('showInactive', 'true');
 
-            const response = await fetch(`/api/turnover?${params.toString()}`);
-            if (!response.ok) throw new Error('Failed to fetch turnover');
-            return response.json();
+            return api.get<TurnoverData>(`/api/turnover?${params.toString()}`);
         },
         staleTime: 1000 * 60 * 10, // 10 minutes cache
     });

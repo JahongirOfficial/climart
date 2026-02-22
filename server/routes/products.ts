@@ -46,7 +46,7 @@ router.get('/', async (req: Request, res: Response) => {
     const productsWithForecast = products.map((product: any) => {
       const totalSold = salesMap.get(product._id.toString()) || 0;
       const dailyAverage = totalSold / 7;
-      const daysRemaining = dailyAverage > 0 ? Math.max(0, product.quantity / dailyAverage) : Infinity;
+      const daysRemaining = dailyAverage > 0 ? Math.max(0, product.quantity / dailyAverage) : 99999;
 
       return {
         ...product,

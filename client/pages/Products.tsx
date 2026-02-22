@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Grid3x3, List, Edit2, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 // Sample products data
 const productsData = [
@@ -71,15 +72,16 @@ const getStockStatus = (stock: number) => {
 const Products = () => {
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [selectedCategory, setSelectedCategory] = useState("");
 
   const categories = Array.from(new Set(productsData.map((p) => p.category)));
 
   const filteredData = productsData.filter((product) => {
     const matchesSearch =
-      !searchTerm ||
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+      !debouncedSearch ||
+      product.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      product.sku.toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchesCategory =
       !selectedCategory || product.category === selectedCategory;
     return matchesSearch && matchesCategory;

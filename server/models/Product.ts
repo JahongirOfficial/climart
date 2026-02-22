@@ -22,6 +22,7 @@ export interface IProduct extends Document {
   sku?: string;
   barcode?: string;
   category?: string;
+  brand?: string;
   unit: string;
   unitType: UnitType;
   weight?: number;
@@ -134,6 +135,10 @@ const ProductSchema: Schema = new Schema(
       type: String,
       trim: true,
     },
+    brand: {
+      type: String,
+      trim: true,
+    },
     unit: {
       type: String,
       required: true,
@@ -222,6 +227,7 @@ ProductSchema.index({ name: 1 });
 ProductSchema.index({ sku: 1 }, { unique: true, sparse: true });
 ProductSchema.index({ barcode: 1 }, { sparse: true });
 ProductSchema.index({ category: 1 });
+ProductSchema.index({ brand: 1 });
 ProductSchema.index({ status: 1 });
 ProductSchema.index({ createdAt: -1 }); // For sorting by creation date
 ProductSchema.index({ name: 'text', sku: 'text', barcode: 'text' }); // Text search index

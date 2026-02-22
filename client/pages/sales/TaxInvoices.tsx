@@ -7,6 +7,7 @@ import {
   Search, Plus, Trash2, Loader2, FileText, DollarSign, Send, Printer, CheckCircle, XCircle
 } from "lucide-react";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useTaxInvoices } from "@/hooks/useTaxInvoices";
 import { TaxInvoiceModal } from "@/components/TaxInvoiceModal";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +17,7 @@ const TaxInvoices = () => {
   const { invoices, loading, error, refetch, createInvoice, updateStatus, deleteInvoice } = useTaxInvoices();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -41,13 +43,13 @@ const TaxInvoices = () => {
   };
 
   const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = 
-      inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inv.shipmentNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const matchesSearch =
+      inv.invoiceNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      inv.customerName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      inv.shipmentNumber.toLowerCase().includes(debouncedSearch.toLowerCase());
+
     const matchesStatus = statusFilter === "all" || inv.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 

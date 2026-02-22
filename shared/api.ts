@@ -136,6 +136,20 @@ export interface Contract {
 }
 
 // Customer Order types
+export type CustomerOrderStatus = 'new' | 'confirmed' | 'assembled' | 'shipped' | 'delivered' | 'returned' | 'cancelled';
+
+export interface CustomerOrderItem {
+  product: string | PopulatedRef;
+  productName: string;
+  quantity: number;
+  price: number;
+  discount: number;
+  vat: number;
+  total: number;
+  shipped: number;
+  reserved: number;
+}
+
 export interface CustomerOrder {
   _id: string;
   orderNumber: string;
@@ -143,23 +157,34 @@ export interface CustomerOrder {
   customerName: string;
   orderDate: string;
   deliveryDate: string;
-  status: 'pending' | 'confirmed' | 'shipped' | 'fulfilled' | 'cancelled';
-  items: Array<{
-    product: string | PopulatedRef;
-    productName: string;
-    quantity: number;
-    price: number;
-    total: number;
-  }>;
+  status: CustomerOrderStatus;
+  items: CustomerOrderItem[];
   totalAmount: number;
   paidAmount: number;
   shippedAmount: number;
+  invoicedSum: number;
+  reservedSum: number;
+  vatEnabled: boolean;
+  vatIncluded: boolean;
+  vatSum: number;
   warehouse?: string | PopulatedRef;
   warehouseName?: string;
   reserved: boolean;
+  assignedWorker?: string | PopulatedRef;
+  assignedWorkerName?: string;
+  salesChannel?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Paginated response wrapper
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 // Purchase Order types
@@ -313,6 +338,7 @@ export interface Product {
   sku?: string;
   barcode?: string;
   category?: string;
+  brand?: string;
   unit: string;
   unitType: 'count' | 'uncount';
   weight?: number;

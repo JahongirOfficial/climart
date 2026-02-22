@@ -16,6 +16,7 @@ import {
   Package
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { ExportButton } from "@/components/ExportButton";
 import { useCustomerInvoices } from "@/hooks/useCustomerInvoices";
 import { format, subMonths, isToday, isWithinInterval, startOfWeek, endOfWeek } from "date-fns";
@@ -36,6 +37,7 @@ const getPaymentStatusColor = (status: "unpaid" | "partial" | "paid" | "cancelle
 
 const Sales = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [dateFilter, setDateFilter] = useState({
     startDate: format(subMonths(new Date(), 1), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd')
@@ -63,10 +65,10 @@ const Sales = () => {
   const filteredData = useMemo(() => {
     return invoices.filter(
       (sale) =>
-        sale.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sale.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+        sale.invoiceNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        sale.customerName.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
-  }, [invoices, searchTerm]);
+  }, [invoices, debouncedSearch]);
 
   return (
     <Layout>

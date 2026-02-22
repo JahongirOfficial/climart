@@ -29,6 +29,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useState, useMemo, memo, useCallback } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { usePayments } from "@/hooks/usePayments";
 import { api } from "@/lib/api";
 import { usePartners } from "@/hooks/usePartners";
@@ -134,6 +135,7 @@ const Payments = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [partnerFilter, setPartnerFilter] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -152,10 +154,10 @@ const Payments = () => {
   const filteredPayments = useMemo(() => {
     return payments.filter(payment => {
       // Search filter
-      const matchesSearch = searchTerm === "" || 
-        payment.paymentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        payment.partnerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        payment.purpose.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = debouncedSearch === "" ||
+        payment.paymentNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        payment.partnerName?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        payment.purpose.toLowerCase().includes(debouncedSearch.toLowerCase());
 
       // Type filter
       const matchesType = typeFilter === "all" || payment.type === typeFilter;
@@ -171,7 +173,7 @@ const Payments = () => {
 
       return matchesSearch && matchesType && matchesAccount && matchesStatus && matchesPartner;
     });
-  }, [payments, searchTerm, typeFilter, accountFilter, statusFilter, partnerFilter]);
+  }, [payments, debouncedSearch, typeFilter, accountFilter, statusFilter, partnerFilter]);
 
   const handleDelete = useCallback(async () => {
     if (!selectedPayment) return;

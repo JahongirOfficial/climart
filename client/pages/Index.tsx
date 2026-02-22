@@ -1,5 +1,6 @@
 import { DemoResponse } from "@shared/api";
 import { useEffect, useState } from "react";
+import { api } from '@/lib/api';
 
 export default function Index() {
   const [exampleFromServer, setExampleFromServer] = useState("");
@@ -11,8 +12,7 @@ export default function Index() {
   // Example of how to fetch data from the server (if needed)
   const fetchDemo = async () => {
     try {
-      const response = await fetch("/api/demo");
-      const data = (await response.json()) as DemoResponse;
+      const data = await api.get<DemoResponse>("/api/demo");
       setExampleFromServer(data.message);
     } catch (error) {
       console.error("Error fetching hello:", error);

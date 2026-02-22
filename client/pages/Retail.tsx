@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Minus, X, CreditCard, QrCode, DollarSign, Search, ShoppingCart, Package } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useProducts } from "@/hooks/useProducts";
 import { Product } from "@shared/api";
 
@@ -25,17 +26,18 @@ const Retail = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "qr">("cash");
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
 
   const filteredProducts = useMemo(() => {
-    if (!searchTerm) return products;
-    const term = searchTerm.toLowerCase();
+    if (!debouncedSearch) return products;
+    const term = debouncedSearch.toLowerCase();
     return products.filter(
       (p) =>
         p.name.toLowerCase().includes(term) ||
         (p.sku && p.sku.toLowerCase().includes(term)) ||
         (p.barcode && p.barcode.toLowerCase().includes(term))
     );
-  }, [products, searchTerm]);
+  }, [products, debouncedSearch]);
 
   const addToCart = (product: Product) => {
     const existingItem = cart.find((item) => item._id === product._id);

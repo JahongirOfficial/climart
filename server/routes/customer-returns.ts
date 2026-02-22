@@ -10,17 +10,63 @@ import { generateDocNumber } from '../utils/documentNumber';
 
 const router = Router();
 
-// Get all customer returns
+// Get all customer returns with filters and pagination
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const returns = await CustomerReturn.find()
-      .populate('customer')
-      .populate('invoice')
-      .populate('shipment')
-      .populate('customerOrder')
-      .populate('items.product')
-      .sort({ createdAt: -1 });
-    res.json(returns);
+    const {
+      startDate, endDate, search, status, customerId, reason,
+      page = '1', pageSize = '25',
+    } = req.query;
+    const query: any = {};
+
+    if (startDate || endDate) {
+      query.returnDate = {};
+      if (startDate) query.returnDate.$gte = new Date(startDate as string);
+      if (endDate) {
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        query.returnDate.$lte = end;
+      }
+    }
+
+    if (search) {
+      const s = search as string;
+      query.$or = [
+        { returnNumber: { $regex: s, $options: 'i' } },
+        { customerName: { $regex: s, $options: 'i' } },
+        { invoiceNumber: { $regex: s, $options: 'i' } },
+      ];
+    }
+
+    if (status && status !== 'all') query.status = status;
+    if (customerId) query.customer = customerId;
+    if (reason && reason !== 'all') query.reason = reason;
+
+    const pageNum = Math.max(1, parseInt(page as string));
+    const limit = Math.min(100, Math.max(1, parseInt(pageSize as string)));
+    const skip = (pageNum - 1) * limit;
+
+    const [returns, total] = await Promise.all([
+      CustomerReturn.find(query)
+        .populate('customer', 'name phone')
+        .populate('invoice', 'invoiceNumber')
+        .populate('shipment', 'shipmentNumber')
+        .populate('customerOrder', 'orderNumber')
+        .populate('items.product', 'name sku unit')
+        .sort({ returnDate: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      CustomerReturn.countDocuments(query),
+    ]);
+
+    res.json({
+      data: returns,
+      total,
+      page: pageNum,
+      pageSize: limit,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }

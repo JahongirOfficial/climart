@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ProfitReportResponse } from '@shared/api';
+import { api } from '@/lib/api';
 
 interface UseProfitReportParams {
   startDate: string;
@@ -16,13 +17,11 @@ export const useProfitReport = (params: UseProfitReportParams) => {
         startDate: params.startDate,
         endDate: params.endDate,
       });
-      
+
       if (params.customerId) searchParams.append('customerId', params.customerId);
       if (params.productId) searchParams.append('productId', params.productId);
-      
-      const response = await fetch(`/api/reports/profit?${searchParams.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch profit report');
-      return response.json();
+
+      return api.get<ProfitReportResponse>(`/api/reports/profit?${searchParams.toString()}`);
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: !!params.startDate && !!params.endDate, // Only fetch if dates are provided

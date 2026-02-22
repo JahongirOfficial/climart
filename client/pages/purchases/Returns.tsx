@@ -15,6 +15,7 @@ import {
   Trash2
 } from "lucide-react";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useModal } from "@/contexts/ModalContext";
 import { useSupplierReturns } from "../../hooks/useSupplierReturns";
 import { SupplierReturnModal } from "@/components/SupplierReturnModal";
@@ -27,6 +28,7 @@ const Returns = () => {
   const { returns, loading, error, refetch, createReturn, deleteReturn } = useSupplierReturns();
   const { showSuccess, showError } = useModal();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [deletingReturn, setDeletingReturn] = useState<string | null>(null);
@@ -88,9 +90,9 @@ const Returns = () => {
 
   const filteredReturns = returns.filter(ret =>
     (ret.supplierName || (typeof ret.supplier === 'string' ? ret.supplier : ret.supplier?.name) || '')
-      .toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ret.returnNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ret.receiptNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+      .toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    ret.returnNumber?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    ret.receiptNumber?.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   // Calculate totals

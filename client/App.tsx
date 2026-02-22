@@ -55,6 +55,8 @@ const CustomerDebts = lazy(() => import("./pages/sales/CustomerDebts"));
 const SalesReturns = lazy(() => import("./pages/sales/Returns"));
 const ReturnsReport = lazy(() => import("./pages/sales/ReturnsReport"));
 const Profitability = lazy(() => import("./pages/sales/Profitability"));
+const SalesFunnel = lazy(() => import("./pages/sales/SalesFunnel"));
+const UnitEconomics = lazy(() => import("./pages/sales/UnitEconomics"));
 
 // Product pages
 const ProductsList = lazy(() => import("./pages/products/ProductsList"));
@@ -175,6 +177,8 @@ const App = () => (
                 <Route path="/sales/returns" element={<ProtectedRoute><SalesReturns /></ProtectedRoute>} />
                 <Route path="/sales/returns-report" element={<ProtectedRoute><ReturnsReport /></ProtectedRoute>} />
                 <Route path="/sales/profitability" element={<ProtectedRoute><Profitability /></ProtectedRoute>} />
+                <Route path="/sales/sales-funnel" element={<ProtectedRoute><SalesFunnel /></ProtectedRoute>} />
+                <Route path="/sales/unit-economics" element={<ProtectedRoute><UnitEconomics /></ProtectedRoute>} />
                 <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
                 <Route path="/products/list" element={<ProtectedRoute><ProductsList /></ProtectedRoute>} />
                 <Route path="/products/history/:id" element={<ProtectedRoute><ProductHistory /></ProtectedRoute>} />

@@ -14,24 +14,34 @@ export const formatDateTime = (dateString: string): string => {
   return new Date(dateString).toLocaleString('uz-UZ');
 };
 
-// ==================== ORDER STATUS ====================
+// ==================== ORDER STATUS (7 statuses - MoySklad style) ====================
 export const orderStatusColors: Record<string, string> = {
-  'pending': 'bg-yellow-100 text-yellow-800',
-  'confirmed': 'bg-blue-100 text-blue-800',
-  'shipped': 'bg-purple-100 text-purple-800',
-  'fulfilled': 'bg-green-100 text-green-800',
-  'cancelled': 'bg-red-100 text-red-800',
+  'new': 'bg-[#4CAF50] text-white',
+  'confirmed': 'bg-[#2196F3] text-white',
+  'assembled': 'bg-[#FF9800] text-white',
+  'shipped': 'bg-[#9C27B0] text-white',
+  'delivered': 'bg-[#00BCD4] text-white',
+  'returned': 'bg-[#F44336] text-white',
+  'cancelled': 'bg-[#9E9E9E] text-white',
+  // Legacy mappings
+  'pending': 'bg-[#4CAF50] text-white',
+  'fulfilled': 'bg-[#00BCD4] text-white',
 };
 
 export const orderStatusLabels: Record<string, string> = {
-  'pending': "Kutilmoqda",
-  'confirmed': "Tasdiqlandi",
-  'shipped': "Jo'natildi",
-  'fulfilled': "Bajarildi",
-  'cancelled': "Bekor qilindi",
+  'new': "Yangi",
+  'confirmed': "Tasdiqlangan",
+  'assembled': "Yig'ilgan",
+  'shipped': "Yuborilgan",
+  'delivered': "Yetkazilgan",
+  'returned': "Qaytarilgan",
+  'cancelled': "Bekor qilingan",
+  // Legacy mappings
+  'pending': "Yangi",
+  'fulfilled': "Yetkazilgan",
 };
 
-export const getOrderStatusColor = (status: string) => orderStatusColors[status] || orderStatusColors['pending'];
+export const getOrderStatusColor = (status: string) => orderStatusColors[status] || orderStatusColors['new'];
 export const getOrderStatusLabel = (status: string) => orderStatusLabels[status] || status;
 
 // ==================== INVOICE STATUS ====================

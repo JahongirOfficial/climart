@@ -11,11 +11,11 @@ import {
   ArrowDownRight,
   XCircle
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDashboard, DashboardPeriod } from "@/hooks/useDashboard";
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
+import { api } from '@/lib/api';
 
 const Indicators = () => {
   const [period, setPeriod] = useState<DashboardPeriod>("this_month");
@@ -25,20 +25,12 @@ const Indicators = () => {
   useEffect(() => {
     // Prefetch all periods for instant switching
     const periods: DashboardPeriod[] = ['today', 'this_week', 'this_month', 'this_year'];
-    const token = localStorage.getItem('auth_token');
-    
+
     periods.forEach(p => {
       if (p !== period) {
         queryClient.prefetchQuery({
           queryKey: ['dashboard-stats', p],
-          queryFn: async () => {
-            const response = await fetch(`/api/dashboard/stats?period=${p}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-              },
-            });
-            return response.json();
-          },
+          queryFn: () => api.get(`/api/dashboard/stats?period=${p}`),
           staleTime: 1000 * 60 * 5,
         });
       }

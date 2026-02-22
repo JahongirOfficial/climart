@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 interface WarehouseExpense {
   _id: string;
@@ -26,9 +27,7 @@ export const useWarehouseExpense = () => {
   const { data: expenses = [], isLoading: loading, error, refetch } = useQuery<WarehouseExpense[]>({
     queryKey: ['warehouse-expense'],
     queryFn: async () => {
-      const response = await fetch('/api/warehouse-expense');
-      if (!response.ok) throw new Error('Failed to fetch expenses');
-      return response.json();
+      return api.get<WarehouseExpense[]>('/api/warehouse-expense');
     },
     placeholderData: keepPreviousData,
   });
@@ -36,9 +35,7 @@ export const useWarehouseExpense = () => {
   const { data: summary } = useQuery<ExpenseSummary>({
     queryKey: ['warehouse-expense-summary'],
     queryFn: async () => {
-      const response = await fetch('/api/warehouse-expense/summary');
-      if (!response.ok) throw new Error('Failed to fetch summary');
-      return response.json();
+      return api.get<ExpenseSummary>('/api/warehouse-expense/summary');
     },
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
@@ -46,13 +43,7 @@ export const useWarehouseExpense = () => {
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<WarehouseExpense>) => {
-      const response = await fetch('/api/warehouse-expense', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to create expense');
-      return response.json();
+      return api.post('/api/warehouse-expense', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warehouse-expense'] });
@@ -62,8 +53,7 @@ export const useWarehouseExpense = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/warehouse-expense/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete expense');
+      await api.delete(`/api/warehouse-expense/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warehouse-expense'] });

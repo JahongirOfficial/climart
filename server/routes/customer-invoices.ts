@@ -143,11 +143,14 @@ router.get('/corrected', async (req: Request, res: Response) => {
   }
 });
 
-// Get all customer invoices with optional date filtering
+// Get all customer invoices with filters and pagination
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate } = req.query;
-    let query: any = {};
+    const {
+      startDate, endDate, search, status, customerId, warehouseId, shippedStatus,
+      page = '1', pageSize = '25',
+    } = req.query;
+    const query: any = {};
 
     if (startDate || endDate) {
       query.invoiceDate = {};
@@ -159,13 +162,50 @@ router.get('/', async (req: Request, res: Response) => {
       }
     }
 
-    const invoices = await CustomerInvoice.find(query)
-      .populate('customer', 'name phone')
-      .populate('warehouse', 'name')
-      .populate('items.product', 'name sku unit')
-      .sort({ invoiceDate: -1, createdAt: -1 })
-      .lean();
-    res.json(invoices);
+    if (search) {
+      const s = search as string;
+      query.$or = [
+        { invoiceNumber: { $regex: s, $options: 'i' } },
+        { customerName: { $regex: s, $options: 'i' } },
+      ];
+    }
+
+    if (status && status !== 'all') {
+      if (status === 'overdue') {
+        query.status = { $ne: 'paid' };
+        query.dueDate = { $lt: new Date() };
+      } else {
+        query.status = status;
+      }
+    }
+
+    if (customerId) query.customer = customerId;
+    if (warehouseId) query.warehouse = warehouseId;
+    if (shippedStatus) query.shippedStatus = shippedStatus;
+
+    const pageNum = Math.max(1, parseInt(page as string));
+    const limit = Math.min(100, Math.max(1, parseInt(pageSize as string)));
+    const skip = (pageNum - 1) * limit;
+
+    const [invoices, total] = await Promise.all([
+      CustomerInvoice.find(query)
+        .populate('customer', 'name phone')
+        .populate('warehouse', 'name')
+        .populate('items.product', 'name sku unit')
+        .sort({ invoiceDate: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      CustomerInvoice.countDocuments(query),
+    ]);
+
+    res.json({
+      data: invoices,
+      total,
+      page: pageNum,
+      pageSize: limit,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }

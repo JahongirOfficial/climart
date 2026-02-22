@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Product } from '@shared/api';
+import { api } from '@/lib/api';
 
 interface ProcurementProduct extends Omit<Product, 'status'> {
   dailyAverageSales: number;
@@ -19,10 +20,8 @@ export const useProcurement = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/products');
-      if (!response.ok) throw new Error('Failed to fetch products');
-      const data: Product[] = await response.json();
-      
+      const data = await api.get<Product[]>('/api/products');
+
       // Generate procurement analysis from products
       const analysisData: ProcurementProduct[] = data.map((product: Product) => {
         // Simulate sales data (in real app, this would come from sales history)
@@ -32,7 +31,7 @@ export const useProcurement = () => {
         const predictedNeed = dailyAverageSales * forecastDays;
         const deficit = product.quantity - predictedNeed;
         const needToOrder = deficit < 0 ? Math.abs(deficit) : 0;
-        
+
         let status: 'critical' | 'warning' | 'ok' = 'ok';
         if (product.quantity < (product.minQuantity || 10) && needToOrder > 0) {
           status = 'critical';
@@ -51,7 +50,7 @@ export const useProcurement = () => {
           status
         };
       });
-      
+
       setProducts(analysisData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -63,7 +62,7 @@ export const useProcurement = () => {
   const createOrdersForProducts = async (productIds: string[]) => {
     try {
       const selectedProducts = products.filter(p => productIds.includes(p._id));
-      
+
       // Group products by supplier
       const ordersBySupplier: Record<string, any[]> = {};
       selectedProducts.forEach(product => {
@@ -79,16 +78,15 @@ export const useProcurement = () => {
       });
 
       let ordersCreated = 0;
-      
+
       // Create orders for each supplier
       for (const [supplierName, items] of Object.entries(ordersBySupplier)) {
         // Find supplier by name (in real app, you'd have proper supplier mapping)
-        const suppliersResponse = await fetch('/api/suppliers');
-        const suppliers = await suppliersResponse.json();
+        const suppliers = await api.get<any[]>('/api/suppliers');
         const supplier = suppliers.find((s: any) => s.name === supplierName) || suppliers[0];
-        
+
         const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
-        
+
         const orderData = {
           supplier: supplier._id,
           supplierName: supplier.name,
@@ -97,22 +95,17 @@ export const useProcurement = () => {
           notes: 'Avtomatik yaratilgan buyurtma (Procurement tahlili asosida)'
         };
 
-        const response = await fetch('/api/purchase-orders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(orderData),
-        });
-
-        if (response.ok) {
+        try {
+          await api.post('/api/purchase-orders', orderData);
           ordersCreated++;
+        } catch {
+          // Skip failed orders, continue with others
         }
       }
 
       // Refresh products after creating orders
       await fetchProducts();
-      
+
       return { ordersCreated };
     } catch (err) {
       throw err;

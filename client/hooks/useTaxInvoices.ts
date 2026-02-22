@@ -49,7 +49,7 @@ export const useTaxInvoices = () => {
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      api.put(`/api/tax-invoices/${id}/status`, { status }),
+      api.patch(`/api/tax-invoices/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tax-invoices'] });
     },

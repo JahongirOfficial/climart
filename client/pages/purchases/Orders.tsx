@@ -27,6 +27,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useModal } from "@/contexts/ModalContext";
 import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
 import { PurchaseOrderModal } from "@/components/PurchaseOrderModal";
@@ -35,6 +36,7 @@ import { CreatePaymentModal } from "@/components/CreatePaymentModal";
 import { ReceiveOrderModal } from "@/components/ReceiveOrderModal";
 import { PurchaseOrder } from "@shared/api";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { api } from '@/lib/api';
 
 const Orders = () => {
   const { orders, loading, error, refetch, receiveOrder, deleteOrder, createOrder, updateOrder } = usePurchaseOrders();
@@ -44,6 +46,7 @@ const Orders = () => {
   const [editingOrder, setEditingOrder] = useState<PurchaseOrder | null>(null);
   const [viewingOrder, setViewingOrder] = useState<PurchaseOrder | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [statusFilter, setStatusFilter] = useState("");
   const [receivingOrder, setReceivingOrder] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -92,18 +95,9 @@ const Orders = () => {
 
     try {
       setReceivingOrder(orderToReceive._id);
-      
-      // Call API to receive order with warehouse distributions
-      const response = await fetch(`/api/purchase-orders/${orderToReceive._id}/receive`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ distributions }),
-      });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Buyurtmani qabul qilishda xatolik');
-      }
+      // Call API to receive order with warehouse distributions
+      await api.post(`/api/purchase-orders/${orderToReceive._id}/receive`, { distributions });
 
       showSuccess('Buyurtma muvaffaqiyatli qabul qilindi!');
       setShowReceiveModal(false);
@@ -175,16 +169,7 @@ const Orders = () => {
       };
 
       // To'lovni API ga yuborish
-      const response = await fetch('/api/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paymentWithLink),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'To\'lov yaratishda xatolik');
-      }
+      await api.post('/api/payments', paymentWithLink);
 
       setShowPaymentModal(false);
       setPaymentOrder(null);
@@ -198,8 +183,8 @@ const Orders = () => {
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch =
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.supplierName.toLowerCase().includes(searchTerm.toLowerCase());
+      order.orderNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      order.supplierName.toLowerCase().includes(debouncedSearch.toLowerCase());
 
     const matchesStatus = !statusFilter || order.status === statusFilter;
 

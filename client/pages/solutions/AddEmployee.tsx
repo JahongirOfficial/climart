@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { api } from '@/lib/api';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,18 +92,7 @@ const AddEmployee = () => {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: typeof form) => {
-      const res = await fetch("/api/employees", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Xodim yaratib bo'lmadi");
-      }
-      return res.json();
-    },
+    mutationFn: (data: typeof form) => api.post<{ employee: { username: string }; password: string }>("/api/employees", data),
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

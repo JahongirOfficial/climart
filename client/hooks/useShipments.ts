@@ -1,13 +1,36 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { Shipment } from '@shared/api';
+import { Shipment, PaginatedResponse } from '@shared/api';
 import { api } from '@/lib/api';
+import { buildQueryString } from '@/lib/format';
 
-export const useShipments = () => {
+export interface ShipmentFilters {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+  customerId?: string;
+  warehouseId?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export const useShipments = (filters: ShipmentFilters = {}) => {
   const queryClient = useQueryClient();
 
-  const { data: shipments = [], isLoading: loading, error, refetch } = useQuery<Shipment[]>({
-    queryKey: ['shipments'],
-    queryFn: () => api.get<Shipment[]>('/api/shipments'),
+  const queryString = buildQueryString({
+    page: filters.page || 1,
+    pageSize: filters.pageSize || 25,
+    search: filters.search,
+    status: filters.status,
+    customerId: filters.customerId,
+    warehouseId: filters.warehouseId,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+  });
+
+  const { data, isLoading: loading, error, refetch } = useQuery<PaginatedResponse<Shipment>>({
+    queryKey: ['shipments', filters],
+    queryFn: () => api.get<PaginatedResponse<Shipment>>(`/api/shipments${queryString}`),
     placeholderData: keepPreviousData,
   });
 
@@ -45,7 +68,11 @@ export const useShipments = () => {
   });
 
   return {
-    shipments,
+    shipments: data?.data || [],
+    total: data?.total || 0,
+    page: data?.page || 1,
+    pageSize: data?.pageSize || 25,
+    totalPages: data?.totalPages || 1,
     loading,
     error: error instanceof Error ? error.message : null,
     refetch,

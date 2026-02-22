@@ -10,6 +10,7 @@ import { CalendarIcon, Loader2, Users, TrendingUp, TrendingDown, FileText } from
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { api } from '@/lib/api';
 
 interface Settlement {
   partner: {
@@ -58,10 +59,8 @@ const MutualSettlements = () => {
       params.append('startDate', startDate.toISOString());
       params.append('endDate', endDate.toISOString());
       if (partnerType !== 'all') params.append('partnerType', partnerType);
-      
-      const response = await fetch(`/api/mutual-settlements?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch settlements');
-      const data = await response.json();
+
+      const data = await api.get<{ settlements: Settlement[]; totals: Totals }>(`/api/mutual-settlements?${params}`);
       setSettlements(data.settlements);
       setTotals(data.totals);
     } catch (error) {

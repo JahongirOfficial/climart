@@ -1,14 +1,38 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { CustomerInvoice } from '@shared/api';
+import { CustomerInvoice, PaginatedResponse } from '@shared/api';
 import { api } from '@/lib/api';
 import { buildQueryString } from '@/lib/format';
 
-export const useCustomerInvoices = (filters?: { startDate?: string; endDate?: string }) => {
+export interface CustomerInvoiceFilters {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+  customerId?: string;
+  warehouseId?: string;
+  shippedStatus?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export const useCustomerInvoices = (filters: CustomerInvoiceFilters = {}) => {
   const queryClient = useQueryClient();
 
-  const { data: invoices = [], isLoading: loading, error, refetch } = useQuery<CustomerInvoice[]>({
+  const queryString = buildQueryString({
+    page: filters.page || 1,
+    pageSize: filters.pageSize || 25,
+    search: filters.search,
+    status: filters.status,
+    customerId: filters.customerId,
+    warehouseId: filters.warehouseId,
+    shippedStatus: filters.shippedStatus,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+  });
+
+  const { data, isLoading: loading, error, refetch } = useQuery<PaginatedResponse<CustomerInvoice>>({
     queryKey: ['customer-invoices', filters],
-    queryFn: () => api.get<CustomerInvoice[]>(`/api/customer-invoices${buildQueryString({ startDate: filters?.startDate, endDate: filters?.endDate })}`),
+    queryFn: () => api.get<PaginatedResponse<CustomerInvoice>>(`/api/customer-invoices${queryString}`),
     placeholderData: keepPreviousData,
   });
 
@@ -48,7 +72,11 @@ export const useCustomerInvoices = (filters?: { startDate?: string; endDate?: st
   });
 
   return {
-    invoices,
+    invoices: data?.data || [],
+    total: data?.total || 0,
+    page: data?.page || 1,
+    pageSize: data?.pageSize || 25,
+    totalPages: data?.totalPages || 1,
     loading,
     error: error instanceof Error ? error.message : null,
     refetch,

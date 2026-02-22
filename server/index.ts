@@ -43,6 +43,9 @@ import telegramRouter from "./routes/telegram";
 import priceListsRouter from "./routes/price-lists";
 import auditRouter from "./routes/audit";
 import tasksRouter from "./routes/tasks";
+import salesFunnelRouter from "./routes/sales-funnel";
+import unitEconomicsRouter from "./routes/unit-economics";
+import { authenticateToken } from "./middleware/auth";
 
 // Connect to MongoDB
 connectDB().then(() => {
@@ -102,44 +105,46 @@ export function createServer() {
     }
   });
 
-  // Business API routes
-  app.use("/api/suppliers", suppliersRouter);
-  app.use("/api/purchase-orders", purchaseOrdersRouter);
-  app.use("/api/supplier-invoices", supplierInvoicesRouter);
-  app.use("/api/receipts", receiptsRouter);
-  app.use("/api/products", productsRouter);
-  app.use("/api/services", servicesRouter);
-  app.use("/api/supplier-returns", supplierReturnsRouter);
-  app.use("/api/payments", paymentsRouter);
-  app.use("/api/debts", debtsRouter);
-  app.use("/api/dashboard", dashboardRouter);
-  app.use("/api/customer-invoices", customerInvoicesRouter);
-  app.use("/api/partners", partnersRouter);
-  app.use("/api/customer-orders", customerOrdersRouter);
-  app.use("/api/shipments", shipmentsRouter);
-  app.use("/api/warehouses", warehousesRouter);
-  app.use("/api/customer-returns", customerReturnsRouter);
-  app.use("/api/returns-report", returnsReportRouter);
-  app.use("/api/profitability", profitabilityRouter);
-  app.use("/api/internal-orders", internalOrdersRouter);
-  app.use("/api/writeoffs", writeoffsRouter);
-  app.use("/api/warehouse-expense", warehouseExpenseRouter);
-  app.use("/api/warehouse-transfers", warehouseTransfersRouter);
-  app.use("/api/tax-invoices", taxInvoicesRouter);
-  app.use("/api/customer-debts", customerDebtsRouter);
-  app.use("/api/contracts", contractsRouter);
-  app.use("/api/telegram", telegramRouter);
-  app.use("/api/warehouse-receipts", warehouseReceiptsRouter);
-  app.use("/api/inventory", inventoryRouter);
-  app.use("/api/balance", balanceRouter);
-  app.use("/api/turnover", turnoverRouter);
-  app.use("/api/cash-flow", cashFlowRouter);
-  app.use("/api/profit-loss", profitLossRouter);
-  app.use("/api/mutual-settlements", mutualSettlementsRouter);
-  app.use("/api/reports", reportsRouter);
-  app.use("/api/price-lists", priceListsRouter);
-  app.use("/api/audit", auditRouter);
-  app.use("/api/tasks", tasksRouter);
+  // Barcha business routelar uchun authentication middleware
+  app.use("/api/suppliers", authenticateToken, suppliersRouter);
+  app.use("/api/purchase-orders", authenticateToken, purchaseOrdersRouter);
+  app.use("/api/supplier-invoices", authenticateToken, supplierInvoicesRouter);
+  app.use("/api/receipts", authenticateToken, receiptsRouter);
+  app.use("/api/products", authenticateToken, productsRouter);
+  app.use("/api/services", authenticateToken, servicesRouter);
+  app.use("/api/supplier-returns", authenticateToken, supplierReturnsRouter);
+  app.use("/api/payments", authenticateToken, paymentsRouter);
+  app.use("/api/debts", authenticateToken, debtsRouter);
+  app.use("/api/dashboard", authenticateToken, dashboardRouter);
+  app.use("/api/customer-invoices", authenticateToken, customerInvoicesRouter);
+  app.use("/api/partners", authenticateToken, partnersRouter);
+  app.use("/api/customer-orders", authenticateToken, customerOrdersRouter);
+  app.use("/api/shipments", authenticateToken, shipmentsRouter);
+  app.use("/api/warehouses", authenticateToken, warehousesRouter);
+  app.use("/api/customer-returns", authenticateToken, customerReturnsRouter);
+  app.use("/api/returns-report", authenticateToken, returnsReportRouter);
+  app.use("/api/profitability", authenticateToken, profitabilityRouter);
+  app.use("/api/internal-orders", authenticateToken, internalOrdersRouter);
+  app.use("/api/writeoffs", authenticateToken, writeoffsRouter);
+  app.use("/api/warehouse-expense", authenticateToken, warehouseExpenseRouter);
+  app.use("/api/warehouse-transfers", authenticateToken, warehouseTransfersRouter);
+  app.use("/api/tax-invoices", authenticateToken, taxInvoicesRouter);
+  app.use("/api/customer-debts", authenticateToken, customerDebtsRouter);
+  app.use("/api/contracts", authenticateToken, contractsRouter);
+  app.use("/api/telegram", authenticateToken, telegramRouter);
+  app.use("/api/warehouse-receipts", authenticateToken, warehouseReceiptsRouter);
+  app.use("/api/inventory", authenticateToken, inventoryRouter);
+  app.use("/api/balance", authenticateToken, balanceRouter);
+  app.use("/api/turnover", authenticateToken, turnoverRouter);
+  app.use("/api/cash-flow", authenticateToken, cashFlowRouter);
+  app.use("/api/profit-loss", authenticateToken, profitLossRouter);
+  app.use("/api/mutual-settlements", authenticateToken, mutualSettlementsRouter);
+  app.use("/api/reports", authenticateToken, reportsRouter);
+  app.use("/api/price-lists", authenticateToken, priceListsRouter);
+  app.use("/api/audit", authenticateToken, auditRouter);
+  app.use("/api/tasks", authenticateToken, tasksRouter);
+  app.use("/api/sales-funnel", authenticateToken, salesFunnelRouter);
+  app.use("/api/unit-economics", authenticateToken, unitEconomicsRouter);
 
   return app;
 }

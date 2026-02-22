@@ -17,8 +17,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useQuery } from "@tanstack/react-query";
 import { useCustomerInvoices } from "@/hooks/useCustomerInvoices";
+import { api } from '@/lib/api';
 
 interface Employee {
   _id: string;
@@ -30,17 +32,14 @@ interface Employee {
 
 const EmployeePerformance = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [period, setPeriod] = useState("month");
 
   const { data: employeesData, isLoading: loadingEmployees } = useQuery<{
     employees: Employee[];
   }>({
     queryKey: ["employees"],
-    queryFn: async () => {
-      const res = await fetch("/api/employees");
-      if (!res.ok) throw new Error("Failed to fetch employees");
-      return res.json();
-    },
+    queryFn: () => api.get<{ employees: Employee[] }>("/api/employees"),
   });
 
   const { invoices, loading: loadingInvoices } = useCustomerInvoices();
@@ -96,8 +95,8 @@ const EmployeePerformance = () => {
 
   const filtered = performanceData.filter(
     (e) =>
-      `${e.firstName} ${e.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.username.toLowerCase().includes(searchTerm.toLowerCase())
+      `${e.firstName} ${e.lastName}`.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      e.username.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const totals = useMemo(() => {

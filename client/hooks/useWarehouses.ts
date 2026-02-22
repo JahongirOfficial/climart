@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 interface Warehouse {
   _id: string;
@@ -19,25 +20,14 @@ export const useWarehouses = () => {
   const { data: warehouses = [], isLoading: loading, error, refetch } = useQuery<Warehouse[]>({
     queryKey: ['warehouses'],
     queryFn: async () => {
-      const response = await fetch('/api/warehouses');
-      if (!response.ok) throw new Error('Failed to fetch warehouses');
-      return response.json();
+      return api.get<Warehouse[]>('/api/warehouses');
     },
     placeholderData: keepPreviousData,
   });
 
   const createMutation = useMutation({
     mutationFn: async (warehouseData: Partial<Warehouse>) => {
-      const response = await fetch('/api/warehouses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(warehouseData),
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || 'Failed to create warehouse');
-      }
-      return response.json();
+      return api.post('/api/warehouses', warehouseData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warehouses'] });
@@ -46,16 +36,7 @@ export const useWarehouses = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Warehouse> }) => {
-      const response = await fetch(`/api/warehouses/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || 'Failed to update warehouse');
-      }
-      return response.json();
+      return api.put(`/api/warehouses/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warehouses'] });
@@ -64,11 +45,7 @@ export const useWarehouses = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/warehouses/${id}`, { method: 'DELETE' });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || 'Failed to delete warehouse');
-      }
+      await api.delete(`/api/warehouses/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['warehouses'] });

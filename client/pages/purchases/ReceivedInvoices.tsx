@@ -13,12 +13,14 @@ import {
   XCircle
 } from "lucide-react";
 import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useSupplierInvoices } from "@/hooks/useSupplierInvoices";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 const ReceivedInvoices = () => {
   const { invoices, loading, error, refetch } = useSupplierInvoices();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
 
   const getStatusColor = (status: string) => {
     if (status === 'paid') return 'bg-green-50 text-green-700 border-green-300';
@@ -39,8 +41,8 @@ const ReceivedInvoices = () => {
   };
 
   const filteredInvoices = invoices.filter(invoice =>
-    invoice.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())
+    invoice.supplierName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    invoice.invoiceNumber.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const totalInvoices = invoices.reduce((sum, i) => sum + i.totalAmount, 0);

@@ -13,19 +13,21 @@ import { useContracts } from "@/hooks/useContracts";
 import { ContractModal } from "@/components/ContractModal";
 import { Contract } from "@shared/api";
 import { useToast } from "@/hooks/use-toast";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const Contracts = () => {
   const { contracts, loading, refetch, setAsDefault, cancelContract, deleteContract } = useContracts();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | undefined>();
 
   const filteredContracts = contracts.filter(c => {
-    const matchesSearch = 
-      c.contractNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.partnerName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      c.contractNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      c.partnerName.toLowerCase().includes(debouncedSearch.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || c.status === statusFilter;
     

@@ -1,11 +1,9 @@
 import { Layout } from "@/components/Layout";
 import { printViaIframe } from "@/utils/print";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Search,
   Plus,
   Eye,
   Edit,
@@ -17,39 +15,108 @@ import {
   Clock,
   Printer
 } from "lucide-react";
-import { useState, useMemo, useCallback } from "react";
-import { useCustomerInvoices } from "@/hooks/useCustomerInvoices";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useCustomerInvoices, CustomerInvoiceFilters } from "@/hooks/useCustomerInvoices";
 import { CustomerInvoiceModal } from "@/components/CustomerInvoiceModal";
 import { ViewInvoiceModal } from "@/components/ViewInvoiceModal";
 import { CustomerPaymentModal } from "@/components/CustomerPaymentModal";
 import { CustomerInvoice } from "@shared/api";
 import { useModal } from "@/contexts/ModalContext";
 import { format } from "date-fns";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ExportButton } from "@/components/ExportButton";
 import { formatCurrency, formatDate, getInvoiceStatusColor, getInvoiceStatusLabel, getShippedStatusColor, getShippedStatusLabel } from "@/lib/format";
+import { AdvancedFilter, FilterField } from "@/components/shared/AdvancedFilter";
+import { DataPagination } from "@/components/shared/DataPagination";
+import { usePartners } from "@/hooks/usePartners";
+import { useWarehouses } from "@/hooks/useWarehouses";
+
+const STATUS_OPTIONS = [
+  { value: 'unpaid', label: "To'lanmagan" },
+  { value: 'partial', label: "Qisman to'langan" },
+  { value: 'paid', label: "To'langan" },
+  { value: 'cancelled', label: "Bekor qilingan" },
+  { value: 'overdue', label: "Muddati o'tgan" },
+];
+
+const SHIPPED_STATUS_OPTIONS = [
+  { value: 'not_shipped', label: "Jo'natilmagan" },
+  { value: 'partial', label: "Qisman jo'natilgan" },
+  { value: 'shipped', label: "Jo'natilgan" },
+];
 
 const CustomerInvoices = () => {
-  const [dateFilter, setDateFilter] = useState<{ startDate: string; endDate: string }>({
-    startDate: format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'),
-    endDate: format(new Date(), 'yyyy-MM-dd')
+  // Default date range: current month start to today
+  const defaultStartDate = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
+  const defaultEndDate = format(new Date(), 'yyyy-MM-dd');
+
+  // Server-side filter state (sent to API)
+  const [filters, setFilters] = useState<CustomerInvoiceFilters>({
+    page: 1,
+    pageSize: 25,
+    startDate: defaultStartDate,
+    endDate: defaultEndDate,
   });
 
-  const { invoices, loading, error, refetch, createInvoice, updateInvoice, deleteInvoice, recordPayment } = useCustomerInvoices(dateFilter);
+  // Local filter form values (for AdvancedFilter inputs)
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({
+    search: '',
+    startDate: defaultStartDate,
+    endDate: defaultEndDate,
+    status: '',
+    customerId: '',
+    warehouseId: '',
+    shippedStatus: '',
+  });
+
+  // Debounce search input for server-side filtering
+  const debouncedSearch = useDebounce(filterValues.search, 500);
+
+  // Auto-apply debounced search to server filters
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, search: debouncedSearch, page: 1 }));
+  }, [debouncedSearch]);
+
+  const { invoices, total, page, pageSize, loading, error, refetch, createInvoice, updateInvoice, deleteInvoice, recordPayment } = useCustomerInvoices(filters);
+  const { partners } = usePartners('customer');
+  const { warehouses } = useWarehouses();
   const { showError } = useModal();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoice | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+
+  // Filter fields definition for AdvancedFilter component
+  const filterFields: FilterField[] = [
+    { key: 'search', label: 'Qidirish', type: 'text', placeholder: 'Invoys № yoki mijoz...' },
+    { key: 'startDate', label: 'Sana dan', type: 'date' },
+    { key: 'endDate', label: 'Sana gacha', type: 'date' },
+    { key: 'status', label: 'Holat', type: 'select', options: STATUS_OPTIONS },
+    { key: 'customerId', label: 'Mijoz', type: 'select', options: partners.map(p => ({ value: p._id, label: p.name })) },
+    { key: 'warehouseId', label: 'Ombor', type: 'select', options: warehouses.map(w => ({ value: w._id, label: w.name })) },
+    { key: 'shippedStatus', label: "Jo'natish holati", type: 'select', options: SHIPPED_STATUS_OPTIONS },
+  ];
+
+  const handleFilterChange = useCallback((key: string, value: string) => {
+    setFilterValues(prev => ({ ...prev, [key]: value }));
+  }, []);
+
+  const handleSearch = useCallback(() => {
+    setFilters(prev => ({
+      ...prev,
+      ...filterValues,
+      page: 1,
+    }));
+  }, [filterValues]);
+
+  const handleClearFilters = useCallback(() => {
+    const empty: Record<string, string> = {};
+    filterFields.forEach(f => { empty[f.key] = ''; });
+    setFilterValues(empty);
+    setFilters({ page: 1, pageSize: filters.pageSize });
+  }, [filters.pageSize]);
 
   const getStatusIcon = (status: string) => {
     if (status === 'paid') return <CheckCircle className="h-4 w-4" />;
@@ -57,31 +124,19 @@ const CustomerInvoices = () => {
     return <AlertCircle className="h-4 w-4" />;
   };
 
-  const filteredInvoices = useMemo(() => invoices.filter(invoice => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = !searchTerm || invoice.invoiceNumber.toLowerCase().includes(searchLower) ||
-      invoice.customerName.toLowerCase().includes(searchLower);
-
-    const matchesStatus = statusFilter === "all" ||
-      (statusFilter === "overdue" && new Date(invoice.dueDate) < new Date() && invoice.status !== 'paid') ||
-      invoice.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  }), [invoices, searchTerm, statusFilter]);
-
-  // Calculate KPIs
+  // Calculate KPIs from current page data
   const { totalInvoices, totalAmount, paidAmount, outstandingAmount, overdueCount } = useMemo(() => {
-    const total = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+    const totalAmt = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
     const paid = invoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
     const now = new Date();
     return {
-      totalInvoices: invoices.length,
-      totalAmount: total,
+      totalInvoices: total,
+      totalAmount: totalAmt,
       paidAmount: paid,
-      outstandingAmount: total - paid,
+      outstandingAmount: totalAmt - paid,
       overdueCount: invoices.filter(inv => inv.status !== 'paid' && new Date(inv.dueDate) < now).length,
     };
-  }, [invoices]);
+  }, [invoices, total]);
 
   const handleCreate = () => {
     setSelectedInvoice(null);
@@ -106,10 +161,10 @@ const CustomerInvoices = () => {
         await updateInvoice(selectedInvoice._id, data);
       } else {
         const result = await createInvoice(data);
-        
+
         // Check for warnings about insufficient inventory
         if (result.warnings && result.warnings.length > 0) {
-          const warningMessage = "⚠️ Ogohlantirish: Ba'zi mahsulotlar yetarli emas:\n\n" + 
+          const warningMessage = "⚠️ Ogohlantirish: Ba'zi mahsulotlar yetarli emas:\n\n" +
             result.warnings.map((w: string) => `• ${w}`).join('\n') +
             "\n\nHisob-faktura muvaffaqiyatli yaratildi, lekin inventar minusga tushdi.";
           setTimeout(() => alert(warningMessage), 100);
@@ -305,11 +360,11 @@ const CustomerInvoices = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Mijozlar hisob-fakturalari</h1>
-            <p className="text-gray-600 mt-1">Mijozlarga berilgan hisob-fakturalarni boshqaring</p>
+            <p className="text-gray-600 mt-1">Jami: {total} ta hisob-faktura</p>
           </div>
           <div className="flex gap-2">
             <ExportButton
-              data={filteredInvoices}
+              data={invoices}
               filename="hisob-fakturalar"
               fieldsToInclude={["invoiceNumber", "customerName", "invoiceDate", "totalAmount", "paidAmount", "status"]}
             />
@@ -375,64 +430,15 @@ const CustomerInvoices = () => {
           </Card>
         </div>
 
-        {/* Search and Filter */}
-        <Card className="p-4 bg-white border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div className="md:col-span-1 relative">
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">Qidiruv</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Invoys № yoki mijoz..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-10 border-gray-300"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">Sana dan</label>
-              <div className="relative">
-                <Input
-                  type="date"
-                  value={dateFilter.startDate}
-                  onChange={(e) => setDateFilter(prev => ({ ...prev, startDate: e.target.value }))}
-                  className="h-10 border-gray-300"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">Sana gacha</label>
-              <div className="relative">
-                <Input
-                  type="date"
-                  value={dateFilter.endDate}
-                  onChange={(e) => setDateFilter(prev => ({ ...prev, endDate: e.target.value }))}
-                  className="h-10 border-gray-300"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">Holat</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-10 border-gray-300">
-                  <SelectValue placeholder="Barcha holatlar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Barcha holatlar</SelectItem>
-                  <SelectItem value="unpaid">To'lanmagan</SelectItem>
-                  <SelectItem value="partial">Qisman to'langan</SelectItem>
-                  <SelectItem value="paid">To'langan</SelectItem>
-                  <SelectItem value="cancelled">Bekor qilingan</SelectItem>
-                  <SelectItem value="overdue">Muddati o'tgan</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </Card>
+        {/* Advanced Filter */}
+        <AdvancedFilter
+          fields={filterFields}
+          values={filterValues}
+          onChange={handleFilterChange}
+          onSearch={handleSearch}
+          onClear={handleClearFilters}
+          defaultExpanded
+        />
 
         {/* Invoices Table */}
         <Card>
@@ -467,14 +473,14 @@ const CustomerInvoices = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredInvoices.length === 0 ? (
+                {invoices.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                       Hisob-fakturalar topilmadi
                     </td>
                   </tr>
                 ) : (
-                  filteredInvoices.map((invoice) => (
+                  invoices.map((invoice) => (
                     <tr key={invoice._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {invoice.invoiceNumber}
@@ -557,6 +563,15 @@ const CustomerInvoices = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          <DataPagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={(p) => setFilters(prev => ({ ...prev, page: p }))}
+            onPageSizeChange={(ps) => setFilters(prev => ({ ...prev, pageSize: ps, page: 1 }))}
+          />
         </Card>
       </div>
 

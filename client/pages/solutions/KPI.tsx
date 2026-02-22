@@ -33,6 +33,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCustomerInvoices } from "@/hooks/useCustomerInvoices";
 import { useToast } from "@/hooks/use-toast";
+import { api } from '@/lib/api';
 
 interface KPITarget {
   id: string;
@@ -80,11 +81,7 @@ const KPI = () => {
 
   const { data: employeesData, isLoading } = useQuery<{ employees: Employee[] }>({
     queryKey: ["employees"],
-    queryFn: async () => {
-      const res = await fetch("/api/employees");
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    queryFn: () => api.get<{ employees: Employee[] }>("/api/employees"),
   });
 
   const { invoices } = useCustomerInvoices();
