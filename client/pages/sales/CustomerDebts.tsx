@@ -295,27 +295,27 @@ const CustomerDebts = () => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mijoz</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Jami sotuv</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">To'langan</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qaytarilgan</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qarz</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Muddati o'tgan</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Oxirgi operatsiya</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amallar</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mijoz</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Jami sotuv</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">To'langan</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Qaytarilgan</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Qarz</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Muddati o'tgan</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Oxirgi operatsiya</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amallar</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200 text-sm">
                 {filteredDebts.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={8} className="px-3 py-12 text-center text-gray-500">
                       Qarzdorlar topilmadi
                     </td>
                   </tr>
                 ) : (
                   filteredDebts.map((debt) => (
                     <tr key={debt.customerId} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
+                      <td className="px-3 py-2">
                         <div>
                           <div className="text-sm font-medium text-gray-900">{debt.customerName}</div>
                           {debt.customerPhone && (
@@ -323,21 +323,21 @@ const CustomerDebts = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-right">
                         {formatCurrency(debt.totalSales)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-medium">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-right text-green-600 font-medium">
                         {formatCurrency(debt.totalPaid)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-orange-600">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-right text-orange-600">
                         {formatCurrency(debt.totalReturns)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-right font-bold">
                         <span className={debt.debt > 0 ? 'text-red-600' : 'text-gray-900'}>
                           {formatCurrency(debt.debt)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-right">
                         {debt.overdueAmount > 0 ? (
                           <span className="text-orange-600 font-medium">
                             {formatCurrency(debt.overdueAmount)}
@@ -346,13 +346,13 @@ const CustomerDebts = () => {
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {debt.lastOperationDate ? formatDate(debt.lastOperationDate) : '-'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
                           <Button 
                             variant="outline" 

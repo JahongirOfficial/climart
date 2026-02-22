@@ -339,42 +339,42 @@ const Returns = () => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qaytarish №</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mijoz</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hisob-faktura</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sana</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Summa</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sabab</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Holat</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amallar</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qaytarish №</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Mijoz</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hisob-faktura</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sana</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Summa</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sabab</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Holat</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amallar</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200 text-sm">
                 {returns.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={8} className="px-3 py-12 text-center text-gray-500">
                       Qaytarishlar topilmadi
                     </td>
                   </tr>
                 ) : (
                   returns.map((ret) => (
                     <tr key={ret._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{ret.returnNumber}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{ret.customerName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{ret.invoiceNumber}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{formatDate(ret.returnDate)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">{ret.returnNumber}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm">{ret.customerName}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm">{ret.invoiceNumber}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm">{formatDate(ret.returnDate)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-red-600">
                         {formatCurrency(ret.totalAmount)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getReasonColor(ret.reason)}`}>
                           {getReasonLabel(ret.reason)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         <StatusBadge status={ret.status || 'pending'} config={RETURN_STATUS_CONFIG} />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
                           {ret.status === 'pending' && (
                             <>

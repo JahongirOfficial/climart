@@ -446,69 +446,69 @@ const CustomerInvoices = () => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Hisob-faktura №
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Mijoz
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Sana
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Jami summa
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     To'langan
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Jo'natildi
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Holat
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Amallar
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-200 text-sm">
                 {invoices.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={8} className="px-3 py-12 text-center text-gray-500">
                       Hisob-fakturalar topilmadi
                     </td>
                   </tr>
                 ) : (
                   invoices.map((invoice) => (
                     <tr key={invoice._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
                         {invoice.invoiceNumber}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 wrap-text">
-                        {invoice.customerName}
+                      <td className="px-3 py-2 text-sm text-gray-900">
+                        <div className="max-w-[180px] truncate">{invoice.customerName}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(invoice.invoiceDate)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
                         {formatCurrency(invoice.totalAmount)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-green-600 font-medium">
                         {formatCurrency(invoice.paidAmount)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getShippedStatusColor(invoice.shippedStatus || 'not_shipped')}`}>
                           {getShippedStatusLabel(invoice.shippedStatus || 'not_shipped')}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getInvoiceStatusColor(invoice.status)}`}>
                           {getStatusIcon(invoice.status)}
                           {getInvoiceStatusLabel(invoice.status)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
