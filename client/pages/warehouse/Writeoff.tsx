@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trash2, Plus, Check, AlertTriangle, FileText } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useWriteoffs } from "@/hooks/useWriteoffs";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { WriteoffModal } from "@/components/WriteoffModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,27 +23,15 @@ import {
 
 const Writeoff = () => {
   const { toast } = useToast();
-  const { writeoffs, loading, refetch, createWriteoff, confirmWriteoff, deleteWriteoff } = useWriteoffs();
-  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const { writeoffs, loading, refetch, confirmWriteoff, deleteWriteoff } = useWriteoffs();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedWriteoff, setSelectedWriteoff] = useState<string | null>(null);
 
-  const handleCreate = async (data: any) => {
-    try {
-      await createWriteoff(data);
-      toast({
-        title: "Hisobdan chiqarish yaratildi",
-        description: "Hisobdan chiqarish muvaffaqiyatli yaratildi",
-      });
-      refetch();
-    } catch (error) {
-      toast({
-        title: "Xatolik",
-        description: "Hisobdan chiqarishni yaratishda xatolik yuz berdi",
-        variant: "destructive",
-      });
-      throw error;
-    }
+  // Detail sahifaga o'tish
+  const handleView = (writeoffId: string) => {
+    storeDocumentIds('warehouse-writeoffs', writeoffs.map(w => w._id));
+    navigate(`/warehouse/writeoff/${writeoffId}`);
   };
 
   const handleConfirm = async (id: string) => {
@@ -129,7 +118,7 @@ const Writeoff = () => {
               Zarar ko'rgan yoki eskirgan mahsulotlarni hisobdan chiqaring
             </p>
           </div>
-          <Button onClick={() => setCreateModalOpen(true)}>
+          <Button onClick={() => navigate('/warehouse/writeoff/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Chiqim qilish
           </Button>
@@ -183,7 +172,12 @@ const Writeoff = () => {
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{writeoff.writeoffNumber}</span>
+                          <button
+                            className="text-blue-600 hover:underline font-medium"
+                            onClick={() => handleView(writeoff._id)}
+                          >
+                            {writeoff.writeoffNumber}
+                          </button>
                         </div>
                       </td>
                       <td className="p-4">
@@ -263,12 +257,6 @@ const Writeoff = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Create Modal */}
-      <WriteoffModal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSave={handleCreate}
-      />
     </Layout>
   );
 };

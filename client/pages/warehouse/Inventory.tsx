@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ClipboardCheck, Plus, Trash2, AlertTriangle, FileText, Check, FileDown, FilePlus } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useInventory } from "@/hooks/useInventory";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { InventoryModal } from "@/components/InventoryModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,27 +23,15 @@ import {
 
 const Inventory = () => {
   const { toast } = useToast();
-  const { inventories, loading, refetch, createInventory, confirmInventory, createWriteoff, createReceipt, deleteInventory } = useInventory();
-  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const { inventories, loading, refetch, confirmInventory, createWriteoff, createReceipt, deleteInventory } = useInventory();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedInventory, setSelectedInventory] = useState<string | null>(null);
 
-  const handleCreate = async (data: any) => {
-    try {
-      await createInventory(data);
-      toast({
-        title: "Inventarizatsiya yaratildi",
-        description: "Inventarizatsiya muvaffaqiyatli yaratildi",
-      });
-      refetch();
-    } catch (error) {
-      toast({
-        title: "Xatolik",
-        description: "Inventarizatsiyani yaratishda xatolik yuz berdi",
-        variant: "destructive",
-      });
-      throw error;
-    }
+  // Detail sahifaga o'tish
+  const handleView = (inventoryId: string) => {
+    storeDocumentIds('warehouse-inventories', inventories.map(i => i._id));
+    navigate(`/warehouse/inventory/${inventoryId}`);
   };
 
   const handleConfirm = async (id: string) => {
@@ -155,7 +144,7 @@ const Inventory = () => {
               Ombordagi mahsulotlarning haqiqiy miqdorini tizim qoldig'i bilan solishtiring
             </p>
           </div>
-          <Button onClick={() => setCreateModalOpen(true)}>
+          <Button onClick={() => navigate('/warehouse/inventory/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Inventarizatsiya
           </Button>
@@ -249,7 +238,12 @@ const Inventory = () => {
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{inventory.inventoryNumber}</span>
+                          <button
+                            className="text-blue-600 hover:underline font-medium"
+                            onClick={() => handleView(inventory._id)}
+                          >
+                            {inventory.inventoryNumber}
+                          </button>
                         </div>
                       </td>
                       <td className="p-4">
@@ -368,12 +362,6 @@ const Inventory = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Create Modal */}
-      <InventoryModal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSave={handleCreate}
-      />
     </Layout>
   );
 };

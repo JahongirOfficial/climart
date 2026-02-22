@@ -6,27 +6,27 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Search, Plus, Users, TrendingUp, TrendingDown,
-  Edit, Trash2, FileDown
+  Trash2, FileDown
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { usePartners } from "@/hooks/usePartners";
-import { PartnerModal } from "@/components/PartnerModal";
 import { PartnerExportModal } from "@/components/PartnerExportModal";
 import { PartnerWithStats } from "@shared/api";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/useDebounce";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 
 const Partners = () => {
   const { partners, loading, refetch, deletePartner } = usePartners();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [modalOpen, setModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [selectedPartner, setSelectedPartner] = useState<PartnerWithStats | undefined>();
 
   const filteredPartners = partners.filter(p => {
     const matchesSearch =
@@ -48,9 +48,9 @@ const Partners = () => {
   const totalDebt = debtors.reduce((sum, p) => sum + p.balance, 0);
   const totalCredit = Math.abs(creditors.reduce((sum, p) => sum + p.balance, 0));
 
-  const handleEdit = (partner: PartnerWithStats) => {
-    setSelectedPartner(partner);
-    setModalOpen(true);
+  const handleView = (partner: PartnerWithStats) => {
+    storeDocumentIds('partners', filteredPartners.map(p => p._id));
+    navigate(`/contacts/partners/${partner._id}`);
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -69,15 +69,6 @@ const Partners = () => {
         variant: "destructive",
       });
     }
-  };
-
-  const handleModalClose = () => {
-    setModalOpen(false);
-    setSelectedPartner(undefined);
-  };
-
-  const handleModalSuccess = () => {
-    refetch();
   };
 
   const getStatusBadge = (status: string) => {
@@ -152,7 +143,7 @@ const Partners = () => {
               <FileDown className="h-4 w-4 mr-2" />
               Eksport
             </Button>
-            <Button onClick={() => setModalOpen(true)}>
+            <Button onClick={() => navigate('/contacts/partners/new')}>
               <Plus className="h-4 w-4 mr-2" />
               Yangi kontragent
             </Button>
@@ -271,7 +262,12 @@ const Partners = () => {
                       <td className="px-4 py-4 text-sm text-gray-600">{partner.code}</td>
                       <td className="px-4 py-4 wrap-text">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{partner.name}</p>
+                          <button
+                            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline text-left"
+                            onClick={() => handleView(partner)}
+                          >
+                            {partner.name}
+                          </button>
                           {partner.group && (
                             <p className="text-xs text-gray-500">{partner.group}</p>
                           )}
@@ -296,13 +292,6 @@ const Partners = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleEdit(partner)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
                             onClick={() => handleDelete(partner._id, partner.name)}
                           >
                             <Trash2 className="h-4 w-4 text-red-600" />
@@ -316,13 +305,6 @@ const Partners = () => {
             </table>
           </div>
         </Card>
-
-        <PartnerModal
-          open={modalOpen}
-          onClose={handleModalClose}
-          onSuccess={handleModalSuccess}
-          partner={selectedPartner}
-        />
 
         <PartnerExportModal
           open={exportModalOpen}

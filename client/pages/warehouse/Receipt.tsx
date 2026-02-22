@@ -15,14 +15,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { 
+import {
   Search, Plus, Loader2, Package, CheckCircle, FileText,
   Edit, Trash2, Check, Printer
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useWarehouseReceipts } from "@/hooks/useWarehouseReceipts";
-import { WarehouseReceiptModal } from "@/components/WarehouseReceiptModal";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { WarehouseReceipt } from "@shared/api";
 import { useToast } from "@/hooks/use-toast";
 import { printViaIframe } from "@/utils/print";
@@ -30,11 +31,10 @@ import { printViaIframe } from "@/utils/print";
 const Receipt = () => {
   const { receipts, loading, refetch, confirmReceipt, deleteReceipt } = useWarehouseReceipts();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedReceipt, setSelectedReceipt] = useState<WarehouseReceipt | undefined>();
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [receiptToPrint, setReceiptToPrint] = useState<WarehouseReceipt | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -56,17 +56,10 @@ const Receipt = () => {
   const confirmedReceipts = receipts.filter(r => r.status === 'confirmed');
   const totalAmount = receipts.reduce((sum, r) => sum + r.totalAmount, 0);
 
-  const handleEdit = (receipt: WarehouseReceipt) => {
-    if (receipt.status === 'confirmed') {
-      toast({
-        title: "Ogohlantirish",
-        description: "Tasdiqlangan kirimni tahrirlash mumkin emas",
-        variant: "destructive",
-      });
-      return;
-    }
-    setSelectedReceipt(receipt);
-    setModalOpen(true);
+  // Detail sahifaga o'tish
+  const handleView = (receipt: WarehouseReceipt) => {
+    storeDocumentIds('warehouse-receipts', filteredReceipts.map(r => r._id));
+    navigate(`/warehouse/receipt/${receipt._id}`);
   };
 
   const handleConfirm = async (id: string, receiptNumber: string) => {
@@ -610,15 +603,6 @@ const Receipt = () => {
     return labels[reason] || reason;
   };
 
-  const handleModalClose = () => {
-    setModalOpen(false);
-    setSelectedReceipt(undefined);
-  };
-
-  const handleModalSuccess = () => {
-    refetch();
-  };
-
   const getStatusBadge = (status: string) => {
     if (status === 'confirmed') {
       return <Badge className="bg-green-100 text-green-800">Tasdiqlangan</Badge>;
@@ -650,7 +634,7 @@ const Receipt = () => {
             <h1 className="text-3xl font-bold text-gray-900">Kirim qilish</h1>
             <p className="text-gray-600 mt-1">Omborga tovar kiritish (manbasiz)</p>
           </div>
-          <Button onClick={() => setModalOpen(true)}>
+          <Button onClick={() => navigate('/warehouse/receipt/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Yangi kirim
           </Button>
@@ -738,7 +722,12 @@ const Receipt = () => {
                   filteredReceipts.map((receipt) => (
                     <tr key={receipt._id} className="hover:bg-gray-50">
                       <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                        {receipt.receiptNumber}
+                        <button
+                          className="text-blue-600 hover:underline font-medium"
+                          onClick={() => handleView(receipt)}
+                        >
+                          {receipt.receiptNumber}
+                        </button>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
                         {new Date(receipt.receiptDate).toLocaleDateString('uz-UZ')}
@@ -774,7 +763,7 @@ const Receipt = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleEdit(receipt)}
+                                onClick={() => handleView(receipt)}
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -796,13 +785,6 @@ const Receipt = () => {
             </table>
           </div>
         </Card>
-
-        <WarehouseReceiptModal
-          open={modalOpen}
-          onClose={handleModalClose}
-          onSuccess={handleModalSuccess}
-          receipt={selectedReceipt}
-        />
 
         {/* Print Options Dialog */}
         <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>

@@ -20,6 +20,21 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const order = await InternalOrder.findById(req.params.id)
+      .populate('sourceWarehouse')
+      .populate('destinationWarehouse')
+      .populate('items.product');
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
 router.post('/', async (req: Request, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();

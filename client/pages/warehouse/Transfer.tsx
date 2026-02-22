@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRightLeft, Plus, Trash2, AlertTriangle, FileText, Truck, CheckCircle, XCircle } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useWarehouseTransfers } from "@/hooks/useWarehouseTransfers";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { WarehouseTransferModal } from "@/components/WarehouseTransferModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,27 +30,15 @@ import {
 
 const Transfer = () => {
   const { toast } = useToast();
-  const { transfers, loading, refetch, createTransfer, updateStatus, deleteTransfer } = useWarehouseTransfers();
-  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const { transfers, loading, refetch, updateStatus, deleteTransfer } = useWarehouseTransfers();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState<string | null>(null);
 
-  const handleCreate = async (data: any) => {
-    try {
-      await createTransfer(data);
-      toast({
-        title: "Ko'chirish yaratildi",
-        description: "Ko'chirish muvaffaqiyatli yaratildi",
-      });
-      refetch();
-    } catch (error) {
-      toast({
-        title: "Xatolik",
-        description: "Ko'chirishni yaratishda xatolik yuz berdi",
-        variant: "destructive",
-      });
-      throw error;
-    }
+  // Detail sahifaga o'tish
+  const handleView = (transferId: string) => {
+    storeDocumentIds('warehouse-transfers', transfers.map(t => t._id));
+    navigate(`/warehouse/transfer/${transferId}`);
   };
 
   const handleStatusChange = async (id: string, status: string) => {
@@ -155,7 +144,7 @@ const Transfer = () => {
               Mahsulotlarni omborlar o'rtasida ko'chiring
             </p>
           </div>
-          <Button onClick={() => setCreateModalOpen(true)}>
+          <Button onClick={() => navigate('/warehouse/transfer/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Ko'chirish
           </Button>
@@ -232,7 +221,12 @@ const Transfer = () => {
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{transfer.transferNumber}</span>
+                          <button
+                            className="text-blue-600 hover:underline font-medium"
+                            onClick={() => handleView(transfer._id)}
+                          >
+                            {transfer.transferNumber}
+                          </button>
                         </div>
                       </td>
                       <td className="p-4">
@@ -320,12 +314,6 @@ const Transfer = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Create Modal */}
-      <WarehouseTransferModal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSave={handleCreate}
-      />
     </Layout>
   );
 };

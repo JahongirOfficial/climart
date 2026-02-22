@@ -53,6 +53,19 @@ router.get('/summary', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const expense = await WarehouseExpense.findById(req.params.id)
+      .populate('warehouse');
+    if (!expense) {
+      return res.status(404).json({ message: 'Expense not found' });
+    }
+    res.json(expense);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+});
+
 router.post('/', async (req: Request, res: Response) => {
   try {
     const expense = new WarehouseExpense(req.body);

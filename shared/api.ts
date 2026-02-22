@@ -532,3 +532,121 @@ export interface CustomerReturn {
   createdAt: string;
   updatedAt: string;
 }
+
+// Warehouse Transfer types
+export interface WarehouseTransfer {
+  _id: string;
+  transferNumber: string;
+  sourceWarehouse: string | PopulatedRef;
+  sourceWarehouseName: string;
+  destinationWarehouse: string | PopulatedRef;
+  destinationWarehouseName: string;
+  transferDate: string;
+  items: Array<{
+    product: string | PopulatedRef;
+    productName: string;
+    quantity: number;
+  }>;
+  status: 'pending' | 'in_transit' | 'completed' | 'cancelled';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Writeoff types
+export interface Writeoff {
+  _id: string;
+  writeoffNumber: string;
+  warehouse: string | PopulatedRef;
+  warehouseName: string;
+  organization?: string;
+  writeoffDate: string;
+  status: 'draft' | 'confirmed';
+  items: Array<{
+    product: string | PopulatedRef;
+    productName: string;
+    quantity: number;
+    costPrice: number;
+    total: number;
+  }>;
+  totalAmount: number;
+  reason: 'damaged' | 'expired' | 'lost' | 'personal_use' | 'inventory_shortage' | 'other';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Internal Order types
+export interface InternalOrder {
+  _id: string;
+  orderNumber: string;
+  organization?: string;
+  sourceWarehouse: string | PopulatedRef;
+  sourceWarehouseName: string;
+  destinationWarehouse: string | PopulatedRef;
+  destinationWarehouseName: string;
+  orderDate: string;
+  expectedDate?: string;
+  items: Array<{
+    product: string | PopulatedRef;
+    productName: string;
+    requestedQuantity: number;
+    shippedQuantity: number;
+    costPrice: number;
+    total: number;
+  }>;
+  totalAmount: number;
+  shippedAmount: number;
+  fulfillmentPercentage: number;
+  status: 'new' | 'approved' | 'partial' | 'completed' | 'cancelled';
+  transferCreated: boolean;
+  transferId?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Inventory types
+export interface InventoryDoc {
+  _id: string;
+  inventoryNumber: string;
+  warehouse: string | PopulatedRef;
+  warehouseName: string;
+  organization?: string;
+  inventoryDate: string;
+  status: 'draft' | 'confirmed';
+  category?: string;
+  items: Array<{
+    product: string | PopulatedRef;
+    productName: string;
+    systemQuantity: number;
+    actualQuantity: number;
+    difference: number;
+    costPrice: number;
+    differenceAmount: number;
+  }>;
+  totalShortage: number;
+  totalSurplus: number;
+  shortageAmount: number;
+  surplusAmount: number;
+  writeoffCreated: boolean;
+  receiptCreated: boolean;
+  writeoffId?: string;
+  receiptId?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Warehouse Expense types
+export interface WarehouseExpenseDoc {
+  _id: string;
+  warehouse: string | PopulatedRef;
+  warehouseName: string;
+  expenseDate: string;
+  category: 'rent' | 'utilities' | 'maintenance' | 'salaries' | 'equipment' | 'other';
+  amount: number;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}

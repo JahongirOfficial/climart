@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Plus, Trash2, AlertTriangle, ArrowRightLeft, CheckCircle, Clock, XCircle } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useInternalOrders } from "@/hooks/useInternalOrders";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { InternalOrderModal } from "@/components/InternalOrderModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,27 +30,15 @@ import {
 
 const InternalOrder = () => {
   const { toast } = useToast();
-  const { orders, loading, refetch, createOrder, updateStatus, createTransfer, deleteOrder } = useInternalOrders();
-  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const { orders, loading, refetch, updateStatus, createTransfer, deleteOrder } = useInternalOrders();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
 
-  const handleCreate = async (data: any) => {
-    try {
-      await createOrder(data);
-      toast({
-        title: "Ichki buyurtma yaratildi",
-        description: "Ichki buyurtma muvaffaqiyatli yaratildi",
-      });
-      refetch();
-    } catch (error) {
-      toast({
-        title: "Xatolik",
-        description: "Ichki buyurtmani yaratishda xatolik yuz berdi",
-        variant: "destructive",
-      });
-      throw error;
-    }
+  // Detail sahifaga o'tish
+  const handleView = (orderId: string) => {
+    storeDocumentIds('warehouse-internal-orders', orders.map(o => o._id));
+    navigate(`/warehouse/internal-order/${orderId}`);
   };
 
   const handleStatusChange = async (id: string, status: string) => {
@@ -179,7 +168,7 @@ const InternalOrder = () => {
               Filiallar uchun mahsulot so'rovlarini boshqaring
             </p>
           </div>
-          <Button onClick={() => setCreateModalOpen(true)}>
+          <Button onClick={() => navigate('/warehouse/internal-order/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Ichki buyurtma
           </Button>
@@ -269,7 +258,12 @@ const InternalOrder = () => {
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{order.orderNumber}</span>
+                          <button
+                            className="text-blue-600 hover:underline font-medium"
+                            onClick={() => handleView(order._id)}
+                          >
+                            {order.orderNumber}
+                          </button>
                         </div>
                       </td>
                       <td className="p-4">
@@ -384,12 +378,6 @@ const InternalOrder = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Create Modal */}
-      <InternalOrderModal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSave={handleCreate}
-      />
     </Layout>
   );
 };

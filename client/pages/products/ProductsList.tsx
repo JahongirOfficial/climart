@@ -5,8 +5,6 @@ import { Card } from "@/components/ui/card";
 import {
   Plus,
   Search,
-  Eye,
-  Edit,
   Trash2,
   Package,
   TrendingUp,
@@ -18,24 +16,19 @@ import { useState, useMemo } from "react";
 import { useModal } from "@/contexts/ModalContext";
 import { useProducts } from "@/hooks/useProducts";
 import { useWarehouses } from "@/hooks/useWarehouses";
-import { ProductModal } from "@/components/ProductModal";
-import { ViewProductModal } from "@/components/ViewProductModal";
 import { Product } from "@shared/api";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExportButton } from "@/components/ExportButton";
 import { formatCurrency, getStockStatus } from "@/lib/format";
 import { useDebounce } from "@/hooks/useDebounce";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 
 const ProductsList = () => {
-  const { products, loading, error, refetch, createProduct, updateProduct, deleteProduct } = useProducts();
+  const { products, loading, error, refetch, deleteProduct } = useProducts();
   const { warehouses } = useWarehouses();
   const { showSuccess, showError } = useModal();
   const navigate = useNavigate();
-  const [showModal, setShowModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
 
@@ -63,28 +56,9 @@ const ProductsList = () => {
     };
   }, [products]);
 
-  const handleCreateProduct = () => {
-    setEditingProduct(null);
-    setShowModal(true);
-  };
-
   const handleViewProduct = (product: Product) => {
-    setViewingProduct(product);
-    setShowViewModal(true);
-  };
-
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct(product);
-    setShowModal(true);
-  };
-
-  const handleSaveProduct = async (productData: any) => {
-    if (editingProduct) {
-      await updateProduct(editingProduct._id, productData);
-    } else {
-      await createProduct(productData);
-    }
-    refetch();
+    storeDocumentIds('products', filteredProducts.map(p => p._id));
+    navigate(`/products/list/${product._id}`);
   };
 
   const handleDeleteProduct = async (productId: string) => {
@@ -174,7 +148,7 @@ const ProductsList = () => {
                 filename="mahsulotlar"
                 fieldsToInclude={["name", "sku", "category", "unit", "quantity", "costPrice", "sellingPrice"]}
               />
-              <Button className="bg-primary hover:bg-primary/90 text-white gap-2" onClick={handleCreateProduct}>
+              <Button className="bg-primary hover:bg-primary/90 text-white gap-2" onClick={() => navigate('/products/list/new')}>
                 <Plus className="h-4 w-4" />
                 Yangi mahsulot
               </Button>
@@ -283,7 +257,12 @@ const ProductsList = () => {
                     <tr key={product._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 wrap-text">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{product.name}</p>
+                          <button
+                            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline text-left"
+                            onClick={() => handleViewProduct(product)}
+                          >
+                            {product.name}
+                          </button>
                           {product.description && (
                             <p className="text-xs text-gray-500 mt-0.5">{product.description}</p>
                           )}
@@ -364,20 +343,6 @@ const ProductsList = () => {
                             <History className="h-4 w-4 text-blue-600" />
                           </button>
                           <button
-                            onClick={() => handleViewProduct(product)}
-                            className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-                            title="Ko'rish"
-                          >
-                            <Eye className="h-4 w-4 text-gray-600" />
-                          </button>
-                          <button
-                            onClick={() => handleEditProduct(product)}
-                            className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-                            title="Tahrirlash"
-                          >
-                            <Edit className="h-4 w-4 text-gray-600" />
-                          </button>
-                          <button
                             onClick={() => handleDeleteProduct(product._id)}
                             className="p-1.5 hover:bg-red-50 rounded transition-colors"
                             title="O'chirish"
@@ -420,26 +385,6 @@ const ProductsList = () => {
           </div>
         </Card>
 
-        {/* Product Modal */}
-        <ProductModal
-          open={showModal}
-          onClose={() => {
-            setShowModal(false);
-            setEditingProduct(null);
-          }}
-          onSave={handleSaveProduct}
-          product={editingProduct}
-        />
-
-        {/* View Product Modal */}
-        <ViewProductModal
-          open={showViewModal}
-          onClose={() => {
-            setShowViewModal(false);
-            setViewingProduct(null);
-          }}
-          product={viewingProduct}
-        />
       </div>
     </Layout>
   );

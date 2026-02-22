@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, Plus, Trash2, AlertTriangle, TrendingUp, Calendar } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useWarehouseExpense } from "@/hooks/useWarehouseExpense";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { WarehouseExpenseModal } from "@/components/WarehouseExpenseModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,27 +23,15 @@ import {
 
 const Expense = () => {
   const { toast } = useToast();
-  const { expenses, summary, loading, refetch, createExpense, deleteExpense } = useWarehouseExpense();
-  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
+  const { expenses, summary, loading, refetch, deleteExpense } = useWarehouseExpense();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<string | null>(null);
 
-  const handleCreate = async (data: any) => {
-    try {
-      await createExpense(data);
-      toast({
-        title: "Xarajat qo'shildi",
-        description: "Ombor xarajati muvaffaqiyatli qo'shildi",
-      });
-      refetch();
-    } catch (error) {
-      toast({
-        title: "Xatolik",
-        description: "Xarajatni qo'shishda xatolik yuz berdi",
-        variant: "destructive",
-      });
-      throw error;
-    }
+  // Detail sahifaga o'tish
+  const handleView = (expenseId: string) => {
+    storeDocumentIds('warehouse-expenses', expenses.map(e => e._id));
+    navigate(`/warehouse/expense/${expenseId}`);
   };
 
   const handleDelete = async () => {
@@ -113,7 +102,7 @@ const Expense = () => {
               Ombor bilan bog'liq barcha xarajatlarni boshqaring
             </p>
           </div>
-          <Button onClick={() => setCreateModalOpen(true)}>
+          <Button onClick={() => navigate('/warehouse/expense/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Xarajat qo'shish
           </Button>
@@ -208,9 +197,12 @@ const Expense = () => {
                   expenses.map((expense) => (
                     <tr key={expense._id} className="border-b hover:bg-muted/50 transition-colors">
                       <td className="p-4">
-                        <div className="text-sm">
+                        <button
+                          className="text-blue-600 hover:underline font-medium text-sm"
+                          onClick={() => handleView(expense._id)}
+                        >
                           {format(new Date(expense.expenseDate), 'dd.MM.yyyy')}
-                        </div>
+                        </button>
                       </td>
                       <td className="p-4">
                         <div className="font-medium">{expense.warehouseName}</div>
@@ -272,12 +264,6 @@ const Expense = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Create Modal */}
-      <WarehouseExpenseModal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSave={handleCreate}
-      />
     </Layout>
   );
 };

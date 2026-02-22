@@ -19,24 +19,22 @@ import {
   Building2,
   Search,
   Plus,
-  Eye,
-  Edit,
   Trash2,
   Check,
   X,
   AlertTriangle,
-  Download,
   Upload,
 } from "lucide-react";
 import { useState, useMemo, memo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import { usePayments } from "@/hooks/usePayments";
 import { api } from "@/lib/api";
 import { usePartners } from "@/hooks/usePartners";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { CreatePaymentModal } from "@/components/CreatePaymentModal";
 import { ImportPaymentsModal } from "@/components/ImportPaymentsModal";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,11 +48,12 @@ import {
 import { ExportButton } from "@/components/ExportButton";
 
 // Jadval qatori komponenti - memo bilan optimizatsiya
-const PaymentRow = memo(({ 
-  payment, 
-  onConfirm, 
-  onCancel, 
+const PaymentRow = memo(({
+  payment,
+  onConfirm,
+  onCancel,
   onDelete,
+  onView,
   getTypeIcon,
   getTypeBadge,
   getStatusBadge
@@ -64,7 +63,12 @@ const PaymentRow = memo(({
       <td className="px-3 py-2">
         <div className="flex items-center gap-1.5">
           {getTypeIcon(payment.type)}
-          <span className="font-medium text-sm whitespace-nowrap">{payment.paymentNumber}</span>
+          <button
+            className="font-medium text-sm whitespace-nowrap text-blue-600 hover:text-blue-800 hover:underline"
+            onClick={() => onView(payment._id)}
+          >
+            {payment.paymentNumber}
+          </button>
         </div>
       </td>
       <td className="px-3 py-2 whitespace-nowrap text-sm">
@@ -136,10 +140,9 @@ const Payments = () => {
   const [partnerFilter, setPartnerFilter] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
+  const navigate = useNavigate();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [createModalType, setCreateModalType] = useState<'incoming' | 'outgoing' | 'transfer'>('incoming');
   const [importModalOpen, setImportModalOpen] = useState(false);
 
   // Faqat sana filtri bilan API chaqiramiz
@@ -237,25 +240,10 @@ const Payments = () => {
     }
   }, [toast, refetch]);
 
-  const handleCreatePayment = useCallback(async (data: any) => {
-    try {
-      await api.post('/api/payments', data);
-
-      toast({
-        title: "To'lov yaratildi",
-        description: "To'lov muvaffaqiyatli yaratildi",
-      });
-
-      refetch();
-    } catch (error) {
-      toast({
-        title: "Xatolik",
-        description: "To'lovni yaratishda xatolik yuz berdi",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  }, [toast, refetch]);
+  const handleViewPayment = useCallback((id: string) => {
+    storeDocumentIds('payments', payments.map(p => p._id));
+    navigate(`/finance/payments/${id}`);
+  }, [payments, navigate]);
 
   const getTypeIcon = useCallback((type: string) => {
     switch (type) {
@@ -324,24 +312,15 @@ const Payments = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => {
-              setCreateModalType('incoming');
-              setCreateModalOpen(true);
-            }}>
+            <Button onClick={() => navigate('/finance/payments/new?type=incoming')}>
               <Plus className="h-4 w-4 mr-2" />
               Kirim
             </Button>
-            <Button variant="outline" onClick={() => {
-              setCreateModalType('outgoing');
-              setCreateModalOpen(true);
-            }}>
+            <Button variant="outline" onClick={() => navigate('/finance/payments/new?type=outgoing')}>
               <Plus className="h-4 w-4 mr-2" />
               Chiqim
             </Button>
-            <Button variant="outline" onClick={() => {
-              setCreateModalType('transfer');
-              setCreateModalOpen(true);
-            }}>
+            <Button variant="outline" onClick={() => navigate('/finance/payments/new?type=transfer')}>
               <Plus className="h-4 w-4 mr-2" />
               O'tkazma
             </Button>
@@ -517,6 +496,7 @@ const Payments = () => {
                         setSelectedPayment(id);
                         setDeleteDialogOpen(true);
                       }}
+                      onView={handleViewPayment}
                       getTypeIcon={getTypeIcon}
                       getTypeBadge={getTypeBadge}
                       getStatusBadge={getStatusBadge}
@@ -546,14 +526,6 @@ const Payments = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Create Payment Modal */}
-      <CreatePaymentModal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSave={handleCreatePayment}
-        type={createModalType}
-      />
 
       {/* Import Payments Modal */}
       <ImportPaymentsModal

@@ -4,25 +4,25 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Search, Plus, Loader2, FileText, AlertTriangle, 
-  Edit, Trash2, Star, XCircle, Download 
+import {
+  Search, Plus, Loader2, FileText, AlertTriangle,
+  Trash2, Star, XCircle, Download
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useContracts } from "@/hooks/useContracts";
-import { ContractModal } from "@/components/ContractModal";
 import { Contract } from "@shared/api";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/useDebounce";
+import { storeDocumentIds } from "@/hooks/useDocumentNavigation";
 
 const Contracts = () => {
   const { contracts, loading, refetch, setAsDefault, cancelContract, deleteContract } = useContracts();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedContract, setSelectedContract] = useState<Contract | undefined>();
 
   const filteredContracts = contracts.filter(c => {
     const matchesSearch =
@@ -42,9 +42,9 @@ const Contracts = () => {
     return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
   });
 
-  const handleEdit = (contract: Contract) => {
-    setSelectedContract(contract);
-    setModalOpen(true);
+  const handleView = (contract: Contract) => {
+    storeDocumentIds('contracts', filteredContracts.map(c => c._id));
+    navigate(`/contacts/contracts/${contract._id}`);
   };
 
   const handleSetDefault = async (id: string, partnerName: string) => {
@@ -99,15 +99,6 @@ const Contracts = () => {
     }
   };
 
-  const handleModalClose = () => {
-    setModalOpen(false);
-    setSelectedContract(undefined);
-  };
-
-  const handleModalSuccess = () => {
-    refetch();
-  };
-
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { label: string; className: string }> = {
       active: { label: "Faol", className: "bg-green-100 text-green-800" },
@@ -159,7 +150,7 @@ const Contracts = () => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Shartnomalar</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">Kontragentlar bilan tuzilgan shartnomalarni boshqaring</p>
           </div>
-          <Button onClick={() => setModalOpen(true)}>
+          <Button onClick={() => navigate('/contacts/contracts/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Yangi shartnoma
           </Button>
@@ -272,7 +263,12 @@ const Contracts = () => {
                             {contract.isDefault && (
                               <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                             )}
-                            <span className="text-sm font-medium text-gray-900">{contract.contractNumber}</span>
+                            <button
+                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                              onClick={() => handleView(contract)}
+                            >
+                              {contract.contractNumber}
+                            </button>
                           </div>
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-900">{contract.partnerName}</td>
@@ -316,13 +312,6 @@ const Contracts = () => {
                                 <Download className="h-4 w-4" />
                               </Button>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(contract)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
                             {contract.status === 'active' && (
                               <Button
                                 variant="ghost"
@@ -351,12 +340,6 @@ const Contracts = () => {
           </div>
         </Card>
 
-        <ContractModal
-          open={modalOpen}
-          onClose={handleModalClose}
-          onSuccess={handleModalSuccess}
-          contract={selectedContract}
-        />
       </div>
     </Layout>
   );

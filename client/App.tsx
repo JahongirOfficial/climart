@@ -71,13 +71,16 @@ const TaxInvoiceDetail = lazy(() => import("./pages/sales/TaxInvoiceDetail"));
 // Product pages
 const ProductsList = lazy(() => import("./pages/products/ProductsList"));
 const ProductHistory = lazy(() => import("./pages/products/ProductHistory"));
+const ProductDetail = lazy(() => import("./pages/products/ProductDetail"));
 const Services = lazy(() => import("./pages/products/Services"));
 const PriceLists = lazy(() => import("./pages/products/PriceLists"));
 const SerialNumbers = lazy(() => import("./pages/products/SerialNumbers"));
 
 // Contact pages
 const Partners = lazy(() => import("./pages/contacts/Partners"));
+const PartnerDetail = lazy(() => import("./pages/contacts/PartnerDetail"));
 const Contracts = lazy(() => import("./pages/contacts/Contracts"));
+const ContractDetail = lazy(() => import("./pages/contacts/ContractDetail"));
 const TelegramPage = lazy(() => import("./pages/contacts/Telegram"));
 
 // Warehouse pages
@@ -90,6 +93,12 @@ const Inventory = lazy(() => import("./pages/warehouse/Inventory"));
 const Balance = lazy(() => import("./pages/warehouse/Balance"));
 const Turnover = lazy(() => import("./pages/warehouse/Turnover"));
 const Warehouses = lazy(() => import("./pages/warehouse/Warehouses"));
+const WarehouseReceiptDetail = lazy(() => import("./pages/warehouse/ReceiptDetail"));
+const WarehouseTransferDetail = lazy(() => import("./pages/warehouse/TransferDetail"));
+const WriteoffDetail = lazy(() => import("./pages/warehouse/WriteoffDetail"));
+const InternalOrderDetail = lazy(() => import("./pages/warehouse/InternalOrderDetail"));
+const InventoryDetail = lazy(() => import("./pages/warehouse/InventoryDetail"));
+const ExpenseDetail = lazy(() => import("./pages/warehouse/ExpenseDetail"));
 
 // Dashboard pages
 const Indicators = lazy(() => import("./pages/dashboard/Indicators"));
@@ -100,6 +109,7 @@ const Files = lazy(() => import("./pages/dashboard/Files"));
 
 // Finance pages
 const Payments = lazy(() => import("./pages/finance/Payments"));
+const PaymentDetail = lazy(() => import("./pages/finance/PaymentDetail"));
 const CashFlow = lazy(() => import("./pages/finance/CashFlow"));
 const ProfitLoss = lazy(() => import("./pages/finance/ProfitLoss"));
 const MutualSettlements = lazy(() => import("./pages/finance/MutualSettlements"));
@@ -203,26 +213,36 @@ const App = () => (
                 </Route>
                 <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
                 <Route path="/products/list" element={<ProtectedRoute><ProductsList /></ProtectedRoute>} />
+                <Route path="/products/list/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
                 <Route path="/products/history/:id" element={<ProtectedRoute><ProductHistory /></ProtectedRoute>} />
                 <Route path="/products/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
                 <Route path="/products/price-lists" element={<ProtectedRoute><PriceLists /></ProtectedRoute>} />
                 <Route path="/products/serial-numbers" element={<ProtectedRoute><SerialNumbers /></ProtectedRoute>} />
                 <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
                 <Route path="/contacts/partners" element={<ProtectedRoute><Partners /></ProtectedRoute>} />
+                <Route path="/contacts/partners/:id" element={<ProtectedRoute><PartnerDetail /></ProtectedRoute>} />
                 <Route path="/contacts/contracts" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
+                <Route path="/contacts/contracts/:id" element={<ProtectedRoute><ContractDetail /></ProtectedRoute>} />
                 <Route path="/contacts/telegram" element={<ProtectedRoute><TelegramPage /></ProtectedRoute>} />
                 <Route path="/warehouse" element={<ProtectedRoute><Warehouse /></ProtectedRoute>} />
                 <Route path="/warehouse/receipt" element={<ProtectedRoute><Receipt /></ProtectedRoute>} />
+                <Route path="/warehouse/receipt/:id" element={<ProtectedRoute><WarehouseReceiptDetail /></ProtectedRoute>} />
                 <Route path="/warehouse/expense" element={<ProtectedRoute><Expense /></ProtectedRoute>} />
+                <Route path="/warehouse/expense/:id" element={<ProtectedRoute><ExpenseDetail /></ProtectedRoute>} />
                 <Route path="/warehouse/transfer" element={<ProtectedRoute><Transfer /></ProtectedRoute>} />
+                <Route path="/warehouse/transfer/:id" element={<ProtectedRoute><WarehouseTransferDetail /></ProtectedRoute>} />
                 <Route path="/warehouse/writeoff" element={<ProtectedRoute><Writeoff /></ProtectedRoute>} />
+                <Route path="/warehouse/writeoff/:id" element={<ProtectedRoute><WriteoffDetail /></ProtectedRoute>} />
                 <Route path="/warehouse/internal-order" element={<ProtectedRoute><InternalOrder /></ProtectedRoute>} />
+                <Route path="/warehouse/internal-order/:id" element={<ProtectedRoute><InternalOrderDetail /></ProtectedRoute>} />
                 <Route path="/warehouse/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+                <Route path="/warehouse/inventory/:id" element={<ProtectedRoute><InventoryDetail /></ProtectedRoute>} />
                 <Route path="/warehouse/balance" element={<ProtectedRoute><Balance /></ProtectedRoute>} />
                 <Route path="/warehouse/turnover" element={<ProtectedRoute><Turnover /></ProtectedRoute>} />
                 <Route path="/warehouse/warehouses" element={<ProtectedRoute><Warehouses /></ProtectedRoute>} />
                 <Route path="/finance" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
                 <Route path="/finance/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
+                <Route path="/finance/payments/:id" element={<ProtectedRoute><PaymentDetail /></ProtectedRoute>} />
                 <Route path="/finance/cashflow" element={<ProtectedRoute><CashFlow /></ProtectedRoute>} />
                 <Route path="/finance/profit-loss" element={<ProtectedRoute><ProfitLoss /></ProtectedRoute>} />
                 <Route path="/finance/mutual-settlements" element={<ProtectedRoute><MutualSettlements /></ProtectedRoute>} />
