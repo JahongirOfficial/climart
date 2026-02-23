@@ -1,4 +1,4 @@
-import { Layout } from "@/components/Layout";
+import { PurchasesLayout } from "@/components/purchases/PurchasesLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -82,20 +82,20 @@ const MyDebts = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <PurchasesLayout>
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
           <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="ml-2 text-gray-600">Ma'lumotlar yuklanmoqda...</span>
           </div>
         </div>
-      </Layout>
+      </PurchasesLayout>
     );
   }
 
   if (error) {
     return (
-      <Layout>
+      <PurchasesLayout>
         <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
           <Card className="p-6 bg-red-50 border-red-200">
             <div className="flex items-center gap-3">
@@ -114,12 +114,12 @@ const MyDebts = () => {
             </div>
           </Card>
         </div>
-      </Layout>
+      </PurchasesLayout>
     );
   }
 
   return (
-    <Layout>
+    <PurchasesLayout>
       <div className="p-6 md:p-8 max-w-[1920px] mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -456,7 +456,7 @@ const MyDebts = () => {
           </div>
         </Card>
       </div>
-    </Layout>
+    </PurchasesLayout>
   );
 };
 
