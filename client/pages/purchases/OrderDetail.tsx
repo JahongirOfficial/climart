@@ -88,7 +88,7 @@ const OrderDetail = () => {
   useEffect(() => {
     if (order) {
       setFormData({
-        supplier: typeof order.supplier === 'string' ? order.supplier : order.supplier._id,
+        supplier: typeof order.supplier === 'string' ? order.supplier : (order.supplier?._id || ''),
         supplierName: order.supplierName,
         orderDate: new Date(order.orderDate).toISOString().split('T')[0],
         notes: order.notes || "",
